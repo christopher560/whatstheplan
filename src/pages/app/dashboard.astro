@@ -1,0 +1,39 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import Section from "@/components/wrapper/Section.astro";
+import Grid from "@/components/wrapper/Grid.astro";
+import Heading from "@/components/typography/Heading.astro";
+import Card from "@/components/item/Card.astro";
+import DashboardSection from '@/components/wrapper/DashboardSection.astro';
+---
+
+<DashboardLayout title="Dashboard">
+  <Section paddingTop="medium" paddingBottom="medium">
+    <Heading tag="h1" variant="h1">Dashboard</Heading>
+
+    <Grid xsmall={1} medium={3}>
+      <Card heading="Upcoming" text="Your next scheduled items." />
+      <Card heading="This week" text="A summary of your week." />
+      <Card heading="Quick actions" text="Shortcuts to common tasks." />
+    </Grid>
+  </Section>
+  <Section paddingTop="medium" paddingBottom="medium">
+    <Heading tag="h1" variant="h1">Dashboard</Heading>
+  
+    <Grid xsmall={1} medium={3}>
+      <Card heading="Upcoming" text="Your next scheduled items." />
+      <Card heading="This week" text="A summary of your week." />
+      <Card heading="Quick actions" text="Shortcuts to common tasks." />
+    </Grid>
+  </Section>
+  <Section />
+  <DashboardSection paddingTop="medium" paddingBottom="medium">
+    <Heading tag="h1" variant="h1">Dashboard</Heading>
+  
+    <Grid xsmall={1} medium={3}>
+      <Card heading="Upcoming" text="Your next scheduled items." />
+      <Card heading="This week" text="A summary of your week." />
+      <Card heading="Quick actions" text="Shortcuts to common tasks." />
+    </Grid>
+  </DashboardSection>
+</DashboardLayout>

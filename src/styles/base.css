@@ -2,21 +2,39 @@
 :root {
   /* Swatches */
   --light-100: #ffffff;
-  --light-200: #ebebeb;
+  --light-200: #F6F5F1;
   --light-300: #d9d9d9;
   --dark-700: #453e42;
   --dark-800: #2f2b2d;
   --dark-900: #1f1d1e;
-  --brand-500: #c6fb50;
+  --brand-500: #E98736;
+  --brand-600: #F0D34E;
   --brand-text: var(--dark-900);
+  --brand-text-secondary: rgb(29, 23, 64);
+  --colors-primary-red: #F06445;
+  --colors-primary-orange: #FF851B;
+  --colors-primary-yellow: #F9D908;
+  --colors-primary-green: #22AE4D;
+  --colors-primary-blue: #3B98D1;
+  --colors-primary-purple: #9065D8;
+  --colors-primary-pink: #F5A0C0;
+  --colors-secondary-red: #FCE0D8;
+  --colors-secondary-orange: #FFE0C2;
+  --colors-secondary-yellow: #FFF3A8;
+  --colors-secondary-green: #D7F2DF;
+  --colors-secondary-blue: #D9EDFA;
+  --colors-secondary-purple: #E9DDFB;
+  --colors-secondary-pink: #FBE0EA;
 
   /* Typography primitives */
-  --primary-family: var(--font-inter, system-ui, sans-serif);
+  --primary-family: var(--font-plus-jakarta-sans, system-ui, sans-serif);
   --primary-regular: 400;
   --primary-medium: 500;
   --primary-bold: 700;
-  --primary-trim-top: 0.4em;
-  --primary-trim-bottom: 0.38em;
+  --primary-trim-top: 0.36em;
+  --primary-trim-bottom: 0.42em;
+  --brand-family: var(--font-milkyway, system-ui, sans-serif);
+  --brand-regular: 400;
 
   /* Letter spacing */
   --letter-spacing-tight: -0.03em;
@@ -258,7 +276,7 @@
 .theme-brand .theme-invert {
   color-scheme: light;
 
-  --background: var(--light-300);
+  --background: var(--light-200);
   --background-2: var(--light-200);
   --background-3: var(--light-100);
   --background-skeleton: color-mix(in lab, currentcolor 10%, transparent);

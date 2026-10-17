@@ -1,0 +1,247 @@
+/* =====================================================================
+   whatstheplan: additive tokens for base.css  (Lumos v0.05 conventions)
+   Nothing here edits or replaces an existing base.css token.
+   Each block says WHERE in base.css it goes. Fonts are excluded.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   A. :root  >  "Swatches"   (add after --colors-secondary-pink)
+   --------------------------------------------------------------------- */
+:root {
+  /* Vivid set: the app's bright accents (avatars, tags, stages, status) */
+  --colors-vivid-red: #FF6F61;
+  --colors-vivid-orange: #FF8A2B;
+  --colors-vivid-yellow: #FFD23F;
+  --colors-vivid-green: #52DDB0;
+  --colors-vivid-blue: #62BCFF;
+  --colors-vivid-purple: #AB97FF;
+  --colors-vivid-pink: #FF94C6;
+  
+  /* Deeper yellow tint used for active nav / chips (no match in secondary set) */
+  --colors-secondary-yellow-strong: #FFE49A;
+  
+  /* Text that sits on any vivid fill. Same value as the app's ink color */
+  --colors-on-vivid: var(--brand-text-secondary);
+
+/* ---------------------------------------------------------------------
+   B. :root  >  new group "Semantic colors"   (after Swatches)
+   --------------------------------------------------------------------- */
+  /* Plan stages (Ideas > Voting > Locked in) */
+  --stage-idea: var(--colors-vivid-pink);
+  --stage-voting: var(--colors-vivid-yellow);
+  --stage-locked: var(--colors-vivid-green);
+  
+  /* Plan categories */
+  --category-hangout: var(--colors-vivid-yellow);
+  --category-school: var(--colors-vivid-blue);
+  --category-formal: var(--colors-vivid-purple);
+  
+  /* Availability status: dot + tinted background */
+  --status-free: var(--colors-vivid-green);
+  --status-free-background: var(--colors-secondary-green);
+  --status-maybe: var(--colors-vivid-yellow);
+  --status-maybe-background: var(--colors-secondary-yellow);
+  --status-away: var(--colors-vivid-purple);
+  --status-away-background: var(--colors-secondary-purple);
+  /* Busy is neutral, so it lives in each theme block (section K) */
+
+/* ---------------------------------------------------------------------
+   C. :root  >  "Borders & focus"   (after --border-width)
+   --------------------------------------------------------------------- */
+  --border-width-medium: 0.09375rem; /* 1.5px: controls, chips, tags */
+  --border-width-thick: 0.125rem;    /* 2px: avatars, dots, strong outlines */
+
+/* ---------------------------------------------------------------------
+   D. :root  >  "Radius"   (after --radius-main)
+   --------------------------------------------------------------------- */
+  --radius-large: 1.5rem;   /* cards */
+  --radius-xlarge: 2rem;    /* big panels / sections */
+
+/* ---------------------------------------------------------------------
+   E. :root  >  "Letter spacing" and "Line height"
+   --------------------------------------------------------------------- */
+  /* after --letter-spacing-normal */
+  --letter-spacing-wide: 0.06em;   /* uppercase tags */
+  --letter-spacing-wider: 0.12em;  /* eyebrow labels */
+  
+  /* between --line-height-large and --line-height-huge */
+  --line-height-normal: 1.4;
+
+/* ---------------------------------------------------------------------
+   F. :root  >  "Motion"   (after Opening motion)
+   --------------------------------------------------------------------- */
+  --move-duration: 300ms;       /* card lift, bar width */
+  --reveal-duration: 500ms;   /* swap-in, pop-in */
+  --enter-duration: 700ms;    /* page content rising in */
+  --stagger-step: 70ms;       /* delay per item in a list */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.3, 1.6, 0.5, 1);
+  --ease-spring-soft: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --hover-lift: -0.125rem;    /* translateY on button hover */
+  --card-lift: -0.1875rem;    /* translateY on card hover */
+
+/* ---------------------------------------------------------------------
+   G. :root  >  new group "Sizing"   (before Typography styles)
+   --------------------------------------------------------------------- */
+  /* Controls: static on purpose, 44px is the touch-target floor */
+  --control-height-tiny: 1.75rem;   /* 28: tags, counts */
+  --control-height-small: 2.75rem;  /* 44: chips, small buttons */
+  --control-height-main: 3rem;      /* 48: buttons, inputs */
+  /* control-height-large is fluid, see section H */
+  
+  --avatar-small: 2rem;     /* 32 */
+  --avatar-main: 2.75rem;   /* 44 */
+  --avatar-large: 3.5rem;   /* 56 */
+  --avatar-xlarge: 4rem;    /* 64 */
+  
+  --icon-small: 1rem;       /* 16 */
+  --icon-main: 1.5rem;      /* 24 */
+  
+  /* Min column widths for repeat(auto-fit, minmax(min(100%, X), 1fr)) */
+  --card-width-small: 15rem;   /* 240 */
+  --card-width-main: 17.5rem;  /* 280 */
+  --card-width-large: 20rem;   /* 320 */
+
+/* ---------------------------------------------------------------------
+   H. :root  >  fluid tokens (3 lines each, same clamp() as base.css)
+   Put the type ones in the h1-h6 / text-* block in size order,
+   --space-0 before --space-1, control-height-large in Sizing.
+   --------------------------------------------------------------------- */
+  /* Spacing step below --space-1 */
+  --space-0: clamp(var(--space-0-min) / 16 * 1rem, ((var(--space-0-min) - ((var(--space-0-max) - var(--space-0-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--space-0-max) - var(--space-0-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--space-0-max) / 16 * 1rem);
+  --space-0-min: 3;
+  --space-0-max: 4;
+
+  /* Type: page title (measured 48 at 1440, 32 at 390) */
+  --title: clamp(var(--title-min) / 16 * 1rem, ((var(--title-min) - ((var(--title-max) - var(--title-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--title-max) - var(--title-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--title-max) / 16 * 1rem);
+  --title-min: 32;
+  --title-max: 48;
+  --title-line-height: var(--line-height-small);
+  --title-letter-spacing: var(--letter-spacing-tight);
+  --title-text-transform: none;
+  --title-margin-top: var(--space-7);
+  --title-margin-bottom: var(--space-6);
+  --title-font-family: var(--primary-family);
+  --title-font-weight: var(--primary-medium);
+  --title-trim-top: var(--primary-trim-top);
+  --title-trim-bottom: var(--primary-trim-bottom);
+  --title-text-wrap: balance;
+
+  /* Type: tiny (tags, counts, eyebrow) */
+  --text-tiny: clamp(var(--text-tiny-min) / 16 * 1rem, ((var(--text-tiny-min) - ((var(--text-tiny-max) - var(--text-tiny-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--text-tiny-max) - var(--text-tiny-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--text-tiny-max) / 16 * 1rem);
+  --text-tiny-min: 11;
+  --text-tiny-max: 12;
+  --text-tiny-line-height: var(--line-height-normal);
+  --text-tiny-letter-spacing: var(--letter-spacing-wide);
+  --text-tiny-text-transform: uppercase;
+  --text-tiny-margin-top: var(--space-2);
+  --text-tiny-margin-bottom: var(--space-2);
+  --text-tiny-font-family: var(--primary-family);
+  --text-tiny-font-weight: var(--primary-bold);
+  --text-tiny-trim-top: var(--primary-trim-top);
+  --text-tiny-trim-bottom: var(--primary-trim-bottom);
+  --text-tiny-text-wrap: pretty;
+
+  /* Sizing: large control (52 -> 56) */
+  --control-height-large: clamp(var(--control-height-large-min) / 16 * 1rem, ((var(--control-height-large-min) - ((var(--control-height-large-max) - var(--control-height-large-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--control-height-large-max) - var(--control-height-large-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--control-height-large-max) / 16 * 1rem);
+  --control-height-large-min: 52;
+  --control-height-large-max: 56;
+
+/* ---------------------------------------------------------------------
+   I. :root  >  new group "Elevation"   (after Motion)
+   Hard offset shadow, no blur (the pressed-button look)
+   --------------------------------------------------------------------- */
+  --shadow-offset-small: 0 0.1875rem 0 var(--border-strong);
+  --shadow-offset-main: 0 0.25rem 0 var(--border-strong);
+}
+
+/* ---------------------------------------------------------------------
+   J. "Text styles" block   (add after .text-style-small)
+   --------------------------------------------------------------------- */
+.text-style-tiny {
+  font-family: var(--text-tiny-font-family);
+  font-size: var(--text-tiny);
+  font-weight: var(--text-tiny-font-weight);
+  line-height: var(--text-tiny-line-height);
+  letter-spacing: var(--text-tiny-letter-spacing);
+  text-transform: var(--text-tiny-text-transform);
+  text-wrap: var(--text-tiny-text-wrap);
+  --_trim-top: var(--text-tiny-trim-top);
+  --_trim-bottom: var(--text-tiny-trim-bottom);
+  --_margin-top: var(--text-tiny-margin-top);
+  --_margin-bottom: var(--text-tiny-margin-bottom);
+}
+
+.text-style-title {
+  font-family: var(--title-font-family);
+  font-size: var(--title);
+  font-weight: var(--title-font-weight);
+  line-height: var(--title-line-height);
+  letter-spacing: var(--title-letter-spacing);
+  text-transform: var(--title-text-transform);
+  text-wrap: var(--title-text-wrap);
+  --_trim-top: var(--title-trim-top);
+  --_trim-bottom: var(--title-trim-bottom);
+  --_margin-top: var(--title-margin-top);
+  --_margin-bottom: var(--title-margin-bottom);
+}
+
+/* ---------------------------------------------------------------------
+   K. "Color themes"   (paste into EVERY theme block:
+   :root/.theme-light, .theme-dark, .theme-brand. Values differ per theme)
+   --------------------------------------------------------------------- */
+
+/* --- K1. :root, .theme-light, .theme-dark .theme-invert, .theme-brand .theme-invert --- */
+:root,
+.theme-light,
+.theme-dark .theme-invert,
+.theme-brand .theme-invert {
+  --background-muted: color-mix(in lab, var(--text) 8%, var(--background));
+  --background-glass: color-mix(in lab, var(--background-3) 60%, transparent);
+  --border-subtle: color-mix(in lab, var(--text) 12%, transparent);
+  --border-strong: var(--text);
+  --status-busy: color-mix(in lab, var(--text) 40%, var(--background));
+  --status-busy-background: var(--background-muted);
+
+  --button-3-background: var(--text);
+  --button-3-border: var(--border);
+  --button-3-text: var(--background);
+  --button-3-background-hover: var(--colors-vivid-orange);
+  --button-3-border-hover: var(--button-3-background-hover);
+  --button-3-text-hover: var(--colors-on-vivid);
+}
+
+/* --- K2. .theme-dark, .theme-light .theme-invert --- */
+.theme-dark,
+.theme-light .theme-invert {
+  --background-muted: color-mix(in lab, var(--text) 8%, var(--background));
+  --background-glass: color-mix(in lab, var(--background-3) 60%, transparent);
+  --border-subtle: color-mix(in lab, var(--text) 12%, transparent);
+  --border-strong: var(--text);
+  --status-busy: color-mix(in lab, var(--text) 40%, var(--background));
+  --status-busy-background: var(--background-muted);
+
+  --button-3-background: var(--text);
+  --button-3-border: var(--border);
+  --button-3-text: var(--background);
+  --button-3-background-hover: var(--colors-vivid-orange);
+  --button-3-border-hover: var(--button-3-background-hover);
+  --button-3-text-hover: var(--colors-on-vivid);
+}
+
+/* --- K3. .theme-brand --- */
+.theme-brand {
+  --background-muted: color-mix(in lab, var(--text) 8%, var(--background));
+  --background-glass: color-mix(in lab, var(--background-3) 60%, transparent);
+  --border-subtle: color-mix(in lab, var(--text) 12%, transparent);
+  --border-strong: var(--text);
+  --status-busy: color-mix(in lab, var(--text) 40%, var(--background));
+  --status-busy-background: var(--background-muted);
+
+  --button-3-background: var(--text);
+  --button-3-border: var(--border);
+  --button-3-text: var(--background);
+  --button-3-background-hover: var(--light-100);
+  --button-3-border-hover: var(--button-3-background-hover);
+  --button-3-text-hover: var(--dark-900);
+}

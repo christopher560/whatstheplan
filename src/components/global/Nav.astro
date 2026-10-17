@@ -1,8 +1,9 @@
 ---
 import Icon from "@/components/media/Icon.astro";
 import NavLink from "@/components/global/NavLink.astro";
-import logo from "@/assets/logo/logo.svg";
 import { SITE_NAME } from "@/consts.ts";
+import brand_full_logo_cropped from '@/assets/logo/brand-full-logo-cropped.svg';
+import Button from '@/components/Button.astro';
 
 interface Props {
   /** Set to `false` to omit the component. */
@@ -18,9 +19,23 @@ const { render = true, overlap = false } = Astro.props;
   render && (
     <header class:list={["nav_wrap", overlap && "overlap"]}>
       <div class="nav_inner">
-        <a class="nav_logo" href="/" aria-label={SITE_NAME}>
-          <Icon src={logo} variant="full-width" />
-        </a>
+        <div class="nav_inner_left"><a class="nav_logo" href="/" aria-label={SITE_NAME}>
+          <Icon src={brand_full_logo_cropped} variant="full-width" />
+        </a><nav class="nav_menu" id="nav-menu" aria-label="Main">
+          <div class="nav_menu_inner">
+            <ul class="nav_links">
+              <NavLink href="/">Features</NavLink>
+              <NavLink href="/example-components">Behind the Code<br /></NavLink>
+            </ul>
+          </div>
+        </nav></div>
+        <div class="nav_inner_right"><nav class="nav_menu" id="nav-menu" aria-label="Main">
+          <div class="nav_menu_inner">
+            <ul class="nav_links">
+              <NavLink href="/example-components">Github<br /></NavLink>
+            </ul>
+          </div>
+        </nav><Button emphasis="secondary">Log In</Button><Button>Get started for free</Button></div>
         <button
           class="nav_toggle"
           type="button"
@@ -30,14 +45,6 @@ const { render = true, overlap = false } = Astro.props;
         >
           <span class="nav_toggle_icon" />
         </button>
-        <nav class="nav_menu" id="nav-menu" aria-label="Main">
-          <div class="nav_menu_inner">
-            <ul class="nav_links">
-              <NavLink href="/">Home</NavLink>
-              <NavLink href="/example-components">Example Components</NavLink>
-            </ul>
-          </div>
-        </nav>
       </div>
     </header>
   )
@@ -107,7 +114,7 @@ const { render = true, overlap = false } = Astro.props;
       display: flex;
       justify-content: center;
       padding-inline: var(--site-margin);
-      background-color: var(--background);
+      background-color: var(--background-3);
       color: var(--text);
       border-bottom: var(--border-width) solid var(--border);
 
@@ -135,7 +142,7 @@ const { render = true, overlap = false } = Astro.props;
     .nav_logo {
       display: flex;
       align-items: center;
-      width: 6.5rem;
+      width: 14rem;
       transition: opacity var(--hover-duration) var(--hover-ease);
       @media (hover: hover) {
         &:hover {
@@ -232,7 +239,7 @@ const { render = true, overlap = false } = Astro.props;
       flex-direction: column;
       padding: var(--space-2) var(--site-margin) var(--space-4);
       font-size: var(--text-main);
-      font-weight: var(--primary-medium);
+      font-weight: var(--primary-bold);
       & > li + li {
         border-top: var(--border-width) solid var(--border);
       }
@@ -293,5 +300,20 @@ const { render = true, overlap = false } = Astro.props;
         }
       }
     }
+  }
+  .nav_inner_left {
+    background-color: rgb(255, 255, 255);
+    justify-content: flex-start;
+    align-items: center;
+    margin-right: 0;
+    row-gap: var(--space-6);
+    column-gap: var(--space-6);
+    display: flex;
+  }
+  .nav_inner_right {
+    display: flex;
+    align-items: center;
+    row-gap: var(--space-2);
+    column-gap: var(--space-2);
   }
 </style>

@@ -13,15 +13,29 @@ export default defineConfig({
   ],
   fonts: [
     {
-      name: "Inter",
-      cssVariable: "--font-inter",
+      name: "Plus Jakarta Sans",
+      cssVariable: "--font-plus-jakarta-sans",
       provider: fontProviders.local(),
       options: {
         variants: [
           {
             weight: 400,
             style: "normal",
-            src: ["./src/assets/fonts/inter-regular.woff2"],
+            src: ["./src/assets/fonts/plus-jakarta-sans.ttf"],
+          },
+        ],
+      },
+    },
+    {
+      name: "Milkyway",
+      cssVariable: "--font-milkyway",
+      provider: fontProviders.local(),
+      options: {
+        variants: [
+          {
+            weight: 400,
+            style: "normal",
+            src: ["./src/assets/fonts/milkyway-demo.ttf"],
           },
         ],
       },
