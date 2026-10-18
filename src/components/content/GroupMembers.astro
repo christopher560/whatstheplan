@@ -1,0 +1,236 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import IconButton from "@/components/item/IconButton.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { reportReasons } from "@/data/group.ts";
+import type { GroupMember } from "@/data/group.ts";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  members?: GroupMember[];
+  /** The viewer, listed first. */
+  viewer?: { name: string; color: AccentColor };
+}
+
+const { render = true, members = [], viewer } = Astro.props;
+
+const icons = {
+  addFriend: "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 3-5 6-5s6 2 6 5M18 8v6M15 11h6",
+  sent: "M5 12l5 5 9-10",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+};
+---
+
+{
+  render && viewer && (
+    <Panel aria-labelledby="group-members-title" data-members>
+      <h2 id="group-members-title" class="group-members_title text-style-h4">
+        Members
+      </h2>
+      <ul class="group-members_list">
+        <li class="group-members_item">
+          <div class="group-members_row">
+            <Avatar initial={viewer.name} color={viewer.color} size="small" />
+            <div class="group-members_text">
+              <p class="group-members_name text-style-main">You ({viewer.name})</p>
+              <p class="group-members_sub text-style-small" data-you-sub>
+                This is you
+              </p>
+            </div>
+          </div>
+        </li>
+        {members.map((member) => (
+          <li class="group-members_item" data-member={member.id}>
+            <div class="group-members_row">
+              <Avatar initial={member.name} color={member.color} size="small" />
+              <div class="group-members_text">
+                <p class="group-members_name text-style-main">{member.name}</p>
+                <p class="group-members_sub text-style-small" data-sub />
+              </div>
+              <IconButton label={`Add ${member.name} as a friend`} class="group-members_friend" aria-pressed="false" data-friend>
+                <span data-add-icon>
+                  <PathIcon d={icons.addFriend} variant="small" />
+                </span>
+                <span data-sent-icon hidden>
+                  <PathIcon d={icons.sent} variant="small" />
+                </span>
+              </IconButton>
+              <IconButton label={`Options for ${member.name}`} aria-expanded="false" data-menu>
+                <PathIcon d={icons.more} variant="small" />
+              </IconButton>
+            </div>
+            <div class="group-members_menu" hidden data-menu-row>
+              <ActionButton color="white" size="small" data-block>
+                Block {member.name}
+              </ActionButton>
+              <ActionButton color="white" size="small" data-report>
+                Report
+              </ActionButton>
+            </div>
+            <div class="group-members_reasons" hidden data-reasons>
+              <p class="group-members_ask text-style-small">What happened?</p>
+              <div class="group-members_chips">
+                {reportReasons.map((reason) => (
+                  <ActionButton color="orange" size="small" data-reason={reason.id}>
+                    {reason.label}
+                  </ActionButton>
+                ))}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  )
+}
+
+<script>
+  import { block, get, group, report, startReport, subscribe, toggleFriend, toggleMenu } from "@/lib/group-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-members]").forEach((root) => {
+    const items = [...root.querySelectorAll<HTMLElement>("[data-member]")];
+    const members = group().members;
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const id = target.closest<HTMLElement>("[data-member]")?.dataset.member;
+      if (!id) return;
+      if (target.closest("[data-friend]")) return toggleFriend(id);
+      if (target.closest("[data-menu]")) return toggleMenu(id);
+      if (target.closest("[data-block]")) return block(id);
+      if (target.closest("[data-report]")) return startReport(id);
+      const reason = target.closest<HTMLElement>("[data-reason]");
+      if (reason) report(id, reason.dataset.reason!);
+    });
+
+    subscribe(() => {
+      const s = get();
+      items.forEach((item) => {
+        const member = members.find((m) => m.id === item.dataset.member)!;
+        const blocked = !!s.blocked[member.id];
+        const reported = !!s.reported[member.id];
+        const sent = !!s.friends[member.id];
+        const menuOpen = s.menu === member.id;
+        const reporting = s.reporting === member.id;
+
+        item.classList.toggle("blocked", blocked);
+        item.querySelector<HTMLElement>("[data-sub]")!.textContent = blocked
+          ? "Blocked"
+          : reported
+            ? "Reported"
+            : `${member.going ? "Going · " : ""}${member.note}`;
+
+        const friend = item.querySelector<HTMLElement>("[data-friend]")!;
+        friend.hidden = blocked;
+        friend.setAttribute("aria-pressed", String(sent));
+        friend.setAttribute(
+          "aria-label",
+          sent ? `Friend request sent to ${member.name}. Tap to undo` : `Add ${member.name} as a friend`,
+        );
+        friend.querySelector<HTMLElement>("[data-add-icon]")!.hidden = sent;
+        friend.querySelector<HTMLElement>("[data-sent-icon]")!.hidden = !sent;
+
+        const menu = item.querySelector<HTMLElement>("[data-menu]")!;
+        menu.hidden = blocked || reporting;
+        menu.setAttribute("aria-expanded", String(menuOpen));
+        item.querySelector<HTMLElement>("[data-menu-row]")!.hidden = !menuOpen;
+        item.querySelector<HTMLElement>("[data-reasons]")!.hidden = !reporting;
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-members_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .group-members_list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .group-members_item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+
+      &.blocked {
+        background-color: var(--background);
+        opacity: 0.6;
+      }
+    }
+
+    .group-members_row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .group-members_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-0);
+      min-width: 0;
+    }
+
+    .group-members_name {
+      font-weight: var(--primary-bold);
+    }
+
+    .group-members_sub {
+      color: var(--text-2);
+    }
+
+    .group-members_friend.icon-button_wrap {
+      &[aria-pressed="true"] {
+        border-color: var(--border-strong);
+        background-color: var(--status-free);
+        color: var(--colors-on-vivid);
+      }
+      &[aria-pressed="true"]:hover:not(:disabled) {
+        background-color: var(--status-free);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .group-members_menu,
+    .group-members_chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+
+      & > * {
+        flex: 1 1 6rem;
+      }
+    }
+
+    .group-members_reasons {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .group-members_ask {
+      font-weight: var(--primary-bold);
+    }
+
+    .group-members_item [hidden] {
+      display: none;
+    }
+  }
+</style>

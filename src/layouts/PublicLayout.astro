@@ -1,0 +1,104 @@
+---
+import "@/styles/global.css";
+import "../styles/dashboard-base.css";
+import BaseHead from "@/components/utility/BaseHead.astro";
+import SkipLink from "@/components/global/SkipLink.astro";
+import Icon from "@/components/media/Icon.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import Pill from "@/components/item/Pill.astro";
+import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
+import { inviteIcons } from "@/data/invite.ts";
+
+interface Props {
+  title?: string;
+  /** Shown beside the logo. Leave empty to hide it. */
+  note?: string;
+}
+
+const { title = "You're invited", note = "No account needed" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={title} noindex />
+  </head>
+
+  <body>
+    <SkipLink />
+    <div class="public-layout_wrap">
+      <header class="public-layout_header">
+        <a class="public-layout_brand" href="/" aria-label="whatstheplan home">
+          <Icon src={brand_full_logo_cropped} variant="full-width" />
+        </a>
+        {
+          note && (
+            <Pill variant="filled" color="green">
+              <PathIcon slot="before" d={inviteIcons.lock} variant="small" />
+              {note}
+            </Pill>
+          )
+        }
+      </header>
+      <main class="public-layout_main" id="main-content">
+        <slot />
+      </main>
+      <footer class="public-layout_footer">
+        <p class="text-style-small">
+          Made with whatstheplan. Friends only ever see free or busy, never what you are up to.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  @layer components {
+    .public-layout_wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      padding-block: var(--space-4) var(--space-6);
+      background-color: var(--background);
+      background-image: radial-gradient(
+        45rem 20rem at 92% -6%,
+        color-mix(in srgb, var(--colors-vivid-orange) 14%, transparent),
+        transparent 70%
+      );
+      background-repeat: no-repeat;
+    }
+
+    .public-layout_header,
+    .public-layout_main,
+    .public-layout_footer {
+      width: var(--site-width);
+      max-width: 72rem;
+      margin-inline: auto;
+    }
+
+    .public-layout_header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .public-layout_brand {
+      display: block;
+      width: clamp(8rem, 24vw, 10rem);
+    }
+
+    .public-layout_main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .public-layout_footer {
+      color: var(--text-2);
+      text-align: center;
+    }
+  }
+</style>

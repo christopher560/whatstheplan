@@ -11,11 +11,11 @@ import { findingSteps } from "@/data/discover.ts";
 interface Props {
   /** Set to `false` to omit the component. */
   render?: boolean;
-  /** Where "Open my group" goes once the viewer joins. */
+  /** Group page address; the joined group's id is appended for "Open my group". */
   groupHref?: string;
 }
 
-const { render = true, groupHref = "/app/plans" } = Astro.props;
+const { render = true, groupHref = "/app/groups" } = Astro.props;
 ---
 
 {
@@ -133,7 +133,7 @@ const { render = true, groupHref = "/app/plans" } = Astro.props;
                 <p class="text-style-small">
                   It's saved to Your groups with the members, chat and plans. A host will say hi.
                 </p>
-                <ActionButton element="link" href={groupHref} color="ink" size="small">
+                <ActionButton element="link" href={groupHref} color="ink" size="small" data-open data-base={groupHref}>
                   Open my group
                 </ActionButton>
               </div>
@@ -269,6 +269,7 @@ const { render = true, groupHref = "/app/plans" } = Astro.props;
     const members = $("[data-members]");
     const reasons = $("[data-reasons]");
     const joined = $("[data-joined]");
+    const openLink = $<HTMLAnchorElement>("[data-open]");
     const joinButton = $<HTMLButtonElement>("[data-join]");
     const anotherButton = $("[data-another]");
     const tileTemplate = $<HTMLTemplateElement>("[data-tile-template]");
@@ -477,6 +478,7 @@ const { render = true, groupHref = "/app/plans" } = Astro.props;
       $("[data-them-bar]").style.setProperty("--_fill", `${fit.them}%`);
 
       joined.hidden = !isIn;
+      openLink.href = `${openLink.dataset.base}/${g.id}`;
       joinButton.classList.toggle("ink", !isIn);
       joinButton.classList.toggle("white", isIn);
       joinButton.setAttribute("aria-pressed", String(isIn));

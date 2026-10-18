@@ -15,7 +15,7 @@ interface Props {
   groups?: HubGroup[];
   /** Groups that already met. */
   past?: HubPast[];
-  /** Group page link; the group id is appended. */
+  /** Group page address; the group id is appended. */
   groupHref?: string;
   /** Where "Meet again" goes. */
   discoverHref?: string;
@@ -25,7 +25,7 @@ const {
   render = true,
   groups = [],
   past = [],
-  groupHref = "/app/plans",
+  groupHref = "/app/groups",
   discoverHref = "/app/discover",
 } = Astro.props;
 ---
@@ -93,7 +93,7 @@ const {
                   </p>
                 )}
                 <div class="plans-groups_buttons">
-                  <ActionButton element="link" href={`${groupHref}`} color="ink">
+                  <ActionButton element="link" href={`${groupHref}/${group.id}`} color="ink">
                     Open group
                   </ActionButton>
                   <ActionButton color="white" data-add>
@@ -147,16 +147,19 @@ const {
 }
 
 <script>
-  import { get, subscribe, toggleAdded, toggleRequest } from "@/lib/plans-store.ts";
+  import { addToCalendar, get, subscribe, toggleRequest } from "@/lib/plans-store.ts";
+  import { flashButton } from "@/lib/ui.ts";
 
   document.querySelectorAll<HTMLElement>("[data-groups]").forEach((root) => {
-    const cards = [...root.querySelectorAll<HTMLElement>("[data-group]")];
     const friends = [...root.querySelectorAll<HTMLElement>("[data-friend]")];
 
     root.addEventListener("click", (event) => {
       const target = event.target as HTMLElement;
       const add = target.closest<HTMLElement>("[data-add]");
-      if (add) return toggleAdded(add.closest<HTMLElement>("[data-group]")!.dataset.group!);
+      if (add) {
+        addToCalendar(add.closest<HTMLElement>("[data-group]")!.dataset.group!);
+        return flashButton(add, "Added to calendar");
+      }
       const friend = target.closest<HTMLElement>("[data-friend]");
       if (friend) toggleRequest(friend.dataset.friend!);
     });
@@ -164,16 +167,6 @@ const {
     subscribe(() => {
       const s = get();
       root.hidden = s.tab !== "groups";
-      cards.forEach((card) => {
-        const added = !!s.added[card.dataset.group!];
-        const button = card.querySelector<HTMLElement>("[data-add]")!;
-        button.classList.toggle("white", !added);
-        button.classList.toggle("green", added);
-        button.setAttribute("aria-pressed", String(added));
-        button.querySelector<HTMLElement>(".action-button_text")!.textContent = added
-          ? "On calendar"
-          : "Add to calendar";
-      });
       friends.forEach((button) => {
         const sent = !!s.requested[button.dataset.friend!];
         button.classList.toggle("white", !sent);

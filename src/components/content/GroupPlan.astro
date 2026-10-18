@@ -1,0 +1,264 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import type { GroupDetail } from "@/data/group.ts";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  group?: GroupDetail;
+  /** The viewer, first in the stack of people. */
+  viewer?: { name: string; color: AccentColor };
+}
+
+const { render = true, group, viewer } = Astro.props;
+
+const icons = {
+  who: "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 3-5 6-5s6 2 6 5M17 11a2.5 2.5 0 100-5M21 19c0-2-1.5-3.5-3.5-4",
+  what: "M12 3l2.4 5.6L20 9.3l-4.2 3.9 1.2 5.8L12 16l-5 3 1.2-5.8L4 9.3l5.6-.7z",
+  where: "M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12zM12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z",
+  when: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2",
+};
+const mapHref = group
+  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${group.place} ${group.address.split(" · ")[0]}`)}`
+  : "#";
+---
+
+{
+  render && group && viewer && (
+    <Panel variant="tint" tint={group.color} class="group-plan_wrap" aria-label="The plan" data-plan>
+      <div class="group-plan_grid">
+        <div class="group-plan_cell">
+          <span class="group-plan_icon blue">
+            <PathIcon d={icons.who} />
+          </span>
+          <div class="group-plan_body">
+            <p class="group-plan_eyebrow text-style-tiny">Who</p>
+            <p class="group-plan_big text-style-h4" data-going-line />
+            <AvatarStack
+              size="main"
+              data-stack
+              people={[
+                { initial: viewer.name, color: viewer.color },
+                ...group.members.map((member) => ({ initial: member.name, color: member.color })),
+              ]}
+            />
+            <p class="text-style-small" data-spots />
+          </div>
+        </div>
+
+        <div class="group-plan_cell">
+          <span class="group-plan_icon yellow">
+            <PathIcon d={icons.what} />
+          </span>
+          <div class="group-plan_body">
+            <p class="group-plan_eyebrow text-style-tiny">What</p>
+            <p class="group-plan_big text-style-h4">{group.short}</p>
+            <p class="text-style-small">{group.what}</p>
+            <div class="group-plan_tags">
+              {group.tags.map((tag) => (
+                <Pill size="tiny">{tag}</Pill>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class="group-plan_cell">
+          <span class="group-plan_icon green">
+            <PathIcon d={icons.where} />
+          </span>
+          <div class="group-plan_body">
+            <p class="group-plan_eyebrow text-style-tiny">Where</p>
+            <p class="group-plan_big text-style-h4">{group.place}</p>
+            <p class="text-style-small">{group.address}</p>
+            <ActionButton
+              element="link"
+              href={mapHref}
+              color="white"
+              size="small"
+              target="_blank"
+              rel="noopener"
+              class="group-plan_action"
+            >
+              Open map
+            </ActionButton>
+          </div>
+        </div>
+
+        <div class="group-plan_cell">
+          <span class="group-plan_icon pink">
+            <PathIcon d={icons.when} />
+          </span>
+          <div class="group-plan_body">
+            <p class="group-plan_eyebrow text-style-tiny">When</p>
+            <p class="group-plan_big text-style-h4">{group.when}</p>
+            <p class="text-style-small">{group.countdown} · about 2 hours</p>
+            <ActionButton color="white" size="small" class="group-plan_action" data-calendar>
+              Add to calendar
+            </ActionButton>
+          </div>
+        </div>
+      </div>
+
+      <hr class="group-plan_rule" />
+
+      <div class="group-plan_rsvp">
+        <p class="group-plan_prompt text-style-main" data-prompt />
+        <ActionButton size="large" color="ink" data-yes>
+          I'm going
+        </ActionButton>
+        <ActionButton size="large" color="white" data-no>
+          Can't make it
+        </ActionButton>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, group, setAnswer, status, subscribe, toggleCalendar } from "@/lib/group-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-plan]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const goingLine = $("[data-going-line]");
+    const spots = $("[data-spots]");
+    const people = [...$("[data-stack]").children] as HTMLElement[];
+    const calendar = $("[data-calendar]");
+    const prompt = $("[data-prompt]");
+    const yes = $("[data-yes]");
+    const no = $("[data-no]");
+
+    $("[data-yes]").addEventListener("click", () => setAnswer(true));
+    $("[data-no]").addEventListener("click", () => setAnswer(false));
+    calendar.addEventListener("click", toggleCalendar);
+
+    /** Swaps a button's color class and label. */
+    const paint = (button: HTMLElement, pressed: boolean, off: string, on: string, offText: string, onText: string) => {
+      button.classList.remove(off, on);
+      button.classList.add(pressed ? on : off);
+      button.setAttribute("aria-pressed", String(pressed));
+      button.querySelector<HTMLElement>(".action-button_text")!.textContent = pressed ? onText : offText;
+    };
+
+    subscribe(() => {
+      const s = get();
+      const g = group();
+      const counts = status();
+      goingLine.textContent = `${counts.going} of ${counts.total} going`;
+      spots.textContent =
+        counts.open > 0
+          ? `${counts.open} open ${counts.open === 1 ? "spot" : "spots"} · ${g.minimum} needed to start`
+          : `Full · ${g.minimum} needed to start`;
+
+      /* The viewer's avatar is first, then the other members in order. */
+      people[0].classList.toggle("dim", s.going !== true);
+      g.members.forEach((member, index) => people[index + 1].classList.toggle("dim", !member.going));
+
+      paint(calendar, s.onCalendar, "white", "purple", "Add to calendar", "On your calendar");
+      prompt.textContent =
+        s.going === true ? "You are going." : s.going === false ? "You are not going." : "Are you going?";
+      paint(yes, s.going === true, "ink", "green", "I'm going", "You're going");
+      paint(no, s.going === false, "white", "pink", "Can't make it", "You're out");
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-plan_wrap {
+      gap: var(--space-4);
+    }
+
+    .group-plan_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 15.5rem), 1fr));
+      gap: var(--space-4) var(--space-5);
+    }
+
+    .group-plan_cell {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .group-plan_icon {
+      --_color: var(--colors-vivid-blue);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+
+      &.yellow {
+        --_color: var(--colors-vivid-yellow);
+      }
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+    }
+
+    .group-plan_body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .group-plan_eyebrow {
+      font-weight: var(--primary-bold);
+    }
+
+    .group-plan_big {
+      font-weight: var(--secondary-bold);
+    }
+
+    .group-plan_tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .group-plan_body .avatar_wrap.dim {
+      opacity: 0.4;
+    }
+
+    .group-plan_rule {
+      width: 100%;
+      margin: 0;
+      border: 0;
+      border-block-start: var(--border-width-medium) solid var(--border-subtle);
+    }
+
+    .group-plan_rsvp {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+
+      & > .action-button_wrap {
+        flex: 1 1 9rem;
+        max-width: 15rem;
+      }
+    }
+
+    .group-plan_prompt {
+      flex: 1 1 9rem;
+      font-weight: var(--primary-bold);
+    }
+  }
+</style>

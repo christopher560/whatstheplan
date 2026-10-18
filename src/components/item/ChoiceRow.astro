@@ -1,0 +1,172 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { AccentColor } from "@/types.ts";
+import PathIcon from "@/components/media/PathIcon.astro";
+
+interface Props extends Omit<HTMLAttributes<"button">, "color"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Main line. */
+  label: string;
+  /** Second line. */
+  sub?: string;
+  /** Stroke path for the round icon on the left. Omit for no icon. */
+  icon?: string;
+  /** Fill when picked. */
+  color?: AccentColor | "neutral";
+  /** Show the picked state. */
+  pressed?: boolean;
+  /** Show a check on the right when picked. */
+  check?: boolean;
+}
+
+const {
+  render = true,
+  label,
+  sub,
+  icon,
+  color = "yellow",
+  pressed = false,
+  check = false,
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+{
+  render && (
+    <button
+      type="button"
+      class:list={["choice-row_wrap", color, className]}
+      aria-pressed={String(pressed) as "true" | "false"}
+      {...rest}
+    >
+      {icon && (
+        <span class="choice-row_dot">
+          <PathIcon d={icon} />
+        </span>
+      )}
+      <span class="choice-row_text">
+        <span class="choice-row_label text-style-main">{label}</span>
+        {sub && <span class="choice-row_sub text-style-small">{sub}</span>}
+      </span>
+      {check && (
+        <span class="choice-row_check">
+          <PathIcon d="M5 12l5 5 9-10" variant="small" />
+        </span>
+      )}
+    </button>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .choice-row_wrap {
+      --_fill: var(--colors-vivid-yellow);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      width: 100%;
+      min-height: var(--control-height-large);
+      padding: var(--space-2) var(--space-4);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      color: var(--text);
+      text-align: start;
+      cursor: pointer;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      &.red {
+        --_fill: var(--colors-vivid-red);
+      }
+      &.orange {
+        --_fill: var(--colors-vivid-orange);
+      }
+      &.green {
+        --_fill: var(--colors-vivid-green);
+      }
+      &.blue {
+        --_fill: var(--colors-vivid-blue);
+      }
+      &.purple {
+        --_fill: var(--colors-vivid-purple);
+      }
+      &.pink {
+        --_fill: var(--colors-vivid-pink);
+      }
+      &.neutral {
+        --_fill: var(--background-muted);
+      }
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+      &:active {
+        scale: 0.98;
+      }
+      &[aria-pressed="true"] {
+        background-color: var(--_fill);
+        color: var(--colors-on-vivid);
+        box-shadow: 0 0 0 var(--border-width-thick) var(--border-strong);
+      }
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .choice-row_dot {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_fill);
+      color: var(--colors-on-vivid);
+
+      .choice-row_wrap[aria-pressed="true"] & {
+        background-color: var(--background-3);
+      }
+    }
+
+    .choice-row_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-0);
+      min-width: 0;
+    }
+
+    .choice-row_label {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .choice-row_sub {
+      display: block;
+      color: var(--text-2);
+
+      .choice-row_wrap[aria-pressed="true"] & {
+        color: inherit;
+      }
+    }
+
+    .choice-row_check {
+      display: none;
+      flex: none;
+
+      .choice-row_wrap[aria-pressed="true"] & {
+        display: inline-flex;
+      }
+    }
+  }
+</style>

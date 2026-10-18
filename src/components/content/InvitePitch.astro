@@ -1,0 +1,65 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Where "Make a free account" goes. */
+  signUpHref?: string;
+}
+
+const { render = true, signUpHref = "/app/onboarding" } = Astro.props;
+---
+
+{
+  render && (
+    <Panel variant="tint" tint="yellow" class="invite-pitch_wrap" aria-labelledby="invite-pitch-title" hidden data-pitch>
+      <div class="invite-pitch_text">
+        <h2 id="invite-pitch-title" class="invite-pitch_title text-style-h4">
+          Want plans this easy for your crew?
+        </h2>
+        <p class="text-style-main">
+          Make your own invite link in four taps and paint your week so friends see when you are
+          free. Free to start. Your reply here stays saved either way.
+        </p>
+      </div>
+      <ActionButton element="link" href={signUpHref} size="large" raised>
+        Make a free account
+      </ActionButton>
+    </Panel>
+  )
+}
+
+<script>
+  import { currentStep, subscribe } from "@/lib/invite-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-pitch]").forEach((root) => {
+    /* A soft invite to the app, only after the reply is sent. */
+    subscribe(() => (root.hidden = currentStep() !== "done"));
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-pitch_wrap {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .invite-pitch_text {
+      display: flex;
+      flex: 1 1 18rem;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .invite-pitch_title {
+      font-weight: var(--secondary-bold);
+    }
+  }
+</style>

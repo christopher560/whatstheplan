@@ -1,0 +1,65 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import type { GroupDetail } from "@/data/group.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  group?: GroupDetail;
+  /** Where "Find another group" goes. */
+  discoverHref?: string;
+}
+
+const { render = true, group, discoverHref = "/app/discover" } = Astro.props;
+---
+
+{
+  render && group && (
+    <Panel class="group-left_wrap" aria-labelledby="group-left-title" hidden data-left>
+      <h1 id="group-left-title" class="group-left_title text-style-h2">
+        You left {group.title}.
+      </h1>
+      <p class="group-left_text text-style-main">It's off your calendar and your chat is gone.</p>
+      <div class="group-left_buttons">
+        <ActionButton element="link" href={discoverHref} size="large" raised>
+          Find another group
+        </ActionButton>
+        <ActionButton color="white" size="large" data-undo>
+          Undo
+        </ActionButton>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, subscribe, undoLeave } from "@/lib/group-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-left]").forEach((root) => {
+    root.querySelector("[data-undo]")!.addEventListener("click", undoLeave);
+    subscribe(() => (root.hidden = !get().left));
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-left_wrap {
+      align-items: flex-start;
+    }
+
+    .group-left_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .group-left_text {
+      color: var(--text-2);
+    }
+
+    .group-left_buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+  }
+</style>

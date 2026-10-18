@@ -109,8 +109,9 @@ const cards = [
     matchesCategory,
     replyOf,
     subscribe,
-    toggleAdded,
+    addToCalendar,
   } from "@/lib/plans-store.ts";
+  import { flashButton } from "@/lib/ui.ts";
   import type { PlanCategory } from "@/data/plans.ts";
 
   document.querySelectorAll<HTMLElement>("[data-going]").forEach((root) => {
@@ -119,10 +120,11 @@ const cards = [
     const invites = new Map(getHub().invites.map((invite) => [invite.id, invite]));
 
     root.addEventListener("click", (event) => {
-      const id = (event.target as HTMLElement)
-        .closest<HTMLElement>("[data-add]")
-        ?.closest<HTMLElement>("[data-plan]")?.dataset.plan;
-      if (id) toggleAdded(id);
+      const button = (event.target as HTMLElement).closest<HTMLElement>("[data-add]");
+      const id = button?.closest<HTMLElement>("[data-plan]")?.dataset.plan;
+      if (!button || !id) return;
+      addToCalendar(id);
+      flashButton(button, "Added to calendar");
     });
 
     subscribe(() => {
@@ -135,14 +137,6 @@ const cards = [
         const visible = confirmed && matchesCategory(card.dataset.category as PlanCategory);
         card.hidden = !visible;
         if (visible) shown += 1;
-        const added = !!s.added[card.dataset.plan!];
-        const button = card.querySelector<HTMLElement>("[data-add]")!;
-        button.classList.toggle("white", !added);
-        button.classList.toggle("green", added);
-        button.setAttribute("aria-pressed", String(added));
-        button.querySelector<HTMLElement>(".action-button_text")!.textContent = added
-          ? "On your calendar"
-          : "Add to calendar";
       });
       root.querySelector<HTMLElement>("[data-count]")!.textContent = String(shown);
       empty.hidden = shown > 0;

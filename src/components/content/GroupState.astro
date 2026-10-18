@@ -1,0 +1,21 @@
+---
+import type { GroupPage } from "@/lib/group-store.ts";
+
+interface Props {
+  /** The group and viewer the components start from. */
+  page?: GroupPage;
+}
+
+const { page } = Astro.props;
+---
+
+{
+  page && (
+    <script
+      is:inline
+      type="application/json"
+      id="group-data"
+      set:html={JSON.stringify(page).replace(/</g, "\\u003c")}
+    />
+  )
+}

@@ -1,0 +1,278 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import IconButton from "@/components/item/IconButton.astro";
+import Input from "@/components/form/Input.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { chatStarters } from "@/data/group.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** First name used in the one-tap openers. */
+  viewerName?: string;
+}
+
+const { render = true, viewerName = "" } = Astro.props;
+---
+
+{
+  render && (
+    <Panel aria-labelledby="group-chat-title" data-chat>
+      <div class="group-chat_head">
+        <h2 id="group-chat-title" class="group-chat_title text-style-h4">Group chat</h2>
+        <p class="group-chat_meta text-style-small" data-meta />
+      </div>
+
+      <div class="group-chat_log" role="log" aria-live="polite" tabindex="0" data-log></div>
+
+      <div class="group-chat_starters" data-starters>
+        {chatStarters.map((starter) => (
+          <Pill element="button" size="main" color="yellow" data-starter>
+            {starter.replace("{name}", viewerName)}
+          </Pill>
+        ))}
+      </div>
+
+      <form class="group-chat_composer" data-composer>
+        <Input
+          variant="text"
+          label="Message the group"
+          labelHidden
+          placeholder="Say something"
+          maxlength={500}
+          autocomplete="off"
+          data-draft
+        />
+        <IconButton label="Send" type="submit" class="group-chat_send">
+          <PathIcon d="M5 12h14M13 6l6 6-6 6" />
+        </IconButton>
+      </form>
+
+      <template data-system-template>
+        <p class="group-chat_system text-style-small"></p>
+      </template>
+      <template data-message-template>
+        <div class="group-chat_row">
+          <span class="avatar_wrap small"></span>
+          <div class="group-chat_col">
+            <p class="group-chat_from text-style-small"></p>
+            <p class="group-chat_bubble text-style-main"></p>
+          </div>
+        </div>
+      </template>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, group, memberById, send, status, subscribe, viewer } from "@/lib/group-store.ts";
+  import { cloneFirst, setAccent } from "@/lib/ui.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-chat]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const log = $("[data-log]");
+    const meta = $("[data-meta]");
+    const starters = $("[data-starters]");
+    const composer = $<HTMLFormElement>("[data-composer]");
+    const draft = $<HTMLInputElement>("[data-draft]");
+    const systemTemplate = $<HTMLTemplateElement>("[data-system-template]");
+    const messageTemplate = $<HTMLTemplateElement>("[data-message-template]");
+    let drawn = -1;
+
+    composer.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (send(draft.value)) draft.value = "";
+    });
+    starters.addEventListener("click", (event) => {
+      const starter = (event.target as HTMLElement).closest<HTMLElement>("[data-starter]");
+      if (!starter) return;
+      draft.value = starter.textContent?.trim() ?? "";
+      draft.focus();
+    });
+
+    subscribe(() => {
+      const s = get();
+      const g = group();
+      const me = viewer();
+      let messages = 0;
+
+      const rows = [
+        ...g.chat.map((line) => ({ ...line, own: false })),
+        ...s.sent.map((line) => ({ kind: "message" as const, id: line.id, from: "you", text: line.text, time: line.time, own: true })),
+      ].map((line) => {
+        if (line.kind === "system") {
+          const row = cloneFirst(systemTemplate);
+          row.textContent = line.text;
+          return row;
+        }
+        messages += 1;
+        const member = line.own ? undefined : memberById(line.from);
+        const name = line.own ? "You" : (member?.name ?? "Someone");
+        const hidden = !line.own && !!s.blocked[line.from];
+
+        const row = cloneFirst(messageTemplate);
+        row.classList.toggle("own", line.own);
+        const avatar = row.querySelector<HTMLElement>(".avatar_wrap")!;
+        avatar.textContent = (line.own ? me.name : name).charAt(0).toUpperCase();
+        setAccent(avatar, line.own ? me.color : member?.color);
+        row.querySelector(".group-chat_from")!.textContent = `${name} · ${line.time}`;
+        const bubble = row.querySelector<HTMLElement>(".group-chat_bubble")!;
+        bubble.textContent = hidden ? `Hidden. You blocked ${name}.` : line.text;
+        bubble.classList.toggle("hidden", hidden);
+        return row;
+      });
+      /* Only the line the viewer just sent slides in; redraws stay still. */
+      if (drawn !== -1 && s.sent.length > drawn) rows[rows.length - 1].classList.add("new");
+      log.replaceChildren(...rows);
+      /* Stay at the newest line on first paint and after the viewer sends. */
+      if (drawn !== s.sent.length) log.scrollTop = log.scrollHeight;
+      drawn = s.sent.length;
+
+      meta.textContent = `${status().going} going · ${messages} ${messages === 1 ? "message" : "messages"}`;
+      starters.hidden = s.sent.length > 0;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-chat_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .group-chat_title {
+      font-weight: var(--secondary-bold);
+      white-space: nowrap;
+    }
+
+    .group-chat_meta {
+      color: var(--text-2);
+    }
+
+    .group-chat_log {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      height: clamp(20rem, 55svh, 26rem);
+      padding: var(--space-1);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .group-chat_system {
+      align-self: center;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-round);
+      background-color: var(--background);
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .group-chat_row {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-2);
+
+      &.new {
+        animation: group-chat-in var(--reveal-duration) var(--ease-out) backwards;
+      }
+      &.own {
+        flex-direction: row-reverse;
+      }
+    }
+
+    .group-chat_col {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-0);
+      max-width: 78%;
+      min-width: 0;
+
+      .own & {
+        align-items: flex-end;
+      }
+    }
+
+    .group-chat_from {
+      display: block;
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .group-chat_bubble {
+      display: block;
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      overflow-wrap: anywhere;
+
+      .own & {
+        background-color: var(--status-free-background);
+      }
+      &.hidden {
+        background-color: var(--background);
+        color: var(--text-2);
+        font-style: italic;
+      }
+    }
+
+    .group-chat_starters {
+      display: flex;
+      gap: var(--space-2);
+      padding-block-end: var(--space-1);
+      overflow-x: auto;
+      scrollbar-width: none;
+
+      &[hidden] {
+        display: none;
+      }
+      & > * {
+        flex: none;
+      }
+    }
+
+    .group-chat_composer {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-2);
+
+      & .form-input {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .group-chat_send.icon-button_wrap {
+      --_size: var(--control-height-main);
+      background-color: var(--colors-vivid-orange);
+      border-color: var(--border-strong);
+      border-width: var(--border-width-thick);
+      box-shadow: var(--shadow-offset-small);
+      color: var(--colors-on-vivid);
+
+      &:hover:not(:disabled) {
+        background-color: var(--colors-vivid-orange);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    @keyframes group-chat-in {
+      from {
+        opacity: 0.2;
+        translate: 0 0.625rem;
+        scale: 0.96;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+        scale: 1;
+      }
+    }
+  }
+</style>

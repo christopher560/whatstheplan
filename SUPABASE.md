@@ -186,8 +186,10 @@ Notes:
 
 ## Stack (decided)
 
-- Porkbun: domain. Cloudflare: hosting, DNS (Porkbun nameservers) and scheduled
-  jobs (Cron Triggers for reminders). Vercel Hobby is the fallback.
+- Porkbun: domain (`whatstheplan.social`). Vercel: hosting and scheduled jobs
+  (Vercel Cron for reminders; Hobby allows daily runs only, so 24h nudges need
+  Pro or a Supabase `pg_cron` job). Cloudflare is no longer used, so swap
+  `@astrojs/cloudflare` and `wrangler.jsonc` for `@astrojs/vercel`.
 - Supabase: Postgres, Auth, Storage, Realtime and PostGIS.
 - Resend: invite and reminder emails, sent from a server action or an Edge
   Function, never from the browser.
@@ -329,3 +331,66 @@ friend_id, label)` that the friend never reads. Each friend row carries only a
 free or busy flag per day, never what they are doing. Accepting or declining and
 the add-friend link (`/add/{username}`) go through RPCs so a request cannot be
 spoofed.
+
+## Invite link (`/p/[slug]`)
+
+The public page a friend opens from a link the host copied. It has no app
+shell and needs no account. `src/lib/invite-repo.ts` is the seam:
+
+| Method | Supabase |
+| --- | --- |
+| `getInvite(slug)` | `plans` row by `slug` with the host's first name and color, the proposed `plan_slots`, and first names and colors of people already in (never anyone's contact details) |
+| `listSlugs()` | only for static builds; with SSR (`prerender = false`) drop `getStaticPaths` |
+| `replyAsGuest(slug, reply)` | insert a `plan_members` row with a null `user_id` and a signed `guest_token`; returns the guest's own link (`/r/{token}`) |
+
+Notes:
+- Each plan kind (`hangout`, `formal`, `school`) lists its own steps in
+  `Invite.steps`, so a new kind is data, not code. The answers go to
+  `plan_members` columns or a `jsonb` `answers` column: `rsvp`, `slot_votes`,
+  `comfort_cents` (private, only the group minimum is ever shown), `plus_one`,
+  `meal`, `diets`, `section`, `remind_via`, `remind_when`.
+- The guest token must be signed and unguessable, rate limited per IP, and let
+  the guest change their reply later from `/r/{token}` (not built yet).
+- **The copied link is the guest's own page.** `/r/{token}` (not built yet) shows
+  the last step of this page for that guest: their stored reply, the time that
+  won (`plans.locked_slot_id`), and the host's updates (`plan_events` for the
+  plan, newest first). They can change the reply from there, which updates the
+  same `plan_members` row, and a changed plan or new update shows up on reload
+  or through Realtime. The page store can start from the stored reply instead of
+  the defaults, so the form and the receipt are one view.
+- A signed-in person who opens the link should be matched to their own
+  `plan_members` row instead of becoming a guest.
+- "Make a free account" goes to `/app/onboarding`; after sign-up, claim the guest
+  row by its token so the reply carries over.
+- Reminders by text or email go through Resend and an SMS provider. Ask for the
+  contact detail only when the guest chooses that channel.
+- The prototype resolves `preview`, `beach-day`, `hangout-chill-5x9k` and
+  `trivia-crew` to the taco night sample so existing links do not 404.
+
+## Group page (`/app/groups/[id]`)
+
+The page for one Discover group the viewer joined, with its persistent chat. It
+shares one client store (`src/lib/group-store.ts`) between its components.
+`src/lib/group-repo.ts` is the seam; leaving, the calendar pin and friend
+requests reuse `discover-repo` and `plans-repo`:
+
+| Method | Supabase |
+| --- | --- |
+| `getGroup(id)` | `meetup_groups` + `meetup_members` (first name, color, note) + last 50 `group_messages` + the open `group_polls` row; returns nothing unless the viewer is a member |
+| `setGoing(groupId, going)` | update the viewer's `meetup_members.going` |
+| `vote(groupId, optionId)` | upsert `group_poll_votes`, one per person per poll |
+| `sendMessage(groupId, text)` | insert `group_messages` (`group_id`, `user_id`, `body` max 500, `created_at`); RLS allows members only |
+| `blockMember(memberId)` / `reportMember(memberId, reasonId)` | `blocks` and `reports` (see "Planned later"); a block hides both people from each other everywhere |
+
+Notes:
+- Chat is live: subscribe to `group_messages` for the group with Realtime and
+  append to the store. Text only at launch; no images, files or direct messages.
+- The status line ("Locked in", "N more yeses") is derived from `going` counts
+  against `meetup_groups.min_people`; compute it in a view so the page and the
+  Plans badge agree.
+- Members are returned as first name, color and a short note only. A blocked
+  member's messages are filtered in the query, not just hidden in the UI.
+- Reports about a minor go to the priority queue described under "Planned later".
+- Leaving writes a system line ("X left") and removes the calendar pin.
+- Groups without a hand-written sample are derived from the Discover data, so
+  every Discover group links to a working page.

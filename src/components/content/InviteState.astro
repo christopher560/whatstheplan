@@ -1,0 +1,21 @@
+---
+import type { Invite } from "@/data/invite.ts";
+
+interface Props {
+  /** The invite the components start from. */
+  invite?: Invite;
+}
+
+const { invite } = Astro.props;
+---
+
+{
+  invite && (
+    <script
+      is:inline
+      type="application/json"
+      id="invite-data"
+      set:html={JSON.stringify(invite).replace(/</g, "\\u003c")}
+    />
+  )
+}

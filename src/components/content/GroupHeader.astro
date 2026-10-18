@@ -1,0 +1,144 @@
+---
+import Pill from "@/components/item/Pill.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_chevron from "@/assets/icons/icon_chevron.svg";
+import type { GroupDetail } from "@/data/group.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  group?: GroupDetail;
+  /** Where "Plans" goes. */
+  plansHref?: string;
+}
+
+const { render = true, group, plansHref = "/app/plans" } = Astro.props;
+---
+
+{
+  render && group && (
+    <header class="group-header_wrap" data-group-header>
+      <a class="group-header_back" href={plansHref}>
+        <span class="group-header_arrow">
+          <Icon src={icon_chevron} variant="small" />
+        </span>
+        <span class="text-style-small">Plans</span>
+      </a>
+      <div class="group-header_row">
+        <div class="group-header_intro">
+          <div class="group-header_tags">
+            <Pill size="tiny" variant="filled" color={group.color}>
+              {group.category}
+            </Pill>
+            <Pill size="tiny" data-open>
+              Open spots
+            </Pill>
+          </div>
+          <h1 class="group-header_title text-style-title">{group.title}</h1>
+        </div>
+        <Pill size="main" variant="filled" role="status" class="group-header_status" data-status>
+          <span slot="before" class="group-header_dot" />
+          Status
+        </Pill>
+      </div>
+    </header>
+  )
+}
+
+<script>
+  import { status, subscribe } from "@/lib/group-store.ts";
+
+  const toneColor = { locked: "green", waiting: "yellow", forming: "orange" } as const;
+
+  document.querySelectorAll<HTMLElement>("[data-group-header]").forEach((root) => {
+    const open = root.querySelector<HTMLElement>("[data-open] .pill_text")!;
+    const pill = root.querySelector<HTMLElement>("[data-status]")!;
+    const pillText = pill.querySelector<HTMLElement>(".pill_text")!;
+
+    subscribe(() => {
+      const s = status();
+      open.textContent = s.open > 0 ? `${s.open} open ${s.open === 1 ? "spot" : "spots"}` : "Group is full";
+      pillText.textContent = s.label;
+      pill.dataset.tone = s.tone;
+      pill.classList.remove("green", "yellow", "orange");
+      pill.classList.add(toneColor[s.tone]);
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-header_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .group-header_back {
+      display: inline-flex;
+      align-items: center;
+      align-self: flex-start;
+      gap: var(--space-1);
+      min-height: var(--control-height-small);
+      font-weight: var(--primary-bold);
+    }
+
+    .group-header_arrow {
+      display: inline-flex;
+      rotate: 180deg;
+    }
+
+    .group-header_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .group-header_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .group-header_tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .group-header_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .group-header_status {
+      & .pill_text {
+        white-space: normal;
+      }
+    }
+
+    .group-header_dot {
+      flex: none;
+      width: var(--space-2);
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-round);
+      background-color: currentColor;
+
+      .group-header_status[data-tone="locked"] & {
+        animation: group-header-ping 2.2s ease-out infinite;
+      }
+    }
+
+    @keyframes group-header-ping {
+      0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-free) 55%, transparent);
+      }
+      80%,
+      100% {
+        box-shadow: 0 0 0 0.5rem transparent;
+      }
+    }
+  }
+</style>

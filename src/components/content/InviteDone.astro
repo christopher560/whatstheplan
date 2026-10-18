@@ -1,0 +1,427 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import type { Invite } from "@/data/invite.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The plan, for the host's updates and the time that won. */
+  invite?: Invite;
+}
+
+const { render = true, invite } = Astro.props;
+---
+
+{
+  render && invite && (
+    <div class="invite-steps_panel invite-done_wrap" data-step="done" hidden data-done>
+      <div class="invite-done_hero">
+        <span class="invite-done_confetti" aria-hidden="true" data-confetti></span>
+        <span class="invite-done_blob" data-blob>
+          <PathIcon d="" variant="large" />
+        </span>
+        <h2 class="invite-steps_heading invite-done_title text-style-h2" tabindex="-1" data-heading data-title />
+        <p class="invite-done_sub text-style-main" data-sub />
+      </div>
+
+      <div class="invite-done_extras" data-extras>
+        <div class="invite-done_win">
+          <span class="invite-done_win_icon">
+            <PathIcon d="M5 12l5 5 9-10" />
+          </span>
+          <div class="invite-done_win_text">
+            <p class="text-style-tiny">Time that won</p>
+            <p class="invite-done_win_time text-style-h4">{invite.winner.time}</p>
+            <p class="text-style-small" data-win-sub />
+          </div>
+        </div>
+
+        <div class="invite-done_updates">
+          <p class="invite-steps_label text-style-main">Updates from {invite.host.name}</p>
+          <ul class="invite-done_list">
+            {invite.updates.map((update) => (
+              <li class="invite-done_update">
+                <Avatar initial={invite.host.name} color={invite.host.color} size="small" />
+                <div class="invite-done_update_text">
+                  <p class="text-style-main">{update.text}</p>
+                  <p class="invite-reply_hint text-style-small">{update.time}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <dl class="invite-done_summary" data-summary-list></dl>
+
+      <div class="invite-done_link" data-link-box>
+        <p class="invite-steps_label text-style-main">Your link</p>
+        <p class="invite-done_url text-style-small" data-url />
+        <p class="invite-reply_hint text-style-small">
+          Keep it. It has your reply, and if the plan changes it updates here. No account needed.
+        </p>
+      </div>
+
+      <div class="invite-done_buttons" data-actions>
+        <ActionButton color="white" size="large" data-calendar>
+          Add to calendar
+        </ActionButton>
+        <ActionButton color="yellow" size="large" data-copy>
+          Copy my link
+        </ActionButton>
+      </div>
+
+      <ActionButton color="white" size="small" class="invite-done_change" data-change>
+        Change my reply
+      </ActionButton>
+    </div>
+  )
+}
+
+<script>
+  import { cleanName, currentStep, doneCopy, edit, get, getInvite, subscribe, summaryRows, update, winnerMissed } from "@/lib/invite-store.ts";
+  import { setIconPath } from "@/lib/ui.ts";
+
+  const confettiColors = ["red", "yellow", "green", "blue", "pink", "purple"];
+  const check = "M5 12l5 5 9-10";
+  const question = "M9 9a3 3 0 115 2c-1 1-2 1.5-2 3M12 18h.01";
+  const cross = "M6 6l12 12M18 6L6 18";
+
+  document.querySelectorAll<HTMLElement>("[data-done]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const blob = $("[data-blob]");
+    const confetti = $("[data-confetti]");
+    const list = $("[data-summary-list]");
+    const linkBox = $("[data-link-box]");
+    const url = $("[data-url]");
+    const actions = $("[data-actions]");
+    const calendar = $("[data-calendar]");
+    const copy = $("[data-copy]");
+    const extras = $("[data-extras]");
+    const winSub = $("[data-win-sub]");
+    const invite = getInvite();
+    let wasDone = false;
+
+    /** Turns a toggle button green and swaps its text while it is on. */
+    const mark = (button: HTMLElement, on: boolean, offColor: string, onText: string, offText: string) => {
+      button.classList.remove("green", offColor);
+      button.classList.add(on ? "green" : offColor);
+      button.setAttribute("aria-pressed", String(on));
+      button.querySelector<HTMLElement>(".action-button_text")!.textContent = on ? onText : offText;
+    };
+
+    const burst = () => {
+      confetti.replaceChildren(
+        ...Array.from({ length: 16 }, (_, index) => {
+          const angle = (index / 16) * Math.PI * 2;
+          const distance = 4.5 + (index % 4) * 1.4;
+          const piece = document.createElement("span");
+          piece.className = `invite-done_piece ${confettiColors[index % 6]}`;
+          piece.style.setProperty("--_x", `${(Math.cos(angle) * distance).toFixed(2)}rem`);
+          piece.style.setProperty("--_y", `${(Math.sin(angle) * distance).toFixed(2)}rem`);
+          piece.style.setProperty("--_r", `${index * 47}deg`);
+          piece.style.setProperty("--_delay", `${(index % 4) * 30}ms`);
+          return piece;
+        }),
+      );
+    };
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (target.closest("[data-change]")) return edit();
+      if (target.closest("[data-calendar]")) return update({ calendar: !get().calendar });
+      if (target.closest("[data-copy]")) {
+        const s = get();
+        void navigator.clipboard?.writeText(`${location.origin}${s.receipt}`).catch(() => {});
+        update({ copied: true });
+      }
+    });
+
+    subscribe(() => {
+      const done = currentStep() === "done";
+      if (!done) {
+        wasDone = false;
+        confetti.replaceChildren();
+        return;
+      }
+      const s = get();
+      const copyText = doneCopy();
+      const going = s.rsvp !== "out";
+
+      $("[data-title]").textContent = copyText.title;
+      $("[data-sub]").textContent = copyText.sub;
+      blob.dataset.rsvp = s.rsvp;
+      setIconPath(blob, s.rsvp === "in" ? check : s.rsvp === "maybe" ? question : cross);
+
+      list.replaceChildren(
+        ...summaryRows().flatMap((row) => {
+          const term = document.createElement("dt");
+          term.className = "invite-done_term text-style-small";
+          term.textContent = row.label;
+          const value = document.createElement("dd");
+          value.className = "invite-done_value text-style-small";
+          value.textContent = row.value;
+          return [term, value];
+        }),
+      );
+
+      extras.hidden = !going;
+      winSub.textContent = `${invite.winner.sub}${winnerMissed() ? ". Not one of your picks, change your reply if it does not work." : ""}`;
+      linkBox.hidden = !going;
+      actions.hidden = !going;
+      url.textContent = s.receipt ? `${location.origin}${s.receipt}` : "Saving your link…";
+      mark(calendar, s.calendar, "white", "Added to calendar", "Add to calendar");
+      mark(copy, s.copied, "yellow", "Link copied", "Copy my link");
+
+      if (!wasDone && s.rsvp === "in" && cleanName()) burst();
+      wasDone = true;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-done_hero {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      text-align: center;
+    }
+
+    .invite-done_blob {
+      --_color: var(--colors-vivid-green);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--avatar-xlarge) * 1.5);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+      animation: invite-done-beat 2.4s ease-in-out infinite;
+
+      &[data-rsvp="maybe"] {
+        --_color: var(--colors-vivid-yellow);
+      }
+      &[data-rsvp="out"] {
+        --_color: var(--colors-vivid-pink);
+      }
+    }
+
+    .invite-done_sub {
+      max-width: 26rem;
+    }
+
+    .invite-done_confetti {
+      position: absolute;
+      inset-inline-start: 50%;
+      inset-block-start: calc(var(--avatar-xlarge) * 0.75);
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .invite-done_piece {
+      --_color: var(--colors-vivid-red);
+      position: absolute;
+      inset: 0;
+      width: var(--space-2);
+      aspect-ratio: 1 / 1;
+      margin: calc(var(--space-2) * -0.5);
+      border-radius: var(--radius-small);
+      background-color: var(--_color);
+      animation: invite-done-burst 0.9s var(--ease-out) var(--_delay, 0ms) both;
+
+      &:nth-child(2n) {
+        border-radius: var(--radius-round);
+      }
+      &.yellow {
+        --_color: var(--colors-vivid-yellow);
+      }
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.blue {
+        --_color: var(--colors-vivid-blue);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+    }
+
+    .invite-done_extras {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .invite-done_win {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--status-free-background);
+    }
+
+    .invite-done_win_icon {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--status-free);
+      color: var(--colors-on-vivid);
+    }
+
+    .invite-done_win_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-0);
+      min-width: 0;
+    }
+
+    .invite-done_win_time {
+      font-weight: var(--secondary-bold);
+    }
+
+    .invite-done_updates {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .invite-done_list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .invite-done_update {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+    }
+
+    .invite-done_update_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-0);
+      min-width: 0;
+    }
+
+    .invite-done_summary {
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      gap: var(--space-2) var(--space-4);
+      margin: 0;
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+    }
+
+    .invite-done_term {
+      display: block;
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-done_value {
+      display: block;
+      margin: 0;
+      font-weight: var(--primary-bold);
+      text-align: end;
+    }
+
+    .invite-done_link {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-secondary-yellow);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .invite-done_url {
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-small);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .invite-done_buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+
+      &[hidden] {
+        display: none;
+      }
+      & > * {
+        flex: 1 1 11rem;
+      }
+    }
+
+    .invite-done_change {
+      align-self: flex-start;
+    }
+
+    @keyframes invite-done-beat {
+      0%,
+      100% {
+        scale: 1;
+      }
+      50% {
+        scale: 1.06;
+      }
+    }
+
+    @keyframes invite-done-burst {
+      0% {
+        opacity: 1;
+        translate: 0 0;
+        scale: 1;
+      }
+      100% {
+        opacity: 0;
+        translate: var(--_x) var(--_y);
+        scale: 0.3;
+        rotate: var(--_r);
+      }
+    }
+  }
+</style>

@@ -1,0 +1,234 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <Panel class="invite-steps_wrap" aria-label="Reply to this invite" data-steps>
+      <div class="invite-steps_progress" data-progress>
+        <div class="invite-steps_meta">
+          <span class="invite-steps_count text-style-small" data-step-text />
+          <span class="invite-steps_name text-style-small" data-step-name />
+        </div>
+        <div
+          class="invite-steps_track"
+          role="progressbar"
+          aria-label="Reply progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          data-track
+        >
+          <div class="invite-steps_fill" data-fill />
+        </div>
+      </div>
+
+      <slot />
+
+      <div class="invite-steps_nav" data-nav>
+        <ActionButton color="white" size="large" data-back>
+          Back
+        </ActionButton>
+        <ActionButton color="yellow" size="large" raised data-next>
+          Next
+        </ActionButton>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { stepLabels } from "@/data/invite.ts";
+  import { back, canContinue, currentStep, next, sequence, stepIndex, subscribe } from "@/lib/invite-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-steps]").forEach((root) => {
+    const progress = root.querySelector<HTMLElement>("[data-progress]")!;
+    const stepText = root.querySelector<HTMLElement>("[data-step-text]")!;
+    const stepName = root.querySelector<HTMLElement>("[data-step-name]")!;
+    const track = root.querySelector<HTMLElement>("[data-track]")!;
+    const fill = root.querySelector<HTMLElement>("[data-fill]")!;
+    const nav = root.querySelector<HTMLElement>("[data-nav]")!;
+    const backButton = root.querySelector<HTMLButtonElement>("[data-back]")!;
+    const nextButton = root.querySelector<HTMLButtonElement>("[data-next]")!;
+    const nextText = nextButton.querySelector<HTMLElement>(".action-button_text")!;
+    const panels = root.querySelectorAll<HTMLElement>("[data-step]");
+    let shown: string | null = null;
+
+    backButton.addEventListener("click", back);
+    nextButton.addEventListener("click", next);
+
+    subscribe(() => {
+      const kind = currentStep();
+      const sequenceNow = sequence();
+      const index = stepIndex();
+      const last = index === sequenceNow.length - 2;
+      const blocked = !canContinue();
+      const percent = Math.round(((index + 1) / sequenceNow.length) * 100);
+
+      progress.hidden = kind === "done";
+      nav.hidden = kind === "done";
+      panels.forEach((panel) => (panel.hidden = panel.dataset.step !== kind));
+
+      stepText.textContent = `Step ${index + 1} of ${sequenceNow.length}`;
+      stepName.textContent = stepLabels[kind];
+      fill.style.setProperty("--_progress", `${percent}%`);
+      track.setAttribute("aria-valuenow", String(percent));
+
+      backButton.hidden = index === 0;
+      nextButton.disabled = blocked;
+      const upcoming = sequenceNow[index + 1];
+      nextText.textContent = blocked
+        ? "Add your name to continue"
+        : last || !upcoming
+          ? "Send my reply"
+          : `Next: ${stepLabels[upcoming].toLowerCase()}`;
+      nextButton.classList.remove("yellow", "orange", "white");
+      nextButton.classList.add(blocked ? "white" : last ? "orange" : "yellow");
+
+      /* Move focus to the new step, but not on the first paint. */
+      if (shown !== null && shown !== kind) {
+        root.querySelector<HTMLElement>(`[data-step="${kind}"] [data-heading]`)?.focus();
+      }
+      shown = kind;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-steps_wrap {
+      gap: var(--space-4);
+    }
+
+    .invite-steps_progress {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .invite-steps_meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-1);
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-steps_name {
+      color: var(--text-2);
+    }
+
+    .invite-steps_track {
+      height: var(--space-2);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .invite-steps_fill {
+      width: var(--_progress, 0%);
+      height: 100%;
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-orange);
+      transition: width var(--reveal-duration) var(--ease-out);
+    }
+
+    .invite-steps_nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+
+      &[hidden] {
+        display: none;
+      }
+
+      & > [data-next] {
+        flex: 1;
+      }
+      & > [hidden] {
+        display: none;
+      }
+    }
+
+    /* Groups a component's panels without adding a box, so the gap isn't doubled */
+    .invite-steps_set {
+      display: contents;
+    }
+
+    /* Shared by every step panel */
+    .invite-steps_panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      animation: invite-steps-rise var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .invite-steps_heading {
+      font-weight: var(--secondary-bold);
+      outline: none;
+    }
+
+    .invite-steps_hint {
+      margin-block-start: calc(var(--space-2) * -1);
+      color: var(--text-2);
+    }
+
+    .invite-steps_group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+
+      &.column {
+        flex-direction: column;
+        flex-wrap: nowrap;
+      }
+    }
+
+    .invite-steps_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-steps_note {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+
+      &[data-tone="low"] {
+        border-style: dashed;
+        border-color: var(--border-strong);
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    @keyframes invite-steps-rise {
+      from {
+        opacity: 0.2;
+        translate: 0 1rem;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

@@ -1,0 +1,237 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import type { Invite } from "@/data/invite.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The plan being offered. */
+  invite?: Invite;
+}
+
+const { render = true, invite } = Astro.props;
+---
+
+{
+  render && invite && (
+    <Panel
+      tag="aside"
+      variant="tint"
+      tint={invite.color}
+      class="invite-summary_wrap"
+      aria-label="The plan"
+      data-summary
+    >
+      <div class="invite-summary_top">
+        <span class={`invite-summary_blob ${invite.color}`}>
+          <PathIcon d={invite.icon} variant="large" />
+        </span>
+        <div class="invite-summary_meta">
+          <Pill size="tiny" variant="filled">
+            {invite.label}
+          </Pill>
+          <p class="invite-summary_host text-style-main">{invite.host.name} invited you</p>
+        </div>
+      </div>
+
+      <h1 class="invite-summary_title text-style-h2">{invite.title}</h1>
+
+      <ul class="invite-summary_details">
+        {invite.details.map((detail) => (
+          <li class="invite-summary_detail">
+            <span class="invite-summary_icon">
+              <PathIcon d={detail.icon} variant="small" />
+            </span>
+            <span class="invite-summary_text text-style-main">{detail.text}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div class="invite-summary_crew">
+        <AvatarStack
+          size="main"
+          data-crew
+          people={invite.crew.map((person) => ({ initial: person.name, color: person.color }))}
+        />
+        <p class="invite-summary_who text-style-small" data-who />
+      </div>
+
+      <div class="invite-summary_note">
+        <Avatar initial={invite.host.name} color={invite.host.color} size="small" />
+        <p class="invite-summary_bubble text-style-main">{invite.note}</p>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { cleanName, currentStep, get, getInvite, stepIndex, subscribe } from "@/lib/invite-store.ts";
+  import { avatarElement } from "@/lib/ui.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-summary]").forEach((root) => {
+    const invite = getInvite();
+    const stack = root.querySelector<HTMLElement>("[data-crew]")!;
+    const who = root.querySelector<HTMLElement>("[data-who]")!;
+
+    subscribe(() => {
+      const s = get();
+      /* The guest joins the stack once they say yes and give a name. */
+      const joined = s.rsvp === "in" && cleanName().length > 0 && stepIndex() >= 1 && currentStep() !== "reply";
+      stack.querySelector("[data-you]")?.remove();
+      if (joined) {
+        const you = avatarElement(cleanName(), s.color, "main");
+        you.dataset.you = "";
+        stack.append(you);
+      }
+
+      const names = invite.crew.slice(0, 3).map((person) => person.name).join(", ");
+      const more = invite.crew.length > 3 ? ` and ${invite.crew.length - 3} more` : "";
+      who.textContent = `${invite.crew.length + (joined ? 1 : 0)} going: ${names}${more}${joined ? " and you" : ""}.`;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-summary_wrap {
+      gap: var(--space-4);
+    }
+
+    .invite-summary_top {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .invite-summary_blob {
+      --_color: var(--colors-vivid-yellow);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--avatar-xlarge) * 1.5);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+      animation: invite-summary-float 4.5s ease-in-out infinite;
+
+      &.red {
+        --_color: var(--colors-vivid-red);
+      }
+      &.orange {
+        --_color: var(--colors-vivid-orange);
+      }
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.blue {
+        --_color: var(--colors-vivid-blue);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+
+      & .path-icon_wrap {
+        --_size: calc(var(--avatar-xlarge) * 0.75);
+      }
+    }
+
+    .invite-summary_meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .invite-summary_host {
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-summary_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .invite-summary_details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .invite-summary_detail {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .invite-summary_icon {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+    }
+
+    .invite-summary_text {
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-summary_crew {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+    }
+
+    .invite-summary_who {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .invite-summary_note {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+    }
+
+    .invite-summary_bubble {
+      flex: 1;
+      min-width: 0;
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: 0.375rem var(--radius-main) var(--radius-main) var(--radius-main);
+      background-color: var(--background-3);
+    }
+
+    @keyframes invite-summary-float {
+      0%,
+      100% {
+        translate: 0 0;
+        rotate: -3deg;
+      }
+      50% {
+        translate: 0 -0.5rem;
+        rotate: 3deg;
+      }
+    }
+  }
+</style>

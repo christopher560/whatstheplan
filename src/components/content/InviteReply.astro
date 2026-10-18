@@ -1,0 +1,184 @@
+---
+import ChoiceRow from "@/components/item/ChoiceRow.astro";
+import Input from "@/components/form/Input.astro";
+import { guestColors, inviteIcons } from "@/data/invite.ts";
+import type { Invite } from "@/data/invite.ts";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The plan being offered. */
+  invite?: Invite;
+}
+
+const { render = true, invite } = Astro.props;
+
+const replyLook = {
+  in: { icon: inviteIcons.check, color: "green" as AccentColor | "neutral" },
+  maybe: { icon: inviteIcons.maybe, color: "yellow" as AccentColor | "neutral" },
+  out: { icon: inviteIcons.out, color: "neutral" as AccentColor | "neutral" },
+};
+---
+
+{
+  render && invite && (
+    <div class="invite-steps_set" data-reply-steps>
+      <div class="invite-steps_panel" data-step="reply" hidden>
+        <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+          {invite.replyTitle}
+        </h2>
+        <div class="invite-steps_group column" role="group" aria-label="Your reply">
+          {invite.replies.map((reply) => (
+            <ChoiceRow
+              label={reply.label}
+              sub={reply.sub}
+              icon={replyLook[reply.id].icon}
+              color={replyLook[reply.id].color}
+              data-reply={reply.id}
+            />
+          ))}
+        </div>
+        <p class="invite-reply_hint text-style-small">
+          Takes about 30 seconds. You do not need an account or the app.
+        </p>
+      </div>
+
+      <div class="invite-steps_panel" data-step="name" hidden>
+        <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+          What should we call you?
+        </h2>
+        <div class="invite-reply_field">
+          <Input
+            variant="first-name"
+            label="Your first name"
+            placeholder="e.g. Alex"
+            maxlength={20}
+            data-name
+          />
+          <p class="invite-reply_hint text-style-small">
+            Just a first name is fine. Friends see this next to your reply.
+          </p>
+        </div>
+        <div class="invite-reply_field" role="group" aria-labelledby="invite-color-label">
+          <p id="invite-color-label" class="invite-steps_label text-style-main">
+            Pick your bubble color
+          </p>
+          <div class="invite-reply_swatches">
+            {guestColors.map((color) => (
+              <button
+                type="button"
+                class="invite-reply_swatch"
+                style={`--_swatch: var(--colors-vivid-${color});`}
+                aria-label={`Color ${color}`}
+                aria-pressed="false"
+                data-color={color}
+              />
+            ))}
+          </div>
+        </div>
+        <div class="invite-reply_preview">
+          <span class="avatar_wrap large yellow" data-you>?</span>
+          <span class="invite-reply_preview_text text-style-main" data-preview />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  import { cleanName, get, getInvite, subscribe, update } from "@/lib/invite-store.ts";
+  import { setAccent } from "@/lib/ui.ts";
+  import type { Rsvp } from "@/data/invite.ts";
+  import type { AccentColor } from "@/types.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-reply-steps]").forEach((root) => {
+    const invite = getInvite();
+    const replies = root.querySelectorAll<HTMLElement>("[data-reply]");
+    const swatches = root.querySelectorAll<HTMLElement>("[data-color]");
+    const name = root.querySelector<HTMLInputElement>("[data-name]")!;
+    const you = root.querySelector<HTMLElement>("[data-you]")!;
+    const preview = root.querySelector<HTMLElement>("[data-preview]")!;
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const reply = target.closest<HTMLElement>("[data-reply]");
+      if (reply) return update({ rsvp: reply.dataset.reply as Rsvp });
+      const swatch = target.closest<HTMLElement>("[data-color]");
+      if (swatch) update({ color: swatch.dataset.color as AccentColor });
+    });
+    name.addEventListener("input", () => update({ name: name.value.slice(0, 20) }));
+
+    subscribe(() => {
+      const s = get();
+      replies.forEach((row) => row.setAttribute("aria-pressed", String(row.dataset.reply === s.rsvp)));
+      swatches.forEach((swatch) =>
+        swatch.setAttribute("aria-pressed", String(swatch.dataset.color === s.color)),
+      );
+      if (name.value !== s.name) name.value = s.name;
+
+      const label = invite.replies.find((reply) => reply.id === s.rsvp)?.label ?? "";
+      you.textContent = cleanName() ? cleanName().charAt(0).toUpperCase() : "?";
+      setAccent(you, s.color);
+      preview.textContent = cleanName()
+        ? `${cleanName()} (${label})`
+        : "This is how you will show up";
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-reply_hint {
+      color: var(--text-2);
+    }
+
+    .invite-reply_field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .invite-reply_swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .invite-reply_swatch {
+      --_swatch: var(--colors-vivid-yellow);
+      width: var(--control-height-main);
+      aspect-ratio: 1 / 1;
+      padding: 0;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_swatch);
+      cursor: pointer;
+      transition:
+        box-shadow var(--hover-duration) var(--hover-ease),
+        scale var(--hover-duration) var(--ease-spring);
+
+      &:active {
+        scale: 0.92;
+      }
+      &[aria-pressed="true"] {
+        box-shadow:
+          0 0 0 var(--border-width-thick) var(--background-3),
+          0 0 0 calc(var(--border-width-thick) * 2.5) var(--border-strong);
+      }
+    }
+
+    .invite-reply_preview {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+    }
+
+    .invite-reply_preview_text {
+      font-weight: var(--primary-bold);
+    }
+  }
+</style>

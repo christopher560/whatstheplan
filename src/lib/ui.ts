@@ -32,3 +32,31 @@ export const avatarElement = (name: string, color: AccentColor, size = "small") 
 /** Pushes the stroke path into a `PathIcon` clone. */
 export const setIconPath = (root: ParentNode, d: string) =>
   root.querySelector<SVGPathElement>("[data-path]")?.setAttribute("d", d);
+
+const flashTimers = new WeakMap<HTMLElement, number>();
+
+/**
+ * Pops an `ActionButton` green with a confirmation, then puts it back as it was.
+ * For one-shot actions like copying a link, where the button should not stay on.
+ */
+export const flashButton = (button: HTMLElement, doneText: string, ms = 2000) => {
+  const label = button.querySelector<HTMLElement>(".action-button_text")!;
+  button.dataset.label ??= label.textContent?.trim() ?? "";
+  window.clearTimeout(flashTimers.get(button));
+
+  /* Restart the pop even when the button is pressed again mid-flash. */
+  button.classList.remove("flash");
+  void button.offsetWidth;
+  button.classList.replace("white", "green");
+  button.classList.add("flash");
+  label.textContent = doneText;
+
+  flashTimers.set(
+    button,
+    window.setTimeout(() => {
+      button.classList.remove("flash");
+      button.classList.replace("green", "white");
+      label.textContent = button.dataset.label!;
+    }, ms),
+  );
+};

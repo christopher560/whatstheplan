@@ -16,10 +16,6 @@ export interface PlansState {
   category: CategoryFilter;
   inviteTab: InviteTab;
   replies: Record<string, InviteReply>;
-  /** Plan ids whose share link was copied. */
-  copied: Record<string, boolean>;
-  /** Plan and group ids on the calendar. */
-  added: Record<string, boolean>;
   /** People who got a friend request. */
   requested: Record<string, boolean>;
 }
@@ -37,8 +33,6 @@ export const getHub = (): PlansHub => {
       category: "all",
       inviteTab: "pending",
       replies: hub.replies,
-      copied: {},
-      added: {},
       requested: {},
     };
   }
@@ -81,16 +75,8 @@ export const answer = (id: string, reply: InviteReply) => {
   void answerInvite(id, reply);
 };
 
-export const toggleCopied = (id: string) => {
-  const copied = !get().copied[id];
-  update({ copied: { ...get().copied, [id]: copied } });
-};
-
-export const toggleAdded = (id: string) => {
-  const added = !get().added[id];
-  update({ added: { ...get().added, [id]: added } });
-  void setOnCalendar(id, added);
-};
+/** Puts a plan or group on the calendar. The button only flashes, so nothing is kept here. */
+export const addToCalendar = (id: string) => void setOnCalendar(id, true);
 
 export const toggleRequest = (name: string) => {
   const sent = !get().requested[name];

@@ -91,7 +91,8 @@ const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
 }
 
 <script>
-  import { get, matchesCategory, subscribe, toggleCopied } from "@/lib/plans-store.ts";
+  import { get, matchesCategory, subscribe } from "@/lib/plans-store.ts";
+  import { flashButton } from "@/lib/ui.ts";
   import type { PlanCategory } from "@/data/plans.ts";
 
   document.querySelectorAll<HTMLElement>("[data-hosting]").forEach((root) => {
@@ -102,10 +103,8 @@ const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
       const button = (event.target as HTMLElement).closest<HTMLElement>("[data-copy]");
       const id = button?.closest<HTMLElement>("[data-plan]")?.dataset.plan;
       if (!id) return;
-      if (!get().copied[id]) {
-        void navigator.clipboard?.writeText(`${location.origin}/p/${id}`).catch(() => {});
-      }
-      toggleCopied(id);
+      void navigator.clipboard?.writeText(`${location.origin}/p/${id}`).catch(() => {});
+      flashButton(button!, "Link copied");
     });
 
     subscribe(() => {
@@ -116,14 +115,6 @@ const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
         const visible = matchesCategory(card.dataset.category as PlanCategory);
         card.hidden = !visible;
         if (visible) shown += 1;
-        const copied = !!s.copied[card.dataset.plan!];
-        const button = card.querySelector<HTMLElement>("[data-copy]")!;
-        button.classList.toggle("white", !copied);
-        button.classList.toggle("green", copied);
-        button.setAttribute("aria-pressed", String(copied));
-        button.querySelector<HTMLElement>(".action-button_text")!.textContent = copied
-          ? "Link copied"
-          : "Share link";
       });
       root.querySelector<HTMLElement>("[data-count]")!.textContent = String(shown);
       empty.hidden = shown > 0;

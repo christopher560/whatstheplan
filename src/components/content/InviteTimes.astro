@@ -1,0 +1,231 @@
+---
+import Pill from "@/components/item/Pill.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { inviteIcons, inviteOptions } from "@/data/invite.ts";
+import type { Invite } from "@/data/invite.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The plan being offered. */
+  invite?: Invite;
+}
+
+const { render = true, invite } = Astro.props;
+const hasTimes = invite?.steps.includes("times");
+const hasBudget = invite?.steps.includes("budget");
+---
+
+{
+  render && invite && (hasTimes || hasBudget) && (
+    <div class="invite-steps_set" data-times>
+      {hasTimes && (
+        <div class="invite-steps_panel" data-step="times" hidden>
+          <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+            When can you make it?
+          </h2>
+          <p class="invite-steps_hint text-style-main">
+            Tap every time that works. We will lock in the one most people can do.
+          </p>
+          <div class="invite-steps_group column" role="group" aria-label="Times">
+            {invite.slots.map((slot) => (
+              <button
+                type="button"
+                class="invite-times_slot"
+                aria-pressed="false"
+                data-slot={slot.id}
+                data-free={slot.free}
+              >
+                <span class="invite-times_top">
+                  <span class="invite-times_when">
+                    <span class="invite-times_day text-style-h5">{slot.day}</span>
+                    <span class="invite-times_time text-style-main">· {slot.time}</span>
+                  </span>
+                  {slot.tag && (
+                    <Pill size="tiny" variant="filled" color="yellow">
+                      {slot.tag}
+                    </Pill>
+                  )}
+                </span>
+                <span class="invite-times_meter">
+                  <span class="invite-times_track" aria-hidden="true">
+                    <span class="invite-times_fill" data-fill />
+                  </span>
+                  <span class="invite-times_count text-style-small" data-count />
+                </span>
+                <span class="invite-times_who text-style-small">{slot.who}</span>
+              </button>
+            ))}
+            <Pill element="button" size="main" class="invite-times_none" data-none>
+              None of these work for me
+            </Pill>
+          </div>
+        </div>
+      )}
+
+      {hasBudget && (
+        <div class="invite-steps_panel" data-step="budget" hidden>
+          <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+            What feels comfortable to spend?
+          </h2>
+          <p class="invite-steps_hint text-style-main">This plan is about ${invite.perPerson} each.</p>
+          <div class="invite-steps_group" role="group" aria-label="Comfortable spend">
+            {inviteOptions.budget.map((option, index) => (
+              <Pill element="button" size="main" color="green" data-budget={index}>
+                {option.label}
+              </Pill>
+            ))}
+          </div>
+          <div class="invite-steps_note" data-budget-note>
+            <PathIcon d={inviteIcons.lock} />
+            <p class="text-style-small" data-budget-text />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+<script>
+  import { belowCost, get, getInvite, subscribe, toggleSlot, update } from "@/lib/invite-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-times]").forEach((root) => {
+    const invite = getInvite();
+    const slots = root.querySelectorAll<HTMLElement>("[data-slot]");
+    const none = root.querySelector<HTMLElement>("[data-none]");
+    const budgets = root.querySelectorAll<HTMLElement>("[data-budget]");
+    const note = root.querySelector<HTMLElement>("[data-budget-note]");
+    const noteText = root.querySelector<HTMLElement>("[data-budget-text]");
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const slot = target.closest<HTMLElement>("[data-slot]");
+      if (slot) return toggleSlot(slot.dataset.slot!);
+      if (target.closest("[data-none]")) {
+        return update({ none: !get().none, slots: [] });
+      }
+      const budget = target.closest<HTMLElement>("[data-budget]");
+      if (budget) update({ budget: Number(budget.dataset.budget) });
+    });
+
+    subscribe(() => {
+      const s = get();
+      slots.forEach((slot) => {
+        const on = s.slots.includes(slot.dataset.slot!);
+        const count = Number(slot.dataset.free) + (on ? 1 : 0);
+        slot.setAttribute("aria-pressed", String(on));
+        slot.querySelector<HTMLElement>("[data-fill]")!.style.setProperty(
+          "--_value",
+          `${Math.round((count / invite.invited) * 100)}%`,
+        );
+        slot.querySelector<HTMLElement>("[data-count]")!.textContent =
+          `${count} of ${invite.invited} free`;
+      });
+      none?.setAttribute("aria-pressed", String(s.none));
+      budgets.forEach((button) =>
+        button.setAttribute("aria-pressed", String(Number(button.dataset.budget) === s.budget)),
+      );
+
+      if (!note || !noteText) return;
+      const low = belowCost();
+      note.dataset.tone = low ? "low" : "private";
+      noteText.textContent = low
+        ? `${invite.title} is about $${invite.perPerson}. ${invite.host.name} may suggest something cheaper, and you can still say you are in.`
+        : `Private. ${invite.host.name} and the group only see the lowest comfortable number across everyone, never yours.`;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-times_slot {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-2);
+      width: 100%;
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      color: var(--text);
+      text-align: start;
+      cursor: pointer;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+      &[aria-pressed="true"] {
+        background-color: var(--status-free-background);
+        box-shadow: 0 0 0 var(--border-width-thick) var(--border-strong);
+      }
+    }
+
+    .invite-times_top,
+    .invite-times_meter {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .invite-times_when {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-1) var(--space-2);
+    }
+
+    .invite-times_day {
+      display: block;
+      font-weight: var(--secondary-bold);
+    }
+
+    .invite-times_time {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-times_track {
+      flex: 1;
+      height: var(--space-2);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .invite-times_fill {
+      display: block;
+      width: var(--_value, 0%);
+      height: 100%;
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-yellow);
+      transition: width var(--move-duration) var(--ease-out);
+
+      .invite-times_slot[aria-pressed="true"] & {
+        background-color: var(--status-free);
+      }
+    }
+
+    .invite-times_count {
+      display: block;
+      flex: none;
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-times_who {
+      display: block;
+      color: var(--text-2);
+    }
+
+    .invite-times_none {
+      align-self: stretch;
+    }
+  }
+</style>

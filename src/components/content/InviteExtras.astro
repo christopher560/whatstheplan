@@ -1,0 +1,190 @@
+---
+import ChoiceRow from "@/components/item/ChoiceRow.astro";
+import Pill from "@/components/item/Pill.astro";
+import Input from "@/components/form/Input.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { inviteIcons, inviteOptions } from "@/data/invite.ts";
+import type { Invite } from "@/data/invite.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The plan being offered. */
+  invite?: Invite;
+}
+
+const { render = true, invite } = Astro.props;
+const has = (id: Invite["steps"][number]) => invite?.steps.includes(id) ?? false;
+---
+
+{
+  render && invite && (has("guests") || has("meal") || has("class") || has("remind")) && (
+    <div class="invite-steps_set" data-extras>
+      {has("guests") && (
+        <div class="invite-steps_panel" data-step="guests" hidden>
+          <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+            Bringing a plus-one?
+          </h2>
+          <div class="invite-steps_group" role="group" aria-label="Plus one">
+            <Pill element="button" size="main" data-plus="false">
+              No, just me
+            </Pill>
+            <Pill element="button" size="main" data-plus="true">
+              Yes, plus one
+            </Pill>
+          </div>
+          <div class="invite-extras_guest" hidden data-guest-field>
+            <Input
+              variant="first-name"
+              label="Guest name"
+              placeholder="Their first name"
+              maxlength={20}
+              data-guest
+            />
+            <p class="invite-reply_hint text-style-small">
+              {invite.host.name} will send them their own reminder. They do not need an account
+              either.
+            </p>
+          </div>
+          {invite.dressCode && (
+            <div class="invite-steps_note">
+              <PathIcon d={inviteIcons.dress} />
+              <p class="text-style-small">{invite.dressCode}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {has("meal") && invite.meals && (
+        <div class="invite-steps_panel" data-step="meal" hidden>
+          <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+            What would you like to eat?
+          </h2>
+          <div class="invite-steps_group column" role="group" aria-label="Meal">
+            {invite.meals.map((meal) => (
+              <ChoiceRow label={meal.label} color="purple" check data-meal={meal.id} />
+            ))}
+          </div>
+          <p class="invite-steps_label text-style-main">Anything we should know?</p>
+          <div class="invite-steps_group" role="group" aria-label="Dietary needs">
+            {inviteOptions.diets.map((diet) => (
+              <Pill element="button" size="main" color="yellow" data-diet={diet.id}>
+                {diet.label}
+              </Pill>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {has("class") && invite.sections && (
+        <div class="invite-steps_panel" data-step="class" hidden>
+          <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+            Which section are you in?
+          </h2>
+          <p class="invite-steps_hint text-style-main">
+            {invite.host.name} uses this to see who from each section is coming.
+          </p>
+          <div class="invite-steps_group column" role="group" aria-label="Section">
+            {invite.sections.map((section) => (
+              <ChoiceRow
+                label={section.label}
+                sub={section.sub}
+                color="blue"
+                check
+                data-section={section.id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {has("remind") && (
+        <div class="invite-steps_panel" data-step="remind" hidden>
+          <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
+            How should we remind you?
+          </h2>
+          <p class="invite-steps_label text-style-main">Where</p>
+          <div class="invite-steps_group" role="group" aria-label="Reminder channel">
+            {inviteOptions.channels.map((channel) => (
+              <Pill element="button" size="main" color="blue" data-channel={channel.id}>
+                {channel.label}
+              </Pill>
+            ))}
+          </div>
+          <p class="invite-steps_label text-style-main">When</p>
+          <div class="invite-steps_group" role="group" aria-label="Reminder timing">
+            {inviteOptions.when.map((when) => (
+              <Pill element="button" size="main" color="yellow" data-when={when.id}>
+                {when.label}
+              </Pill>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+<script>
+  import { get, subscribe, toggleDiet, toggleRemind, update } from "@/lib/invite-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-extras]").forEach((root) => {
+    const $$ = (selector: string) => root.querySelectorAll<HTMLElement>(selector);
+    const plans = $$("[data-plus]");
+    const guestField = root.querySelector<HTMLElement>("[data-guest-field]");
+    const guest = root.querySelector<HTMLInputElement>("[data-guest]");
+    const meals = $$("[data-meal]");
+    const diets = $$("[data-diet]");
+    const sections = $$("[data-section]");
+    const channels = $$("[data-channel]");
+    const whens = $$("[data-when]");
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const pick = (selector: string) => target.closest<HTMLElement>(selector);
+      const plus = pick("[data-plus]");
+      if (plus) return update({ plus: plus.dataset.plus === "true" });
+      const meal = pick("[data-meal]");
+      if (meal) return update({ meal: meal.dataset.meal! });
+      const diet = pick("[data-diet]");
+      if (diet) return toggleDiet(diet.dataset.diet!);
+      const section = pick("[data-section]");
+      if (section) return update({ section: section.dataset.section! });
+      const channel = pick("[data-channel]");
+      if (channel) return toggleRemind(channel.dataset.channel!);
+      const when = pick("[data-when]");
+      if (when) update({ when: when.dataset.when! });
+    });
+    guest?.addEventListener("input", () => update({ guest: guest.value.slice(0, 20) }));
+
+    const press = (list: NodeListOf<HTMLElement>, key: string, on: (value: string) => boolean) =>
+      list.forEach((item) => item.setAttribute("aria-pressed", String(on(item.dataset[key]!))));
+
+    subscribe(() => {
+      const s = get();
+      press(plans, "plus", (value) => (value === "true") === s.plus);
+      if (guestField) guestField.hidden = !s.plus;
+      if (guest && guest.value !== s.guest) guest.value = s.guest;
+      press(meals, "meal", (value) => value === s.meal);
+      press(diets, "diet", (value) => s.diets.includes(value));
+      press(sections, "section", (value) => value === s.section);
+      press(channels, "channel", (value) => s.remind.includes(value));
+      press(whens, "when", (value) => value === s.when);
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-extras_guest {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      animation: invite-steps-rise var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>

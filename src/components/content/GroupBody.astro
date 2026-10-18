@@ -1,0 +1,40 @@
+---
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <div class="group-body_wrap" data-group-body>
+      <slot />
+    </div>
+  )
+}
+
+<script>
+  import { get, subscribe } from "@/lib/group-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-group-body]").forEach((root) => {
+    /* Everything else on the page steps aside once the viewer leaves. */
+    subscribe(() => (root.hidden = get().left));
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-body_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      min-width: 0;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>

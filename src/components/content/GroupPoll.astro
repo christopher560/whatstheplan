@@ -1,0 +1,126 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import type { GroupPoll } from "@/data/group.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The open vote, if the group has one. */
+  poll?: GroupPoll;
+}
+
+const { render = true, poll } = Astro.props;
+---
+
+{
+  render && poll && (
+    <Panel aria-labelledby="group-poll-title" data-poll>
+      <h2 id="group-poll-title" class="group-poll_title text-style-h4">
+        {poll.question}
+      </h2>
+      <div class="group-poll_options">
+        {poll.options.map((option) => (
+          <button type="button" class="group-poll_option" aria-pressed="false" data-option={option.id}>
+            <span class="group-poll_fill" data-fill />
+            <span class="group-poll_label text-style-main">{option.label}</span>
+            <span class="group-poll_count text-style-small" data-count />
+          </button>
+        ))}
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { castVote, get, group, subscribe } from "@/lib/group-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-poll]").forEach((root) => {
+    const poll = group().poll;
+    if (!poll) return;
+    const options = root.querySelectorAll<HTMLElement>("[data-option]");
+
+    root.addEventListener("click", (event) => {
+      const option = (event.target as HTMLElement).closest<HTMLElement>("[data-option]");
+      if (option) castVote(option.dataset.option!);
+    });
+
+    subscribe(() => {
+      const mine = get().vote;
+      const votes = (id: string, voters: string[]) => voters.length + (mine === id ? 1 : 0);
+      const total = poll.options.reduce((sum, option) => sum + votes(option.id, option.voters), 0) || 1;
+
+      options.forEach((button) => {
+        const option = poll.options.find((item) => item.id === button.dataset.option)!;
+        const count = votes(option.id, option.voters);
+        button.setAttribute("aria-pressed", String(mine === option.id));
+        button.querySelector<HTMLElement>("[data-fill]")!.style.setProperty(
+          "--_value",
+          `${Math.round((count / total) * 100)}%`,
+        );
+        button.querySelector<HTMLElement>("[data-count]")!.textContent =
+          `${count} ${count === 1 ? "vote" : "votes"}`;
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-poll_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .group-poll_options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .group-poll_option {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      width: 100%;
+      min-height: var(--control-height-large);
+      padding-inline: var(--space-4);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      color: var(--text);
+      overflow: hidden;
+      text-align: start;
+      cursor: pointer;
+      transition: box-shadow var(--hover-duration) var(--hover-ease);
+
+      &[aria-pressed="true"] {
+        border-color: var(--border-strong);
+        box-shadow: 0 0 0 var(--border-width-medium) var(--border-strong);
+      }
+    }
+
+    .group-poll_fill {
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      width: var(--_value, 0%);
+      background-color: var(--colors-secondary-purple);
+      transition: width var(--reveal-duration) var(--ease-out);
+
+      .group-poll_option[aria-pressed="true"] & {
+        background-color: var(--colors-vivid-yellow);
+      }
+    }
+
+    .group-poll_label,
+    .group-poll_count {
+      position: relative;
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .group-poll_label {
+      flex: 1;
+    }
+  }
+</style>

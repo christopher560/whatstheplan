@@ -1,0 +1,48 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import DashboardColumns from "@/components/wrapper/DashboardColumns.astro";
+import GroupState from "@/components/content/GroupState.astro";
+import GroupLeft from "@/components/content/GroupLeft.astro";
+import GroupBody from "@/components/content/GroupBody.astro";
+import GroupHeader from "@/components/content/GroupHeader.astro";
+import GroupPlan from "@/components/content/GroupPlan.astro";
+import GroupPoll from "@/components/content/GroupPoll.astro";
+import GroupChat from "@/components/content/GroupChat.astro";
+import GroupMembers from "@/components/content/GroupMembers.astro";
+import GroupLeave from "@/components/content/GroupLeave.astro";
+import GroupToast from "@/components/content/GroupToast.astro";
+import { groupRepo } from "@/lib/group-repo.ts";
+import { viewer } from "@/data/dashboard.ts";
+
+export async function getStaticPaths() {
+  const ids = await groupRepo.listGroupIds();
+  return ids.map((id) => ({ params: { id } }));
+}
+
+const { id } = Astro.params;
+const group = await groupRepo.getGroup(id!);
+if (!group) return Astro.redirect("/app/plans");
+const you = { name: viewer.name, color: viewer.color };
+---
+
+<DashboardLayout title={group.title}>
+  <!-- Group -->
+  <DashboardSection paddingTop="small" paddingBottom="small" gap="5">
+    <GroupState page={{ group, viewer: you }} />
+    <GroupLeft group={group} />
+    <GroupBody>
+      <GroupHeader group={group} />
+      <DashboardColumns>
+        <GroupPlan group={group} viewer={you} />
+        <GroupPoll poll={group.poll} />
+        <GroupChat viewerName={you.name} />
+        <Fragment slot="rail">
+          <GroupMembers members={group.members} viewer={you} />
+          <GroupLeave />
+          <GroupToast />
+        </Fragment>
+      </DashboardColumns>
+    </GroupBody>
+  </DashboardSection>
+</DashboardLayout>

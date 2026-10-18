@@ -1,0 +1,39 @@
+---
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && <p class="group-toast_wrap text-style-small" role="status" hidden data-toast />}
+
+<script>
+  import { get, subscribe } from "@/lib/group-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-toast]").forEach((root) => {
+    subscribe(() => {
+      const text = get().toast;
+      root.textContent = text;
+      root.hidden = !text;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .group-toast_wrap {
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--status-free-background);
+      font-weight: var(--primary-bold);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>
