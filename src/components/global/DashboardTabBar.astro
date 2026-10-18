@@ -28,7 +28,9 @@ const {
 const isActive = (href: string) =>
   pathname === href || pathname.startsWith(`${href}/`);
 
-const half = shell ? Math.ceil(shell.nav.length / 2) : 0;
+/* Home is left out: the plus button sits in the middle, so four tabs balance two on each side. */
+const items = shell ? shell.nav.filter((item) => item.id !== "home") : [];
+const half = Math.ceil(items.length / 2);
 ---
 
 {
@@ -38,7 +40,7 @@ const half = shell ? Math.ceil(shell.nav.length / 2) : 0;
       aria-label="Main"
       {...rest}
     >
-      {shell.nav.map((item, index) => (
+      {items.map((item, index) => (
         <Fragment>
           {index === half && (
             <a class="dashboard-tabs_add" href={addHref} aria-label="Start a plan">
@@ -87,6 +89,12 @@ const half = shell ? Math.ceil(shell.nav.length / 2) : 0;
       padding: var(--space-1) var(--space-1) env(safe-area-inset-bottom);
       border-block-start: var(--border-width) solid var(--border-subtle);
       background-color: var(--background-3);
+      /* Own compositing layer so iOS keeps the bar pinned while its toolbars collapse and expand. */
+      transform: translateZ(0);
+      will-change: transform;
+      backface-visibility: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
 
       @media (width < 48rem) {
         display: flex;
