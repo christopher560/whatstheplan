@@ -87,6 +87,12 @@ const half = shell ? Math.ceil(shell.nav.length / 2) : 0;
       padding: var(--space-1) var(--space-1) env(safe-area-inset-bottom);
       border-block-start: var(--border-width) solid var(--border-subtle);
       background-color: var(--background-3);
+      /* Own compositing layer so iOS keeps the bar pinned while its toolbars collapse and expand. */
+      transform: translateZ(0);
+      will-change: transform;
+      backface-visibility: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
 
       @media (width < 48rem) {
         display: flex;

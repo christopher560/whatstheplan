@@ -4,6 +4,7 @@
   display: grid;
   grid-template-columns: minmax(0, var(--_sidebar_width)) minmax(0, 1fr);
   min-height: 100vh;
+  min-height: 100svh;
   background-color: var(--background-2);
   color: var(--text);
 

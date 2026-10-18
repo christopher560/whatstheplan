@@ -113,10 +113,14 @@ const { render = true, overlap = false } = Astro.props;
       z-index: 100;
       display: flex;
       justify-content: center;
-      padding-inline: var(--site-margin);
+      padding-inline: max(var(--site-margin), env(safe-area-inset-left))
+        max(var(--site-margin), env(safe-area-inset-right));
       background-color: var(--background-3);
       color: var(--text);
       border-bottom: var(--border-width) solid var(--border);
+      /* Own compositing layer so the sticky bar doesn't flicker as iOS toolbars move. */
+      transform: translateZ(0);
+      backface-visibility: hidden;
 
       &.overlap {
         position: fixed;
