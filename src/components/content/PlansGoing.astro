@@ -1,0 +1,256 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import { categoryColor, categoryLabel } from "@/data/plans.ts";
+import { personColor } from "@/data/plans-hub.ts";
+import type { HubGoing, HubInvite } from "@/data/plans-hub.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Plans the viewer is in from the start. */
+  going?: HubGoing[];
+  /** Invites; each one appears here once the viewer answers "I'm in". */
+  invites?: HubInvite[];
+  /** Where "Open your idea stash" goes. */
+  ideasHref?: string;
+}
+
+const { render = true, going = [], invites = [], ideasHref = "/app/ideas" } = Astro.props;
+
+const cards = [
+  ...going.map((plan) => ({ ...plan, fromInvite: false })),
+  ...invites.map((invite) => ({
+    id: invite.id,
+    category: invite.category,
+    host: invite.from,
+    title: invite.title,
+    when: invite.when,
+    place: invite.place,
+    cost: invite.cost,
+    crew: invite.crew,
+    who: `You and ${invite.crew.length} others`,
+    fromInvite: true,
+  })),
+];
+---
+
+{
+  render && (
+    <div class="plans-going_wrap" data-going>
+      <section class="plans-going_section" aria-labelledby="plans-going-title">
+        <div class="plans-going_head">
+          <h2 id="plans-going-title" class="plans-going_title text-style-h4">
+            You're going to
+          </h2>
+          <p class="plans-going_count text-style-small" data-count />
+        </div>
+
+        <div class="plans-going_grid">
+          {cards.map((plan) => (
+            <Panel
+              tag="article"
+              class="plans-going_card"
+              data-plan={plan.id}
+              data-category={plan.category}
+              data-from-invite={plan.fromInvite ? "" : undefined}
+              hidden={plan.fromInvite}
+            >
+              <div class="plans-going_body">
+                <div class="plans-going_top">
+                  <Pill size="tiny" variant="filled" color={categoryColor[plan.category]}>
+                    {categoryLabel[plan.category]}
+                  </Pill>
+                  <p class="plans-going_host text-style-small">Hosted by {plan.host}</p>
+                </div>
+                <h3 class="plans-going_name text-style-h4">{plan.title}</h3>
+                <p class="text-style-small">
+                  {plan.when}
+                  <br />
+                  {plan.place} · {plan.cost}
+                </p>
+                <div class="plans-going_crew">
+                  <AvatarStack
+                    size="small"
+                    people={[...plan.crew, "You"].map((name) => ({
+                      initial: name,
+                      color: personColor(name),
+                    }))}
+                  />
+                  <p class="plans-going_who text-style-small">{plan.who}</p>
+                </div>
+                <ActionButton color="white" class="plans-going_add" data-add>
+                  Add to calendar
+                </ActionButton>
+              </div>
+            </Panel>
+          ))}
+        </div>
+
+        <p class="plans-going_empty text-style-small" hidden data-empty>
+          Nothing here for this filter.
+        </p>
+      </section>
+
+      <p class="plans-going_ideas text-style-small">
+        <span>Not sure what to plan?</span>
+        <a href={ideasHref}>Open your idea stash</a>
+      </p>
+    </div>
+  )
+}
+
+<script>
+  import {
+    get,
+    getHub,
+    matchesCategory,
+    replyOf,
+    subscribe,
+    toggleAdded,
+  } from "@/lib/plans-store.ts";
+  import type { PlanCategory } from "@/data/plans.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-going]").forEach((root) => {
+    const cards = [...root.querySelectorAll<HTMLElement>("[data-plan]")];
+    const empty = root.querySelector<HTMLElement>("[data-empty]")!;
+    const invites = new Map(getHub().invites.map((invite) => [invite.id, invite]));
+
+    root.addEventListener("click", (event) => {
+      const id = (event.target as HTMLElement)
+        .closest<HTMLElement>("[data-add]")
+        ?.closest<HTMLElement>("[data-plan]")?.dataset.plan;
+      if (id) toggleAdded(id);
+    });
+
+    subscribe(() => {
+      const s = get();
+      root.hidden = s.tab !== "friends";
+      let shown = 0;
+      cards.forEach((card) => {
+        const invite = card.hasAttribute("data-from-invite") ? invites.get(card.dataset.plan!) : null;
+        const confirmed = !invite || replyOf(invite) === "in";
+        const visible = confirmed && matchesCategory(card.dataset.category as PlanCategory);
+        card.hidden = !visible;
+        if (visible) shown += 1;
+        const added = !!s.added[card.dataset.plan!];
+        const button = card.querySelector<HTMLElement>("[data-add]")!;
+        button.classList.toggle("white", !added);
+        button.classList.toggle("green", added);
+        button.setAttribute("aria-pressed", String(added));
+        button.querySelector<HTMLElement>(".action-button_text")!.textContent = added
+          ? "On your calendar"
+          : "Add to calendar";
+      });
+      root.querySelector<HTMLElement>("[data-count]")!.textContent = String(shown);
+      empty.hidden = shown > 0;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-going_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plans-going_section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plans-going_head {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-3);
+    }
+
+    .plans-going_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-going_count {
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-going_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-width-main)), 1fr));
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+
+    .plans-going_card {
+      height: 100%;
+    }
+
+    .plans-going_body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-3);
+      height: 100%;
+    }
+
+    .plans-going_top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plans-going_host {
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-going_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-going_crew {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plans-going_who {
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-going_add {
+      margin-block-start: auto;
+    }
+
+    .plans-going_empty {
+      padding: var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-large);
+      color: var(--text-2);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plans-going_ideas {
+      font-weight: var(--primary-bold);
+
+      & a {
+        margin-inline-start: var(--space-2);
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+      }
+    }
+  }
+</style>

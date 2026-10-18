@@ -1,0 +1,87 @@
+---
+import Pill from "@/components/item/Pill.astro";
+import type { DiscoverData } from "@/data/discover.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Area and clock shown in the eyebrow. */
+  data?: Pick<DiscoverData, "area" | "clock">;
+  /** Where "Make a plan" goes. */
+  buildHref?: string;
+}
+
+const { render = true, data, buildHref = "/app/dashboard#builder" } = Astro.props;
+---
+
+{
+  render && data && (
+    <header class="discover-header_wrap">
+      <div class="discover-header_eyebrow">
+        <span class="discover-header_live" aria-hidden="true" />
+        <span class="text-style-tiny">
+          {data.clock.weekday}, {data.clock.time} · near {data.area}
+        </span>
+      </div>
+      <h1 class="discover-header_title text-style-title">Meet your people.</h1>
+      <div class="discover-header_row">
+        <Pill variant="filled" color="blue" size="main">
+          New people
+        </Pill>
+        <a class="discover-header_link text-style-small" href={buildHref}>
+          Know them already? Make a plan
+        </a>
+      </div>
+    </header>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .discover-header_wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+
+    .discover-header_eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .discover-header_live {
+      --_ping: color-mix(in srgb, var(--status-free) 55%, transparent);
+      flex: none;
+      width: var(--space-3);
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-round);
+      background-color: var(--status-free);
+      animation: discover-header-ping 2.2s ease-out infinite;
+    }
+
+    .discover-header_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+    }
+
+    .discover-header_link {
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
+    @keyframes discover-header-ping {
+      0% {
+        box-shadow: 0 0 0 0 var(--_ping);
+      }
+      80%,
+      100% {
+        box-shadow: 0 0 0 var(--space-2) transparent;
+      }
+    }
+  }
+</style>

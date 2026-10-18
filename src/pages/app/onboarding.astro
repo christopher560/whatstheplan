@@ -1,0 +1,12 @@
+---
+import OnboardingLayout from "@/layouts/OnboardingLayout.astro";
+import OnboardingFlow from "@/components/content/OnboardingFlow.astro";
+import { onboardingRepo } from "@/lib/onboarding-repo.ts";
+
+const areas = await onboardingRepo.getAreas();
+---
+
+<OnboardingLayout title="Set up your profile">
+  <!-- Onboarding -->
+  <OnboardingFlow areas={areas} />
+</OnboardingLayout>

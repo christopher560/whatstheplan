@@ -1,0 +1,120 @@
+---
+import IconButton from "@/components/item/IconButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_chevron from "@/assets/icons/icon_chevron.svg";
+import { weekDatesFor } from "@/data/calendar.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** First day of the week shown, as `YYYY-MM-DD`. */
+  weekStart: string;
+}
+
+const { render = true, weekStart } = Astro.props;
+
+const dates = weekDatesFor(weekStart);
+const day = (date: Date) =>
+  date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const label =
+  dates[0].getMonth() === dates[6].getMonth()
+    ? `${day(dates[0])} to ${dates[6].getDate()}`
+    : `${day(dates[0])} to ${day(dates[6])}`;
+---
+
+{
+  render && weekStart && (
+    <header class="calendar-header_wrap">
+      <div class="calendar-header_intro">
+        <h1 class="calendar-header_title text-style-title">Your calendar</h1>
+        <p class="calendar-header_lead text-style-large">
+          Paint free or busy. Your plans show up here too.
+        </p>
+      </div>
+      <div class="calendar-header_nav">
+        <span class="calendar-header_back">
+          <IconButton label="Previous week" data-week="-1">
+            <Icon src={icon_chevron} variant="small" />
+          </IconButton>
+        </span>
+        <p
+          class="calendar-header_label text-style-main"
+          aria-live="polite"
+          data-week-label
+        >
+          {label}
+        </p>
+        <IconButton label="Next week" data-week="1">
+          <Icon src={icon_chevron} variant="small" />
+        </IconButton>
+      </div>
+    </header>
+  )
+}
+
+<script>
+  import { get, setWeek, subscribe, weekLabel } from "@/lib/calendar-store.ts";
+  import { MAX_WEEK_OFFSET } from "@/data/calendar.ts";
+
+  document.querySelectorAll<HTMLElement>(".calendar-header_wrap").forEach((root) => {
+    const label = root.querySelector<HTMLElement>("[data-week-label]")!;
+    const buttons = root.querySelectorAll<HTMLButtonElement>("[data-week]");
+    buttons.forEach((button) =>
+      button.addEventListener("click", () =>
+        setWeek(get().weekOffset + Number(button.dataset.week)),
+      ),
+    );
+    subscribe(() => {
+      label.textContent = weekLabel();
+      buttons.forEach((button) => {
+        const next = get().weekOffset + Number(button.dataset.week);
+        button.disabled = next < 0 || next > MAX_WEEK_OFFSET;
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .calendar-header_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .calendar-header_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+
+    .calendar-header_lead {
+      color: var(--text-2);
+    }
+
+    .calendar-header_nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .calendar-header_back {
+      display: inline-flex;
+      rotate: 180deg;
+    }
+
+    .calendar-header_nav button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .calendar-header_label {
+      min-width: 8rem;
+      text-align: center;
+      font-weight: var(--primary-bold);
+    }
+  }
+</style>

@@ -2,15 +2,9 @@
 import "@/styles/global.css";
 import BaseHead from "@/components/utility/BaseHead.astro";
 import SkipLink from "@/components/global/SkipLink.astro";
-import Icon from '@/components/media/Icon.astro';
-import brand_full_logo_cropped from '@/assets/logo/brand-full-logo-cropped.svg';
-import icon_home from '@/assets/icons/icon_home.svg';
-import icon_discover from '@/assets/icons/icon_discover.svg';
-import icon_calendar from '@/assets/icons/icon_calendar.svg';
-import icon_plans from '@/assets/icons/icon_plans.svg';
-import icon_friends from '@/assets/icons/icon_friends.svg';
-import icon_invites from '@/assets/icons/icon_invites.svg';
-import Paragraph from "@/components/typography/Paragraph.astro";
+import DashboardSidebar from "@/components/global/DashboardSidebar.astro";
+import DashboardTabBar from "@/components/global/DashboardTabBar.astro";
+import { dashboardRepo } from "@/lib/dashboard-repo.ts";
 import "../styles/dashboard.css";
 import "../styles/dashboard-base.css";
 
@@ -19,8 +13,8 @@ interface Props {
 }
 
 const { title = "Dashboard" } = Astro.props;
-const pathname = Astro.url.pathname;
-
+const pathname = Astro.url.pathname.replace(/\/$/, "");
+const shell = await dashboardRepo.getShell();
 ---
 
 <!doctype html>
@@ -33,50 +27,13 @@ const pathname = Astro.url.pathname;
     <SkipLink />
 
     <div class="dashboard_sidebar_shell">
-      <aside class="dashboard_sidebar" aria-label="Dashboard sidebar">
-        <div class="dashboard_sidebar_top">
-          <div class="dashboard_sidebar_brand"><Icon src={brand_full_logo_cropped} variant="full-width" /></div>
-          
-          <nav class="dashboard_sidebar_nav" aria-label="Dashboard navigation">
-            <a class={`dashboard_sidebar_nav_link ${pathname === '/app/dashboard' ? 'active' : ''}`} href="/app/dashboard">
-            <Icon src={icon_home} />
-            <Paragraph tag="div" variant="main" class="weight-bold display-inline-flex" style="margin-top: 0;">Home</Paragraph>
-          </a>
-          <a class={`dashboard_sidebar_nav_link ${pathname === '/app/discover' ? 'active' : ''}`} href="/app/discover">
-            <Icon src={icon_discover} />
-            <Paragraph tag="div" variant="main" class="weight-bold display-inline-flex" style="margin-top: 0;">Discover</Paragraph>
-          </a>
-          <a class={`dashboard_sidebar_nav_link ${pathname === '/app/calendar' ? 'active' : ''}`} href="/app/calendar">
-            <Icon src={icon_calendar} />
-            <Paragraph tag="div" variant="main" class="weight-bold display-inline-flex" style="margin-top: 0;">Calendar</Paragraph>
-          </a>
-          <a class={`dashboard_sidebar_nav_link ${pathname === '/app/plans' ? 'active' : ''}`} href="/app/plans">
-            <Icon src={icon_plans} />
-            <Paragraph tag="div" variant="main" class="weight-bold display-inline-flex" style="margin-top: 0;">Plans</Paragraph>
-          </a>
-          <a class={`dashboard_sidebar_nav_link ${pathname === '/app/friends' ? 'active' : ''}`} href="/app/friends">
-            <Icon src={icon_friends} />
-            <Paragraph tag="div" variant="main" class="weight-bold display-inline-flex" style="margin-top: 0;">Friends</Paragraph>
-          </a>
-          <a class={`dashboard_sidebar_nav_link ${pathname === '/app/invites' ? 'active' : ''}`} href="/app/invites">
-            <Icon src={icon_invites} />
-            <Paragraph tag="div" variant="main" class="weight-bold display-inline-flex" style="margin-top: 0;">Invites</Paragraph>
-          </a>
-        </nav>
-        </div>
-
-        <div class="dashboard_sidebar_bottom">
-          <div class="dashboard_sidebar_profile">D</div>
-          <div class="dashboard_sidebar_profile_info">
-            <Paragraph tag="div" variant="main" class="weight-bold display-inline-flex" style="margin-top: 0;">Chris</Paragraph>
-            <Paragraph tag="div" variant="small" class="display-inline-flex" style="margin-top: 0;">6 friends</Paragraph>
-          </div>
-        </div>
-      </aside>
+      <DashboardSidebar shell={shell} pathname={pathname} />
 
       <main class="dashboard_main" id="main-content">
         <slot />
       </main>
     </div>
+
+    <DashboardTabBar shell={shell} pathname={pathname} />
   </body>
 </html>

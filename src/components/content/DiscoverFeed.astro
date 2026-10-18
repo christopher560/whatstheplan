@@ -1,0 +1,255 @@
+---
+import GroupCard from "@/components/item/GroupCard.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <div class="discover-feed_wrap" data-feed>
+      <section class="discover-feed_section" aria-labelledby="discover-soon-title" data-soon>
+        <h3 id="discover-soon-title" class="discover-feed_title text-style-h4">
+          Starting soon
+        </h3>
+        <div class="discover-feed_grid" data-list></div>
+      </section>
+
+      <section class="discover-feed_section" aria-labelledby="discover-later-title" data-later>
+        <h3 id="discover-later-title" class="discover-feed_title text-style-h4">
+          Coming up
+        </h3>
+        <div class="discover-feed_grid" data-list></div>
+      </section>
+
+      <div class="discover-feed_empty" hidden data-empty>
+        <p class="discover-feed_empty_text text-style-main">Nothing open here. Try another day.</p>
+        <ActionButton size="small" color="white" data-clear>
+          Clear filters
+        </ActionButton>
+      </div>
+
+      <p class="discover-feed_hidden text-style-small" hidden data-hidden />
+
+      <template data-card-template>
+        <GroupCard />
+      </template>
+      <template data-tag-template>
+        <Pill size="tiny">Tag</Pill>
+      </template>
+    </div>
+  )
+}
+
+<script>
+  import { groupCategories } from "@/data/discover.ts";
+  import type { OpenGroup } from "@/data/discover.ts";
+  import { fitOf, memberOf } from "@/lib/discover-fit.ts";
+  import {
+    get,
+    getData,
+    subscribe,
+    feed,
+    whenLabel,
+    whenFull,
+    toggleJoin,
+    clearFilters,
+  } from "@/lib/discover-store.ts";
+  import { avatarElement, cloneFirst, setAccent, setText } from "@/lib/ui.ts";
+
+  const colorOf = Object.fromEntries(groupCategories.map((c) => [c.id, c.color]));
+  const labelOf = Object.fromEntries(groupCategories.map((c) => [c.id, c.label]));
+
+  document.querySelectorAll<HTMLElement>("[data-feed]").forEach((root) => {
+    const data = getData();
+    const soon = root.querySelector<HTMLElement>("[data-soon]")!;
+    const later = root.querySelector<HTMLElement>("[data-later]")!;
+    const empty = root.querySelector<HTMLElement>("[data-empty]")!;
+    const hiddenLine = root.querySelector<HTMLElement>("[data-hidden]")!;
+    const cardTemplate = root.querySelector<HTMLTemplateElement>("[data-card-template]")!;
+    const tagTemplate = root.querySelector<HTMLTemplateElement>("[data-tag-template]")!;
+    const cards = new Map<string, HTMLElement>();
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (target.closest("[data-clear]")) return clearFilters();
+      const id = target.closest<HTMLElement>("[data-card]")?.dataset.card;
+      if (id && target.closest("[data-join]")) toggleJoin(id);
+    });
+
+    const tagsFor = (group: OpenGroup) => [
+      group.capacity <= 4 ? "Cozy group" : group.capacity <= 6 ? "Small group" : "Bigger group",
+      group.newcomerFriendly ? "Newcomer friendly" : "Regulars welcome",
+      "Public place",
+    ];
+
+    const fill = (card: HTMLElement, group: OpenGroup, isSoon: boolean) => {
+      const joined = !!get().joined[group.id];
+      const fit = fitOf(data, group);
+      const names = group.memberIds.map((id) => memberOf(data, id));
+      const going = names.length + (joined ? 1 : 0);
+      const open = group.capacity - going;
+
+      card.dataset.card = group.id;
+      card.classList.toggle("green", joined);
+
+      const category = card.querySelector<HTMLElement>("[data-category]")!;
+      setAccent(category, colorOf[group.category]);
+      setText(category, ".pill_text", labelOf[group.category]);
+      const chip = card.querySelector<HTMLElement>("[data-when-chip]")!;
+      chip.classList.toggle("filled", isSoon);
+      setText(chip, ".pill_text", whenLabel(group));
+
+      setText(card, "[data-title]", group.title);
+      setText(card, "[data-purpose]", group.purpose);
+      setText(
+        card,
+        "[data-where]",
+        `${whenFull(group)} · ${group.place} · ${group.distance.toFixed(1)} mi`,
+      );
+      setText(
+        card,
+        "[data-going]",
+        `${going} going · ${open > 0 ? `${open} spot${open === 1 ? "" : "s"} open` : "Full"}`,
+      );
+      setText(card, "[data-you]", `Fits you ${fit.you}%`);
+      setText(card, "[data-them]", `You fit them ${fit.them}%`);
+
+      const stack = card.querySelector<HTMLElement>("[data-stack]")!;
+      const people = [
+        ...names.map((person) => ({ name: person.name, color: person.color })),
+        ...(joined ? [{ name: data.viewer.initial, color: data.viewer.color }] : []),
+      ];
+      stack.replaceChildren(
+        ...people.slice(0, 5).map((person) => avatarElement(person.name, person.color)),
+      );
+
+      const tags = card.querySelector<HTMLElement>("[data-tags]")!;
+      if (!tags.childElementCount) {
+        tags.replaceChildren(
+          ...tagsFor(group).map((tag) => {
+            const pill = cloneFirst(tagTemplate);
+            setText(pill, ".pill_text", tag);
+            return pill;
+          }),
+        );
+      }
+
+      const join = card.querySelector<HTMLElement>("[data-join]")!;
+      join.classList.toggle("ink", !joined);
+      join.classList.toggle("white", joined);
+      join.setAttribute("aria-pressed", String(joined));
+      setText(join, ".action-button_text", joined ? "You're in. Tap to leave" : "Join");
+    };
+
+    /** Keeps one card per group, in order, without redrawing cards that stay. */
+    const sync = (section: HTMLElement, groups: OpenGroup[], isSoon: boolean) => {
+      const list = section.querySelector<HTMLElement>("[data-list]")!;
+      section.hidden = groups.length === 0;
+      const wanted = new Set(groups.map((group) => group.id));
+
+      [...list.children].forEach((child) => {
+        const id = (child as HTMLElement).dataset.card!;
+        if (!wanted.has(id)) {
+          child.remove();
+          cards.delete(id);
+        }
+      });
+
+      groups.forEach((group, index) => {
+        let card = cards.get(group.id);
+        if (!card) {
+          card = cloneFirst(cardTemplate);
+          cards.set(group.id, card);
+        }
+        card.style.setProperty("--i", String(index));
+        fill(card, group, isSoon);
+        if (list.children[index] !== card) list.insertBefore(card, list.children[index] ?? null);
+      });
+    };
+
+    subscribe(() => {
+      const view = feed();
+      sync(soon, view.soon, true);
+      sync(later, view.later, false);
+      empty.hidden = view.shown > 0;
+      hiddenLine.hidden = view.hidden <= 0;
+      hiddenLine.textContent = `${view.hidden} hidden. Not a fit for you or your calendar.`;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .discover-feed_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    .discover-feed_section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .discover-feed_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .discover-feed_grid {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fill,
+        minmax(min(100%, var(--card-width-main)), 1fr)
+      );
+      gap: var(--space-4);
+      align-items: stretch;
+
+      & > * {
+        animation: discover-feed-swap var(--reveal-duration) var(--ease-out) backwards;
+        animation-delay: calc(var(--i, 0) * 60ms);
+      }
+    }
+
+    .discover-feed_empty {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-large);
+    }
+
+    .discover-feed_empty_text {
+      flex: 1 1 var(--card-width-small);
+      color: var(--text-2);
+    }
+
+    .discover-feed_hidden {
+      color: var(--text-2);
+    }
+
+    @keyframes discover-feed-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

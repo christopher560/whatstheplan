@@ -1,0 +1,116 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { slotContent } from "@/utils/slots.ts";
+
+type Base = HTMLAttributes<"section"> & {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** HTML element. */
+  tag?: "section" | "article" | "aside" | "div";
+  /** Draw the border as dashes. */
+  dashed?: boolean;
+};
+
+type Props = Base &
+  (
+    | {
+        /** Panel surface. */
+        variant?: "default";
+        tint?: never;
+      }
+    | {
+        variant: "tint";
+        /** Tint of the surface. */
+        tint: "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink";
+      }
+  );
+
+type AllProps = Base & {
+  variant?: "default" | "tint";
+  tint?: "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink";
+};
+
+const {
+  render = true,
+  tag: Tag = "section",
+  dashed = false,
+  variant = "default",
+  tint,
+  class: className,
+  ...rest
+} = Astro.props as AllProps;
+
+const content = await slotContent(Astro.slots);
+---
+
+{
+  render && content && (
+    <Tag
+      class:list={[
+        "panel_wrap",
+        variant === "tint" && tint,
+        dashed && "dashed",
+        className,
+      ]}
+      {...rest}
+    >
+      <Fragment set:html={content} />
+    </Tag>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .panel_wrap {
+      --_padding: var(--space-4);
+      --_surface: var(--background-3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+      padding: var(--_padding);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--_surface);
+      color: var(--text);
+      transition: translate var(--move-duration) var(--ease-out);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--card-lift);
+        }
+      }
+      @media (width >= 48rem) {
+        --_padding: var(--space-5);
+      }
+
+      &[hidden] {
+        display: none;
+      }
+      &.dashed {
+        border: var(--border-width-medium) dashed var(--border-strong);
+      }
+      &.red {
+        --_surface: var(--colors-secondary-red);
+      }
+      &.orange {
+        --_surface: var(--colors-secondary-orange);
+      }
+      &.yellow {
+        --_surface: var(--colors-secondary-yellow);
+      }
+      &.green {
+        --_surface: var(--colors-secondary-green);
+      }
+      &.blue {
+        --_surface: var(--colors-secondary-blue);
+      }
+      &.purple {
+        --_surface: var(--colors-secondary-purple);
+      }
+      &.pink {
+        --_surface: var(--colors-secondary-pink);
+      }
+    }
+  }
+</style>

@@ -1,0 +1,190 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Input from "@/components/form/Input.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** First name used in the confirmation question. */
+  name?: string;
+  /** Where the person goes after the account is gone. */
+  startHref?: string;
+}
+
+const { render = true, name = "", startHref = "/app/onboarding" } = Astro.props;
+---
+
+{
+  render && (
+    <>
+      <Panel
+        variant="tint"
+        tint="red"
+        dashed
+        class="width-full"
+        aria-labelledby="delete-title"
+        data-account-hide
+        data-delete
+      >
+        <div class="delete-account_wrap">
+          <h2 id="delete-title" class="delete-account_title text-style-h5">
+            Delete account
+          </h2>
+          <p class="delete-account_text text-style-main">
+            This permanently deletes your profile, the plans you host and your
+            replies. It cannot be undone.
+          </p>
+          <div class="delete-account_open" data-open>
+            <ActionButton color="white" size="large" data-ask>
+              Delete my account
+            </ActionButton>
+          </div>
+          <div
+            class="delete-account_dialog"
+            role="alertdialog"
+            aria-labelledby="delete-question"
+            hidden
+            data-dialog
+          >
+            <p id="delete-question" class="delete-account_question text-style-h5">
+              Are you sure{name ? `, ${name}` : ""}?
+            </p>
+            <Input
+              label="Type DELETE to confirm"
+              placeholder="DELETE"
+              name="confirm_delete"
+              autocomplete="off"
+              data-confirm
+            />
+            <div class="delete-account_actions">
+              <ActionButton color="white" size="large" data-cancel>
+                Keep my account
+              </ActionButton>
+              <ActionButton color="red" size="large" data-delete-now disabled>
+                Delete forever
+              </ActionButton>
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel variant="tint" tint="yellow" class="width-full" role="status" hidden data-deleted>
+        <div class="delete-account_wrap">
+          <h2 class="delete-account_title text-style-h3">Your account is deleted.</h2>
+          <p class="delete-account_text text-style-main">
+            Your profile, plans you hosted and replies were removed. We sent a
+            confirmation to your email. Thanks for planning with us.
+          </p>
+          <ActionButton element="link" href={startHref} size="large">
+            Back to the start
+          </ActionButton>
+        </div>
+      </Panel>
+    </>
+  )
+}
+
+<script>
+  import { deleteAccount } from "@/lib/account-repo.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-delete]").forEach((card) => {
+    const $ = <T extends HTMLElement>(selector: string) =>
+      card.querySelector<T>(selector)!;
+    const open = $("[data-open]");
+    const dialog = $("[data-dialog]");
+    const confirm = $<HTMLInputElement>("[data-confirm] input, input[data-confirm]");
+    const now = $<HTMLButtonElement>("[data-delete-now]");
+
+    const reset = () => {
+      dialog.hidden = true;
+      open.hidden = false;
+      confirm.value = "";
+      now.disabled = true;
+    };
+
+    $("[data-ask]").addEventListener("click", () => {
+      open.hidden = true;
+      dialog.hidden = false;
+      confirm.focus();
+    });
+    $("[data-cancel]").addEventListener("click", reset);
+    confirm.addEventListener("input", () => {
+      now.disabled = confirm.value.trim().toUpperCase() !== "DELETE";
+    });
+
+    now.addEventListener("click", async () => {
+      if (now.disabled) return;
+      now.disabled = true;
+      await deleteAccount();
+      document
+        .querySelectorAll<HTMLElement>("[data-account-hide]")
+        .forEach((element) => {
+          element.hidden = true;
+        });
+      const deleted = document.querySelector<HTMLElement>("[data-deleted]")!;
+      deleted.hidden = false;
+      deleted.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .delete-account_wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-4);
+    }
+
+    .delete-account_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .delete-account_text {
+      max-width: 36rem;
+    }
+
+    .delete-account_open[hidden] {
+      display: none;
+    }
+
+    .delete-account_dialog {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      width: 100%;
+      padding: var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      animation: delete-account-pop var(--reveal-duration) var(--ease-spring-soft) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .delete-account_question {
+      font-weight: var(--secondary-bold);
+    }
+
+    .delete-account_actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    @keyframes delete-account-pop {
+      from {
+        opacity: 0.2;
+        scale: 0.9;
+      }
+      to {
+        opacity: 1;
+        scale: 1;
+      }
+    }
+  }
+</style>

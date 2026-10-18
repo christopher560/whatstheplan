@@ -1,0 +1,63 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_plus from "@/assets/icons/icon_plus.svg";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Where "Start a plan" goes. */
+  buildHref?: string;
+}
+
+const { render = true, buildHref = "/app/dashboard#builder" } = Astro.props;
+---
+
+{
+  render && (
+    <header class="friends-header_wrap" data-friends-header>
+      <div class="friends-header_intro">
+        <h1 class="friends-header_title text-style-title">Your people</h1>
+        <p class="friends-header_lead text-style-large" data-subline />
+      </div>
+      <ActionButton element="link" href={buildHref} size="large" raised>
+        <Icon slot="before" src={icon_plus} variant="small" />
+        Start a plan
+      </ActionButton>
+    </header>
+  )
+}
+
+<script>
+  import { circleMembers, freeTonight, people, subscribe } from "@/lib/friends-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-friends-header]").forEach((root) => {
+    const subline = root.querySelector<HTMLElement>("[data-subline]")!;
+    subscribe(() => {
+      subline.textContent = `${people().length} friends. ${circleMembers().length} in your group. ${freeTonight()} free tonight.`;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friends-header_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .friends-header_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+
+    .friends-header_lead {
+      color: var(--text-2);
+    }
+  }
+</style>

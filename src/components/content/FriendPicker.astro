@@ -1,0 +1,85 @@
+---
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_check from "@/assets/icons/icon_check.svg";
+import type { CalendarFriend } from "@/data/calendar.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Friends who can be compared. */
+  friends?: CalendarFriend[];
+  /** Friend ids picked at the start. */
+  who?: string[];
+}
+
+const { render = true, friends = [], who = [] } = Astro.props;
+---
+
+{
+  render && friends.length > 0 && (
+    <div class="friend-picker_wrap" role="group" aria-label="Friends">
+      {friends.map((friend) => (
+        <Pill
+          element="button"
+          size="main"
+          color={friend.color}
+          pressed={who.includes(friend.id)}
+          data-friend={friend.id}
+        >
+          <Avatar
+            slot="before"
+            initial={friend.name}
+            color={friend.color}
+            size="small"
+          />
+          {friend.name}
+          <span slot="after" class="friend-picker_check">
+            <Icon src={icon_check} variant="small" />
+          </span>
+        </Pill>
+      ))}
+    </div>
+  )
+}
+
+<script>
+  import { get, update, subscribe } from "@/lib/calendar-store.ts";
+  import { toggle } from "@/lib/profile-form.ts";
+
+  document.querySelectorAll<HTMLElement>(".friend-picker_wrap").forEach((root) => {
+    const pills = root.querySelectorAll<HTMLElement>("[data-friend]");
+    pills.forEach((pill) =>
+      pill.addEventListener("click", () =>
+        update({
+          who: toggle(get().who, pill.dataset.friend!),
+          tick: get().tick + 1,
+        }),
+      ),
+    );
+    subscribe(() =>
+      pills.forEach((pill) =>
+        pill.setAttribute("aria-pressed", String(get().who.includes(pill.dataset.friend!))),
+      ),
+    );
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-picker_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .friend-picker_check {
+      display: none;
+
+      .pill_wrap[aria-pressed="true"] & {
+        display: inline-flex;
+      }
+    }
+  }
+</style>

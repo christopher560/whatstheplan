@@ -1,0 +1,47 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Where "Make a plan with friends" goes. */
+  buildHref?: string;
+}
+
+const { render = true, buildHref = "/app/dashboard#builder" } = Astro.props;
+---
+
+{
+  render && (
+    <Panel
+      variant="tint"
+      tint="orange"
+      aria-labelledby="discover-know-title"
+      class="discover-know_wrap"
+    >
+      <h2 id="discover-know-title" class="discover-know_title text-style-h4">
+        Know them already?
+      </h2>
+      <ActionButton element="link" href={buildHref} color="white">
+        Make a plan with friends
+      </ActionButton>
+    </Panel>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .discover-know_wrap {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3) var(--space-4);
+    }
+
+    .discover-know_title {
+      font-weight: var(--secondary-bold);
+    }
+  }
+</style>

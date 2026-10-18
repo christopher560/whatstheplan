@@ -1,0 +1,211 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_check from "@/assets/icons/icon_check.svg";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Friends to compare schedules with. The first is selected. */
+  friends?: { id: string; name: string; best: string; grid: number[][] }[];
+}
+
+const { render = true, friends = [] } = Astro.props;
+
+const days = ["M", "T", "W", "T", "F", "S", "S"];
+const times = ["Morn", "Aft", "Eve"];
+---
+
+{
+  render && friends.length > 0 && (
+    <Panel aria-labelledby="overlap-card-title">
+      <div class="overlap-card_wrap" data-overlap>
+        <h2 id="overlap-card-title" class="overlap-card_title text-style-h5">
+          You + <span data-friend-name>{friends[0].name}</span> are both free
+        </h2>
+
+        <div class="overlap-card_friends" role="group" aria-label="Friend">
+          {friends.map((friend, index) => (
+            <Pill
+              element="button"
+              color="yellow"
+              pressed={index === 0}
+              data-friend={friend.id}
+              data-name={friend.name}
+            >
+              {friend.name}
+            </Pill>
+          ))}
+        </div>
+
+        {friends.map((friend, index) => (
+          <div class="overlap-card_friend" hidden={index !== 0} data-panel={friend.id}>
+            <div class="overlap-card_grid">
+              <div class="overlap-card_row head" aria-hidden="true">
+                <span></span>
+                {days.map((day) => (
+                  <span class="overlap-card_day text-style-small">{day}</span>
+                ))}
+              </div>
+              {friend.grid.map((row, rowIndex) => (
+                <div class="overlap-card_row">
+                  <span class="overlap-card_time text-style-small">
+                    {times[rowIndex]}
+                  </span>
+                  {row.map((free) => (
+                    <div class:list={["overlap-card_cell", free && "both"]}>
+                      {free ? (
+                        <>
+                          <Icon src={icon_check} variant="small" />
+                          <span class="sr-only">Both free</span>
+                        </>
+                      ) : (
+                        <span class="sr-only">Not both free</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div class="overlap-card_summary">
+              <span class="overlap-card_swatch" aria-hidden="true" />
+              <span class="text-style-small">
+                <strong>
+                  {friend.grid.flat().filter(Boolean).length} shared windows.
+                </strong>{" "}
+                {friend.best}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        <Pill
+          class="width-full"
+          element="button"
+          size="main"
+          variant="filled"
+          color="purple"
+        >
+          Plan something with <span data-friend-name>{friends[0].name}</span>
+        </Pill>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-overlap]").forEach((root) => {
+    const pills = root.querySelectorAll<HTMLElement>("[data-friend]");
+    const panels = root.querySelectorAll<HTMLElement>("[data-panel]");
+    const names = root.querySelectorAll<HTMLElement>("[data-friend-name]");
+
+    pills.forEach((pill) =>
+      pill.addEventListener("click", () => {
+        pills.forEach((other) =>
+          other.setAttribute("aria-pressed", String(other === pill)),
+        );
+        panels.forEach((panel) => {
+          panel.hidden = panel.dataset.panel !== pill.dataset.friend;
+        });
+        names.forEach((name) => {
+          name.textContent = pill.dataset.name!;
+        });
+      }),
+    );
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .overlap-card_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .overlap-card_friends {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .overlap-card_friend {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      animation: overlap-card-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .overlap-card_grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-0);
+    }
+
+    .overlap-card_row {
+      display: grid;
+      grid-template-columns: var(--control-height-small) repeat(7, minmax(0, 1fr));
+      gap: var(--space-0);
+      align-items: center;
+    }
+
+    .overlap-card_day,
+    .overlap-card_time {
+      color: var(--text-2);
+      text-align: center;
+      text-transform: none;
+      letter-spacing: var(--letter-spacing-normal);
+    }
+
+    .overlap-card_time {
+      text-align: start;
+    }
+
+    .overlap-card_cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: var(--control-height-tiny);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-small);
+      background-color: var(--background);
+
+      &.both {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--status-free);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .overlap-card_summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .overlap-card_swatch {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-small);
+      background-color: var(--status-free);
+    }
+
+    @keyframes overlap-card-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-1);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

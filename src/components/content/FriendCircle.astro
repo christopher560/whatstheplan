@@ -1,0 +1,40 @@
+---
+import FriendOrbit from "@/components/content/FriendOrbit.astro";
+import FriendGroup from "@/components/content/FriendGroup.astro";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The viewer, shown in the middle of the ring. */
+  viewer?: { initial: string; color: AccentColor };
+}
+
+const { render = true, viewer } = Astro.props;
+---
+
+{
+  render && viewer && (
+    <section class="friend-circle_wrap" aria-labelledby="friend-group-title">
+      <FriendOrbit viewer={viewer} />
+      <FriendGroup />
+    </section>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .friend-circle_wrap {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-width-large)), 1fr));
+      gap: var(--space-5);
+      align-items: center;
+      padding: var(--space-5);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-xlarge);
+      background-color: var(--background-3);
+      background-image: radial-gradient(var(--border-subtle) 0.09375rem, transparent 0.09375rem);
+      background-size: 1.375rem 1.375rem;
+    }
+  }
+</style>

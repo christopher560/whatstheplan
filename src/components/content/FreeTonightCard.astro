@@ -1,0 +1,192 @@
+---
+import type { AccentColor } from "@/types.ts";
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Friends who are free tonight. */
+  friends?: { name: string; note: string; color: AccentColor }[];
+}
+
+const { render = true, friends = [] } = Astro.props;
+---
+
+{
+  render && friends.length > 0 && (
+    <Panel aria-labelledby="free-tonight-title">
+      <div
+        class="free-tonight_wrap"
+        data-free-tonight
+        data-hint-on="Friends who are free can see that you are too."
+        data-hint-off="You're hidden tonight."
+      >
+        <div class="free-tonight_head">
+          <h2 id="free-tonight-title" class="free-tonight_title text-style-h5">
+            Who's free tonight
+          </h2>
+          <button
+            type="button"
+            class="free-tonight_switch"
+            role="switch"
+            aria-checked="true"
+            aria-label="I'm free tonight"
+            data-switch
+          >
+            <span class="free-tonight_knob"></span>
+          </button>
+        </div>
+        <p class="free-tonight_hint text-style-small" data-hint>
+          Friends who are free can see that you are too.
+        </p>
+        <ul class="free-tonight_list" data-list>
+          {friends.map((friend) => (
+            <li class="free-tonight_item">
+              <Avatar initial={friend.name} color={friend.color} />
+              <div class="free-tonight_who">
+                <p class="free-tonight_name text-style-main">{friend.name}</p>
+                <p class="free-tonight_note text-style-small">{friend.note}</p>
+              </div>
+              <span class="free-tonight_dot" aria-hidden="true"></span>
+            </li>
+          ))}
+        </ul>
+        <Pill
+          class="width-full"
+          element="button"
+          size="main"
+          variant="filled"
+          color="green"
+          data-ping
+        >
+          Ping everyone who's free
+        </Pill>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-free-tonight]").forEach((root) => {
+    const toggle = root.querySelector<HTMLElement>("[data-switch]")!;
+    const hint = root.querySelector<HTMLElement>("[data-hint]")!;
+    const list = root.querySelector<HTMLElement>("[data-list]")!;
+    const ping = root.querySelector<HTMLButtonElement>("[data-ping]")!;
+
+    toggle.addEventListener("click", () => {
+      const on = toggle.getAttribute("aria-checked") !== "true";
+      toggle.setAttribute("aria-checked", String(on));
+      hint.textContent = on ? root.dataset.hintOn! : root.dataset.hintOff!;
+      list.hidden = !on;
+      ping.disabled = !on;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .free-tonight_wrap {
+      --_track: 4rem;
+      --_knob: 1.625rem;
+      --_inset: var(--space-0);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .free-tonight_head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .free-tonight_hint {
+      color: var(--text-2);
+    }
+
+    .free-tonight_switch {
+      display: flex;
+      flex: none;
+      align-items: center;
+      width: var(--_track);
+      height: calc(var(--_knob) + var(--_inset) * 2 + var(--border-width-thick) * 2);
+      padding: var(--_inset);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--status-busy-background);
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      &[aria-checked="true"] {
+        background-color: var(--status-free);
+      }
+    }
+
+    .free-tonight_knob {
+      display: block;
+      width: var(--_knob);
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-round);
+      background-color: var(--border-strong);
+      transition: translate var(--reveal-duration) var(--ease-spring);
+
+      [aria-checked="true"] > & {
+        translate: calc(var(--_track) - var(--_knob) - var(--_inset) * 2 - var(--border-width-thick) * 2) 0;
+      }
+    }
+
+    .free-tonight_list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .free-tonight_item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .free-tonight_who {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .free-tonight_name {
+      font-weight: var(--primary-bold);
+    }
+
+    .free-tonight_note {
+      color: var(--text-2);
+    }
+
+    .free-tonight_dot {
+      flex: none;
+      width: var(--space-2);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--status-free);
+      animation: free-tonight-ping 2.2s ease-out infinite;
+    }
+
+    @keyframes free-tonight-ping {
+      0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-free) 55%, transparent);
+      }
+      80%,
+      100% {
+        box-shadow: 0 0 0 var(--space-1) transparent;
+      }
+    }
+  }
+</style>

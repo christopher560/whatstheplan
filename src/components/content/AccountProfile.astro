@@ -1,0 +1,664 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Input from "@/components/form/Input.astro";
+import Choice from "@/components/form/Choice.astro";
+import ColorPicker from "@/components/form/ColorPicker.astro";
+import ScaleQuestion from "@/components/form/ScaleQuestion.astro";
+import OptionGroup from "@/components/form/OptionGroup.astro";
+import type { Profile } from "@/lib/onboarding-repo.ts";
+import type { Area } from "@/data/onboarding.ts";
+import {
+  ageGroups,
+  interests,
+  questions,
+  activityTypes,
+  availability,
+  groupSizes,
+  findOptions,
+  contactOptions,
+  otherArea,
+} from "@/data/onboarding.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The signed-in person's profile. */
+  profile?: Profile;
+  /** Nearby places to choose from, nearest first. */
+  areas?: Area[];
+}
+
+const { render = true, profile, areas = [] } = Astro.props;
+
+const adultAges = ageGroups.filter((age) => age.id !== "u13");
+const allAreas = [...areas, otherArea];
+---
+
+{
+  render && profile && (
+    <div
+      class="account-profile_wrap"
+      data-account
+      data-profile={JSON.stringify(profile)}
+    >
+      <header class="account-profile_header">
+        <h1 class="account-profile_title text-style-title">Your profile</h1>
+        <p class="account-profile_lead text-style-large">
+          Change anything you set up when you joined. Friends only ever see your
+          first name and color.
+        </p>
+      </header>
+
+      <Panel
+        variant="tint"
+        tint="yellow"
+        aria-label="How you look to friends"
+        data-account-hide
+      >
+        <div class="account-profile_live">
+          <span class="account-profile_avatar" data-live-avatar>
+            <span data-live-initial>?</span>
+          </span>
+          <div class="account-profile_who">
+            <p class="account-profile_name text-style-h3" data-live-name />
+            <p class="account-profile_line text-style-main" data-live-line />
+            <div class="account-profile_tags">
+              {interests.map((interest) => (
+                <Pill
+                  size="tiny"
+                  variant="filled"
+                  color={interest.color}
+                  hidden
+                  data-live-tag={interest.id}
+                >
+                  {interest.name}
+                </Pill>
+              ))}
+            </div>
+          </div>
+          <p class="account-profile_note text-style-small">What friends see</p>
+        </div>
+      </Panel>
+
+      <Panel aria-labelledby="account-basics" data-account-hide>
+        <div class="account-profile_section">
+          <h2 id="account-basics" class="account-profile_heading text-style-h5">
+            The basics
+          </h2>
+          <Input
+            variant="first-name"
+            label="First name"
+            placeholder="What should people call you?"
+            maxlength={20}
+            value={profile.first_name}
+            data-first-name
+          />
+          <ColorPicker id="account-color" />
+          <div class="account-profile_group" role="group" aria-labelledby="account-age">
+            <p id="account-age" class="account-profile_label text-style-main">
+              Age group
+            </p>
+            <div class="account-profile_row">
+              {adultAges.map((age) => (
+                <Pill
+                  element="button"
+                  size="main"
+                  pressed={age.id === profile.age_group}
+                  data-age={age.id}
+                >
+                  {age.label}
+                </Pill>
+              ))}
+            </div>
+            <p class="account-profile_hint text-style-small">
+              Used to match you with people your age. It stays private.
+            </p>
+          </div>
+          <div class="account-profile_group" role="group" aria-labelledby="account-area">
+            <p id="account-area" class="account-profile_label text-style-main">
+              Your area
+            </p>
+            <div class="account-profile_row">
+              {allAreas.map((area) => (
+                <Pill
+                  element="button"
+                  size="main"
+                  pressed={area.id === profile.area_id}
+                  data-area={area.id}
+                  data-area-name={area.name}
+                >
+                  {area.name}
+                </Pill>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel aria-labelledby="account-interests" data-account-hide>
+        <div class="account-profile_section">
+          <div class="account-profile_split">
+            <h2 id="account-interests" class="account-profile_heading text-style-h5">
+              Interests
+            </h2>
+            <p class="account-profile_hint text-style-small" data-interest-count />
+          </div>
+          <div class="account-profile_row" role="group" aria-label="Interests">
+            {interests.map((interest) => (
+              <Pill
+                element="button"
+                size="main"
+                color={interest.color}
+                pressed={profile.interests.includes(interest.id)}
+                data-interest={interest.id}
+              >
+                <span
+                  slot="before"
+                  class="account-profile_dot"
+                  style={`--_dot: var(--colors-vivid-${interest.color});`}
+                />
+                {interest.name}
+              </Pill>
+            ))}
+          </div>
+        </div>
+      </Panel>
+
+      <Panel aria-labelledby="account-style" data-account-hide>
+        <div class="account-profile_section">
+          <div class="account-profile_split">
+            <h2 id="account-style" class="account-profile_heading text-style-h5">
+              Your social style
+            </h2>
+            <Pill variant="filled" color="yellow" data-style-name>Style</Pill>
+          </div>
+          {questions.map((question) => (
+            <ScaleQuestion
+              id={question.id}
+              question={question.q}
+              lo={question.lo}
+              hi={question.hi}
+              value={profile.style[question.id as keyof Profile["style"]]}
+            />
+          ))}
+        </div>
+      </Panel>
+
+      <Panel aria-labelledby="account-activities" data-account-hide>
+        <div class="account-profile_section">
+          <h2 id="account-activities" class="account-profile_heading text-style-h5">
+            Activities and time
+          </h2>
+          <div class="account-profile_group" role="group" aria-labelledby="account-types">
+            <p id="account-types" class="account-profile_label text-style-main">
+              What sounds fun?
+            </p>
+            <div class="account-profile_row">
+              {activityTypes.map((type) => (
+                <Pill
+                  element="button"
+                  size="main"
+                  color="green"
+                  pressed={profile.activity_types.includes(type.id)}
+                  data-activity={type.id}
+                >
+                  {type.label}
+                </Pill>
+              ))}
+            </div>
+          </div>
+          <div class="account-profile_group" role="group" aria-labelledby="account-times">
+            <p id="account-times" class="account-profile_label text-style-main">
+              When are you usually free?
+            </p>
+            <div class="account-profile_row">
+              {availability.map((time) => (
+                <Pill
+                  element="button"
+                  size="main"
+                  color="blue"
+                  pressed={profile.availability.includes(time.id)}
+                  data-availability={time.id}
+                >
+                  {time.label}
+                </Pill>
+              ))}
+            </div>
+          </div>
+          <OptionGroup
+            id="account-size"
+            label="Group size you're comfortable with"
+            name="group_size"
+            options={groupSizes}
+            value={profile.group_size}
+            columns
+          />
+          <div class="account-profile_setting">
+            <Choice
+              variant="toggle"
+              label="Start me in a group"
+              name="group_first"
+              role="switch"
+              checked={profile.group_first}
+            />
+            <p class="account-profile_hint text-style-small">
+              Meet people in groups before one-on-one.
+            </p>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel aria-labelledby="account-privacy" data-account-hide>
+        <div class="account-profile_section">
+          <h2 id="account-privacy" class="account-profile_heading text-style-h5">
+            Privacy
+          </h2>
+          <OptionGroup
+            id="account-find"
+            label="Who can find me"
+            name="discoverable_by"
+            options={findOptions}
+            value={profile.discoverable_by}
+          />
+          <OptionGroup
+            id="account-hi"
+            label="Who can say hi"
+            name="contactable_by"
+            options={contactOptions}
+            value={profile.contactable_by}
+          />
+          <div class="account-profile_setting">
+            <Choice
+              variant="toggle"
+              label="Show my general area"
+              name="show_area"
+              role="switch"
+              checked={profile.show_area}
+            />
+            <p class="account-profile_hint text-style-small">Never an exact spot.</p>
+          </div>
+        </div>
+      </Panel>
+
+      <div class="account-profile_bar" role="status" hidden data-bar data-account-hide>
+        <span class="account-profile_bar_text text-style-small" data-bar-text />
+        <span class="account-profile_bar_actions" data-bar-actions>
+          <ActionButton color="white" size="small" data-discard>Discard</ActionButton>
+          <ActionButton color="yellow" size="small" raised data-save>
+            Save changes
+          </ActionButton>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  import { updateProfile } from "@/lib/account-repo.ts";
+  import type { Profile } from "@/lib/onboarding-repo.ts";
+  import { luminance, toggle, styleResult, profileErrors } from "@/lib/profile-form.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-account]").forEach((root) => {
+    const initial: Profile = JSON.parse(root.dataset.profile ?? "{}");
+    const state: Profile = structuredClone(initial);
+    let base = JSON.stringify(initial);
+    let justSaved = false;
+    let failed = false;
+
+    const $ = <T extends HTMLElement>(selector: string) =>
+      root.querySelector<T>(selector)!;
+    const $$ = <T extends HTMLElement>(selector: string) =>
+      root.querySelectorAll<T>(selector);
+
+    const swatches = $$<HTMLButtonElement>("[data-swatch]");
+    const customSwatch = $("[data-swatch-custom]");
+    const colorInput = $<HTMLInputElement>("[data-color-input]");
+    const nameInput = $<HTMLInputElement>("[data-first-name]");
+    const bar = $("[data-bar]");
+    const barText = $("[data-bar-text]");
+    const barActions = $("[data-bar-actions]");
+    const saveButton = $<HTMLButtonElement>("[data-save]");
+
+    const swatchColor = (button: HTMLElement) =>
+      getComputedStyle(button).getPropertyValue("--_swatch").trim();
+
+    const press = (selector: string, active: (el: HTMLElement) => boolean) =>
+      $$(selector).forEach((el) =>
+        el.setAttribute("aria-pressed", String(active(el))),
+      );
+
+    const checkRadios = (name: string, value: string) =>
+      $$<HTMLInputElement>(`input[name="${name}"]`).forEach((input) => {
+        input.checked = input.value === value;
+      });
+
+    const render = () => {
+      const errors = profileErrors(state);
+      const dirty = JSON.stringify(state) !== base;
+      const result = styleResult(state.style);
+      const first = state.first_name.trim();
+      const fg = luminance(state.avatar_color) < 0.5 ? "#ffffff" : "";
+      const onColor = fg || "var(--colors-on-vivid)";
+
+      if (nameInput.value !== state.first_name) nameInput.value = state.first_name;
+
+      const matched = [...swatches].find(
+        (swatch) => swatchColor(swatch).toLowerCase() === state.avatar_color.toLowerCase(),
+      );
+      swatches.forEach((swatch) =>
+        swatch.setAttribute("aria-pressed", String(swatch === matched)),
+      );
+      customSwatch.classList.toggle("chosen", !matched);
+      customSwatch.style.setProperty("--_swatch", state.avatar_color);
+      customSwatch.style.setProperty("--_on", onColor);
+      if (!matched && colorInput.value !== state.avatar_color.toLowerCase())
+        colorInput.value = state.avatar_color.toLowerCase();
+
+      press("[data-age]", (el) => el.dataset.age === state.age_group);
+      press("[data-area]", (el) => el.dataset.area === state.area_id);
+      press("[data-interest]", (el) => state.interests.includes(el.dataset.interest!));
+      press("[data-activity]", (el) => state.activity_types.includes(el.dataset.activity!));
+      press("[data-availability]", (el) => state.availability.includes(el.dataset.availability!));
+
+      $("[data-interest-count]").textContent =
+        state.interests.length >= 3
+          ? `${state.interests.length} picked`
+          : `Pick at least 3 (${state.interests.length} so far)`;
+
+      $$<HTMLInputElement>("input[data-style]").forEach((input) => {
+        const key = input.dataset.style as keyof Profile["style"];
+        input.checked = state.style[key] === Number(input.value);
+      });
+      checkRadios("group_size", state.group_size);
+      checkRadios("discoverable_by", state.discoverable_by);
+      checkRadios("contactable_by", state.contactable_by);
+      ($(`input[name="group_first"]`) as HTMLInputElement).checked = state.group_first;
+      ($(`input[name="show_area"]`) as HTMLInputElement).checked = state.show_area;
+
+      const avatar = $("[data-live-avatar]");
+      avatar.style.setProperty("--_color", state.avatar_color);
+      avatar.style.setProperty("--_on", onColor);
+      $("[data-live-initial]").textContent = first ? first[0].toUpperCase() : "?";
+      $("[data-live-name]").textContent = first || "Your first name";
+      const areaName = $<HTMLElement>(`[data-area="${state.area_id}"]`)?.dataset.areaName;
+      $("[data-live-line]").textContent =
+        (result?.name ?? "") +
+        (state.show_area && areaName && state.area_id !== "other"
+          ? ` · ${areaName} area`
+          : "");
+      const shown = state.interests.slice(0, 4);
+      $$("[data-live-tag]").forEach((tag) => {
+        const index = shown.indexOf(tag.dataset.liveTag!);
+        tag.hidden = index < 0;
+        tag.style.order = String(index);
+      });
+      if (result) $("[data-style-name] .pill_text").textContent = result.name;
+
+      const saved = justSaved && !dirty;
+      bar.hidden = !(dirty || saved);
+      bar.classList.toggle("saved", saved);
+      barActions.hidden = !dirty;
+      barText.textContent = saved
+        ? "Saved. Your profile is up to date."
+        : failed
+          ? "Couldn't save. Try again."
+          : errors[0] ?? "You have unsaved changes.";
+      saveButton.disabled = errors.length > 0;
+    };
+
+    const change = (patch: () => void) => {
+      patch();
+      justSaved = false;
+      failed = false;
+      render();
+    };
+
+    root.addEventListener("click", (event) => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>(
+        "[data-swatch], [data-age], [data-area], [data-interest], [data-activity], [data-availability], [data-discard], [data-save]",
+      );
+      if (!target) return;
+      const data = target.dataset;
+
+      if (target.matches("[data-discard]")) {
+        Object.assign(state, structuredClone(JSON.parse(base)));
+        justSaved = false;
+        failed = false;
+        return render();
+      }
+      if (target.matches("[data-save]")) {
+        if (profileErrors(state).length) return;
+        const snapshot = JSON.stringify(state);
+        saveButton.disabled = true;
+        barText.textContent = "Saving...";
+        updateProfile(structuredClone(state)).then(
+          () => {
+            base = snapshot;
+            justSaved = true;
+            failed = false;
+            render();
+          },
+          () => {
+            failed = true;
+            render();
+          },
+        );
+        return;
+      }
+      change(() => {
+        if (target.matches("[data-swatch]")) state.avatar_color = swatchColor(target);
+        else if (data.age) state.age_group = data.age;
+        else if (data.area) state.area_id = data.area;
+        else if (data.interest) state.interests = toggle(state.interests, data.interest);
+        else if (data.activity) state.activity_types = toggle(state.activity_types, data.activity);
+        else if (data.availability)
+          state.availability = toggle(state.availability, data.availability);
+      });
+    });
+
+    root.addEventListener("input", (event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.matches("[data-first-name]")) change(() => (state.first_name = target.value));
+      else if (target.matches("[data-color-input]"))
+        change(() => (state.avatar_color = target.value));
+    });
+
+    root.addEventListener("change", (event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.dataset.style) {
+        const key = target.dataset.style as keyof Profile["style"];
+        change(() => (state.style[key] = Number(target.value)));
+      } else if (target.name === "group_size") change(() => (state.group_size = target.value));
+      else if (target.name === "discoverable_by")
+        change(() => (state.discoverable_by = target.value));
+      else if (target.name === "contactable_by")
+        change(() => (state.contactable_by = target.value));
+      else if (target.name === "group_first") change(() => (state.group_first = target.checked));
+      else if (target.name === "show_area") change(() => (state.show_area = target.checked));
+    });
+
+    render();
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .account-profile_wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .account-profile_header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .account-profile_lead,
+    .account-profile_hint {
+      color: var(--text-2);
+    }
+
+    .account-profile_live {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .account-profile_avatar {
+      --_color: var(--colors-vivid-green);
+      --_on: var(--colors-on-vivid);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--avatar-xlarge) + var(--space-1));
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_color);
+      box-shadow: var(--shadow-offset-small);
+      color: var(--_on);
+      font-family: var(--secondary-family);
+      font-size: var(--h4);
+      font-weight: var(--secondary-bold);
+      line-height: 1;
+      transition: background-color var(--move-duration) var(--ease-out);
+    }
+
+    .account-profile_who {
+      display: flex;
+      flex: 1 1 var(--card-width-small);
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .account-profile_name {
+      font-weight: var(--secondary-bold);
+      overflow-wrap: anywhere;
+    }
+
+    .account-profile_tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .account-profile_note {
+      font-weight: var(--primary-bold);
+    }
+
+    .account-profile_section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .account-profile_heading {
+      font-weight: var(--secondary-bold);
+    }
+
+    .account-profile_split {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .account-profile_group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .account-profile_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .account-profile_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .account-profile_dot {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_dot);
+    }
+
+    .account-profile_setting {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+    }
+
+    .account-profile_bar {
+      position: sticky;
+      inset-block-end: var(--space-4);
+      z-index: 5;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--text);
+      color: var(--background);
+      animation: account-profile-up var(--move-duration) var(--ease-out) backwards;
+
+      &.saved {
+        background-color: var(--status-free);
+        color: var(--colors-on-vivid);
+      }
+      &[hidden] {
+        display: none;
+      }
+      @media (width < 48rem) {
+        inset-block-end: calc(5.5rem + env(safe-area-inset-bottom));
+      }
+    }
+
+    .account-profile_bar_text {
+      flex: 1 1 var(--card-width-small);
+      font-weight: var(--primary-bold);
+    }
+
+    .account-profile_bar_actions {
+      display: flex;
+      gap: var(--space-2);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    @keyframes account-profile-up {
+      from {
+        opacity: 0;
+        translate: 0 var(--space-3);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

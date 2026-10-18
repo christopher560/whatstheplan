@@ -1,0 +1,264 @@
+---
+import PathIcon from "@/components/media/PathIcon.astro";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The viewer, shown in the middle. */
+  viewer?: { initial: string; color: AccentColor };
+}
+
+const { render = true, viewer } = Astro.props;
+
+/** Where each of the six spots sits on the ring, in degrees from the right. */
+const slots = [-90, -30, 30, 90, 150, 210];
+---
+
+{
+  render && viewer && (
+    <div class="friend-orbit_wrap" data-orbit>
+      <span class="friend-orbit_glow" aria-hidden="true" />
+      <span class="friend-orbit_ring" aria-hidden="true" />
+
+      <div class="friend-orbit_you">
+        <span class={`friend-orbit_you_avatar avatar_wrap ${viewer.color}`}>
+          {viewer.initial}
+        </span>
+        <span class="friend-orbit_label text-style-small">You</span>
+      </div>
+
+      {slots.map((degrees, index) => (
+        <div class="friend-orbit_slot" style={`--_deg: ${degrees}deg;`} data-slot={index}>
+          <button type="button" class="friend-orbit_member" hidden data-remove>
+            <span class="friend-orbit_float" style={`--_i: ${index};`}>
+              <span class="friend-orbit_avatar avatar_wrap">
+                <span data-initial />
+                <span class="friend-orbit_status" data-status />
+              </span>
+            </span>
+            <span class="friend-orbit_label text-style-small" data-name />
+          </button>
+          <a class="friend-orbit_add" href="#everyone" hidden data-add aria-label="Open spot. Pick a friend below to add them">
+            <span class="friend-orbit_add_circle">
+              <PathIcon d="M12 5v14M5 12h14" />
+            </span>
+            <span class="friend-orbit_label muted text-style-small">Add</span>
+          </a>
+          <span class="friend-orbit_dot" hidden data-dot aria-hidden="true" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+<script>
+  import { MAX_CIRCLE } from "@/data/friends.ts";
+  import { circleMembers, subscribe, toggleCircle } from "@/lib/friends-store.ts";
+  import { setAccent, setText } from "@/lib/ui.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-orbit]").forEach((root) => {
+    const slots = [...root.querySelectorAll<HTMLElement>("[data-slot]")];
+    let ids: string[] = [];
+
+    root.addEventListener("click", (event) => {
+      const slot = (event.target as HTMLElement).closest<HTMLElement>("[data-remove]")
+        ?.closest<HTMLElement>("[data-slot]");
+      const id = ids[Number(slot?.dataset.slot)];
+      if (id) toggleCircle(id);
+    });
+
+    subscribe(() => {
+      const members = circleMembers();
+      ids = members.map((member) => member.id);
+      const firstEmpty = members.length < MAX_CIRCLE ? members.length : -1;
+
+      slots.forEach((slot, index) => {
+        const member = members[index];
+        const remove = slot.querySelector<HTMLElement>("[data-remove]")!;
+        const add = slot.querySelector<HTMLElement>("[data-add]")!;
+        const dot = slot.querySelector<HTMLElement>("[data-dot]")!;
+        remove.hidden = !member;
+        add.hidden = !!member || index !== firstEmpty;
+        dot.hidden = !!member || index === firstEmpty;
+        if (!member) return;
+
+        remove.setAttribute("aria-label", `Remove ${member.name} from the group`);
+        setText(remove, "[data-initial]", member.name.charAt(0).toUpperCase());
+        setText(remove, "[data-name]", member.name);
+        setAccent(remove.querySelector(".avatar_wrap")!, member.color);
+        remove.querySelector<HTMLElement>("[data-status]")!.dataset.tone = member.tone;
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-orbit_wrap {
+      position: relative;
+      width: min(100%, 28.75rem);
+      aspect-ratio: 1 / 1;
+      margin-inline: auto;
+      container-type: inline-size;
+    }
+
+    .friend-orbit_glow {
+      position: absolute;
+      inset: 2%;
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: var(--radius-round);
+      background: radial-gradient(
+        circle,
+        color-mix(in srgb, var(--colors-vivid-yellow) 32%, transparent),
+        transparent 66%
+      );
+    }
+
+    .friend-orbit_ring {
+      position: absolute;
+      inset: 16%;
+      border: var(--border-width-thick) dashed var(--border);
+      border-radius: var(--radius-round);
+      animation: friend-orbit-spin 80s linear infinite;
+    }
+
+    .friend-orbit_you {
+      position: absolute;
+      inset-inline-start: 50%;
+      inset-block-start: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-1);
+      translate: -50% -50%;
+    }
+
+    .friend-orbit_you_avatar {
+      --_size: max(20cqw, 3.5rem);
+      box-shadow: 0 0.3125rem 0 var(--border-strong);
+      font-family: var(--secondary-family);
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-orbit_label {
+      display: block;
+      font-size: max(3.2cqw, 0.8125rem);
+      font-weight: var(--primary-bold);
+
+      &.muted {
+        color: var(--text-2);
+      }
+    }
+
+    .friend-orbit_slot {
+      position: absolute;
+      inset-inline-start: calc(50% + 34% * cos(var(--_deg)));
+      inset-block-start: calc(50% + 34% * sin(var(--_deg)));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: max(22cqw, 4rem);
+      translate: -50% -50%;
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    .friend-orbit_member,
+    .friend-orbit_add {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-1);
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--text);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .friend-orbit_float {
+      display: block;
+      animation: friend-orbit-float calc(5.2s + (var(--_i) * 0.35s)) ease-in-out infinite;
+      animation-delay: calc(var(--_i) * -0.9s);
+    }
+
+    .friend-orbit_avatar {
+      --_size: max(16cqw, 3rem);
+      position: relative;
+      box-shadow: 0 0.25rem 0 var(--border-strong);
+      font-family: var(--secondary-family);
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-orbit_status {
+      position: absolute;
+      inset-inline-end: calc(var(--space-0) * -0.5);
+      inset-block-end: calc(var(--space-0) * -0.5);
+      width: max(3.8cqw, 0.875rem);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--status-busy);
+
+      &[data-tone="free"] {
+        --_ping: color-mix(in srgb, var(--status-free) 55%, transparent);
+        background-color: var(--status-free);
+        animation: friend-orbit-ping 2.2s ease-out infinite;
+      }
+      &[data-tone="maybe"] {
+        background-color: var(--status-maybe);
+      }
+      &[data-tone="away"] {
+        background-color: var(--status-away);
+      }
+    }
+
+    .friend-orbit_add_circle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: max(16cqw, 3rem);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) dashed var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: color-mix(in srgb, var(--background-3) 75%, transparent);
+    }
+
+    .friend-orbit_dot {
+      width: max(6cqw, 1.375rem);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) dashed var(--border);
+      border-radius: var(--radius-round);
+    }
+
+    @keyframes friend-orbit-spin {
+      to {
+        rotate: 360deg;
+      }
+    }
+
+    @keyframes friend-orbit-float {
+      0%,
+      100% {
+        translate: 0 0;
+      }
+      50% {
+        translate: 0 -0.3125rem;
+      }
+    }
+
+    @keyframes friend-orbit-ping {
+      0% {
+        box-shadow: 0 0 0 0 var(--_ping);
+      }
+      80%,
+      100% {
+        box-shadow: 0 0 0 0.5rem transparent;
+      }
+    }
+  }
+</style>

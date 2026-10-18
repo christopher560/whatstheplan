@@ -1,39 +1,37 @@
 ---
 import DashboardLayout from "@/layouts/DashbaordLayout.astro";
-import Section from "@/components/wrapper/Section.astro";
-import Grid from "@/components/wrapper/Grid.astro";
-import Heading from "@/components/typography/Heading.astro";
-import Card from "@/components/item/Card.astro";
-import DashboardSection from '@/components/wrapper/DashboardSection.astro';
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import DashboardColumns from "@/components/wrapper/DashboardColumns.astro";
+import DashboardHeader from "@/components/content/DashboardHeader.astro";
+import PlanBuilder from "@/components/content/PlanBuilder.astro";
+import PlanBubbles from "@/components/content/PlanBubbles.astro";
+import InviteList from "@/components/content/InviteList.astro";
+import BudgetCard from "@/components/content/BudgetCard.astro";
+import FreeTonightCard from "@/components/content/FreeTonightCard.astro";
+import OverlapCard from "@/components/content/OverlapCard.astro";
+import { dashboardRepo } from "@/lib/dashboard-repo.ts";
+
+const { user, freeNow, plans, invites, budget, tonight, overlap } =
+  await dashboardRepo.getHome();
 ---
 
 <DashboardLayout title="Dashboard">
-  <Section paddingTop="medium" paddingBottom="medium">
-    <Heading tag="h1" variant="h1">Dashboard</Heading>
-
-    <Grid xsmall={1} medium={3}>
-      <Card heading="Upcoming" text="Your next scheduled items." />
-      <Card heading="This week" text="A summary of your week." />
-      <Card heading="Quick actions" text="Shortcuts to common tasks." />
-    </Grid>
-  </Section>
-  <Section paddingTop="medium" paddingBottom="medium">
-    <Heading tag="h1" variant="h1">Dashboard</Heading>
-  
-    <Grid xsmall={1} medium={3}>
-      <Card heading="Upcoming" text="Your next scheduled items." />
-      <Card heading="This week" text="A summary of your week." />
-      <Card heading="Quick actions" text="Shortcuts to common tasks." />
-    </Grid>
-  </Section>
-  <Section />
-  <DashboardSection paddingTop="medium" paddingBottom="medium">
-    <Heading tag="h1" variant="h1">Dashboard</Heading>
-  
-    <Grid xsmall={1} medium={3}>
-      <Card heading="Upcoming" text="Your next scheduled items." />
-      <Card heading="This week" text="A summary of your week." />
-      <Card heading="Quick actions" text="Shortcuts to common tasks." />
-    </Grid>
+  <!-- Home -->
+  <DashboardSection paddingTop="small" paddingBottom="small">
+    <DashboardColumns>
+      <DashboardHeader
+        name={user.name}
+        people={freeNow.people}
+        summary={freeNow.summary}
+      />
+      <PlanBuilder comfort={budget.comfort} />
+      <PlanBubbles plans={plans} />
+      <InviteList invites={invites} />
+      <Fragment slot="rail">
+        <BudgetCard {...budget} />
+        <FreeTonightCard friends={tonight} />
+        <OverlapCard friends={overlap} />
+      </Fragment>
+    </DashboardColumns>
   </DashboardSection>
 </DashboardLayout>

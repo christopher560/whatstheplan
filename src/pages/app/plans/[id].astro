@@ -1,0 +1,44 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import DashboardColumns from "@/components/wrapper/DashboardColumns.astro";
+import Grid from "@/components/wrapper/Grid.astro";
+import PlanState from "@/components/content/PlanState.astro";
+import PlanHeader from "@/components/content/PlanHeader.astro";
+import PlanStage from "@/components/content/PlanStage.astro";
+import PlanReplies from "@/components/content/PlanReplies.astro";
+import PlanTimes from "@/components/content/PlanTimes.astro";
+import PlanDescription from "@/components/content/PlanDescription.astro";
+import PlanBudget from "@/components/content/PlanBudget.astro";
+import PlanActivity from "@/components/content/PlanActivity.astro";
+import { planRepo } from "@/lib/plan-repo.ts";
+
+export async function getStaticPaths() {
+  const ids = await planRepo.listPlanIds();
+  return ids.map((id) => ({ params: { id } }));
+}
+
+const { id } = Astro.params;
+const plan = await planRepo.getPlan(id!);
+if (!plan) return Astro.redirect("/app/plans");
+---
+
+<DashboardLayout title={plan.title}>
+  <!-- Plan replies -->
+  <DashboardSection paddingTop="small" paddingBottom="small" gap="5">
+    <PlanState plan={plan} />
+    <PlanHeader plan={plan} />
+    <PlanStage plan={plan} />
+    <DashboardColumns>
+      <PlanReplies plan={plan} />
+      <Fragment slot="rail">
+        <PlanTimes plan={plan} />
+      </Fragment>
+    </DashboardColumns>
+    <Grid variant="autofit" minColumnWidth={20}>
+      <PlanDescription plan={plan} />
+      <PlanBudget plan={plan} />
+    </Grid>
+    <PlanActivity plan={plan} />
+  </DashboardSection>
+</DashboardLayout>

@@ -1,0 +1,94 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <Panel tag="article" class="group-card_wrap" data-card>
+      <div class="group-card_top">
+        <Pill size="tiny" variant="filled" color="blue" data-category>
+          Category
+        </Pill>
+        <Pill size="tiny" data-when-chip>
+          When
+        </Pill>
+      </div>
+      <h3 class="group-card_title text-style-h4" data-title />
+      <p class="group-card_purpose text-style-small" data-purpose />
+      <p class="group-card_where text-style-small" data-where />
+      <div class="group-card_crew">
+        <span class="avatar-stack_wrap" data-stack></span>
+        <p class="group-card_going text-style-small" data-going />
+      </div>
+      <div class="group-card_fit">
+        <span class="text-style-small" data-you />
+        <span class="text-style-small" data-them />
+      </div>
+      <div class="group-card_tags" data-tags></div>
+      <ActionButton class="group-card_join" data-join>
+        Join
+      </ActionButton>
+    </Panel>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .group-card_wrap {
+      gap: var(--space-3);
+      height: 100%;
+    }
+
+    .group-card_top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .group-card_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .group-card_where {
+      color: var(--text-2);
+    }
+
+    .group-card_crew {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .group-card_going {
+      font-weight: var(--primary-bold);
+    }
+
+    .group-card_fit {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1) var(--space-3);
+      font-weight: var(--primary-bold);
+    }
+
+    .group-card_tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .group-card_join {
+      margin-block-start: auto;
+    }
+  }
+</style>

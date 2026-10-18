@@ -106,3 +106,10 @@ const background = await slotContent(Astro.slots, "background");
     </section>
   )
 }
+<style is:global>
+  @layer components {
+    .dashboard_section > .container {
+      align-items: stretch;
+    }
+  }
+</style>

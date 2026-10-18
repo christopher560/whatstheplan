@@ -1,0 +1,71 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Choice from "@/components/form/Choice.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Whether friends can see the calendar at the start. */
+  share?: boolean;
+}
+
+const { render = true, share = true } = Astro.props;
+
+const on = "Friends see free or busy only. They never see what you are doing or why.";
+const off = "Your calendar is hidden. Friends cannot line up times with you.";
+---
+
+{
+  render && (
+    <Panel aria-labelledby="share-title">
+      <div class="share-card_wrap" data-share data-on={on} data-off={off}>
+        <h2 id="share-title" class="share-card_title text-style-h5">
+          Share with friends
+        </h2>
+        <Choice
+          variant="toggle"
+          label="Share my calendar with friends"
+          name="share_calendar"
+          role="switch"
+          checked={share}
+        />
+        <p class="share-card_hint text-style-small" data-hint>
+          {share ? on : off}
+        </p>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, update, subscribe } from "@/lib/calendar-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-share]").forEach((root) => {
+    const input = root.querySelector<HTMLInputElement>("input[name='share_calendar']")!;
+    const hint = root.querySelector<HTMLElement>("[data-hint]")!;
+    input.addEventListener("change", () => update({ share: input.checked }));
+    subscribe(() => {
+      const { share } = get();
+      input.checked = share;
+      hint.textContent = share ? root.dataset.on! : root.dataset.off!;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .share-card_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .share-card_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .share-card_hint {
+      color: var(--text-2);
+    }
+  }
+</style>

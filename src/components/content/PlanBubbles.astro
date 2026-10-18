@@ -1,0 +1,414 @@
+---
+import type { Plan } from "@/data/dashboard.ts";
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Plans shown as bubbles. The first is selected. */
+  plans?: Plan[];
+}
+
+const { render = true, plans = [] } = Astro.props;
+
+const filters = [
+  { id: "all", label: "All" },
+  { id: "hangout", label: "Hangouts" },
+  { id: "school", label: "School" },
+  { id: "formal", label: "Formal" },
+];
+const stages = ["Idea", "Voting", "Locked in"];
+const nameStyle = (rank: number) =>
+  rank >= 6 ? "text-style-h4" : rank >= 4 ? "text-style-h5" : "text-style-h6";
+---
+
+{
+  render && plans.length > 0 && (
+    <section class="plan-bubbles_wrap" aria-labelledby="plan-bubbles-title" data-plan-bubbles>
+      <div class="plan-bubbles_head">
+        <h2 id="plan-bubbles-title" class="plan-bubbles_title text-style-h4">
+          Plans with your people
+        </h2>
+        <div class="plan-bubbles_filters" role="group" aria-label="Filter plans">
+          {filters.map((filter) => (
+            <Pill
+              element="button"
+              pressed={filter.id === "all"}
+              data-filter={filter.id}
+            >
+              {filter.label}
+            </Pill>
+          ))}
+        </div>
+      </div>
+
+      <div class="plan-bubbles_canvas">
+        {plans.map((plan, index) => (
+          <button
+            type="button"
+            class:list={[
+              "plan-bubbles_bubble",
+              plan.color,
+              `shape-${plan.shape}`,
+              plan.idea && "idea",
+            ]}
+            style={`--_rank: ${plan.rank}; --_i: ${index};`}
+            aria-pressed={String(index === 0)}
+            data-plan={plan.id}
+            data-category={plan.category}
+          >
+            <span class="plan-bubbles_tag text-style-tiny">{plan.tag}</span>
+            <span class:list={["plan-bubbles_name", nameStyle(plan.rank)]}>
+              {plan.title}
+            </span>
+            <span class="plan-bubbles_sub text-style-tiny">{plan.sub}</span>
+            <span class="plan-bubbles_crew">
+              <AvatarStack people={plan.people} size="small" />
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <p class="plan-bubbles_legend text-style-small">
+        Bigger bubble = closer to locked in. Wobbly = still just an idea. Tap a
+        bubble to see what's next.
+      </p>
+
+      <div class="plan-bubbles_details" aria-live="polite">
+        {plans.map((plan, index) => (
+          <Panel tag="article" hidden={index !== 0} data-detail={plan.id}>
+            <div class="plan-bubbles_detail">
+              <div class="plan-bubbles_summary">
+                <div class="plan-bubbles_meta">
+                  <Pill size="tiny" variant="filled" color={plan.color}>
+                    {plan.tag}
+                  </Pill>
+                  <AvatarStack people={plan.people} size="small" />
+                  <p class="plan-bubbles_who text-style-small">{plan.who}</p>
+                </div>
+                <h3 class="plan-bubbles_plan text-style-h4">{plan.title}</h3>
+                <p class="plan-bubbles_when text-style-small">
+                  {plan.when}
+                  <br />
+                  {plan.place}
+                </p>
+                <div class="plan-bubbles_stages" role="group" aria-label="Plan progress">
+                  {stages.map((label, stage) => (
+                    <Pill
+                      size="tiny"
+                      variant={stage <= plan.stage ? "filled" : "dashed"}
+                    >
+                      {label}
+                    </Pill>
+                  ))}
+                </div>
+              </div>
+              <div class="plan-bubbles_side">
+                <div class="plan-bubbles_cost">
+                  <p class="plan-bubbles_amount text-style-h4">{plan.cost}</p>
+                  <p class="plan-bubbles_unit text-style-tiny">per person</p>
+                </div>
+                <ActionButton color="ink" class="width-full">{plan.action}</ActionButton>
+              </div>
+            </div>
+          </Panel>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+<script>
+  document
+    .querySelectorAll<HTMLElement>("[data-plan-bubbles]")
+    .forEach((root) => {
+      const bubbles = root.querySelectorAll<HTMLElement>("[data-plan]");
+      const details = root.querySelectorAll<HTMLElement>("[data-detail]");
+      const filters = root.querySelectorAll<HTMLElement>("[data-filter]");
+      let selected = bubbles[0]?.dataset.plan;
+
+      const select = (id: string | undefined) => {
+        selected = id;
+        bubbles.forEach((bubble) =>
+          bubble.setAttribute("aria-pressed", String(bubble.dataset.plan === id)),
+        );
+        details.forEach((detail) => {
+          detail.hidden = detail.dataset.detail !== id;
+        });
+      };
+
+      const filter = (category: string) => {
+        filters.forEach((pill) =>
+          pill.setAttribute("aria-pressed", String(pill.dataset.filter === category)),
+        );
+        bubbles.forEach((bubble) => {
+          bubble.hidden =
+            category !== "all" && bubble.dataset.category !== category;
+        });
+        const current = [...bubbles].find(
+          (bubble) => bubble.dataset.plan === selected,
+        );
+        if (!current || current.hidden) {
+          select([...bubbles].find((bubble) => !bubble.hidden)?.dataset.plan);
+        }
+      };
+
+      bubbles.forEach((bubble) =>
+        bubble.addEventListener("click", () => select(bubble.dataset.plan)),
+      );
+      filters.forEach((pill) =>
+        pill.addEventListener("click", () => filter(pill.dataset.filter!)),
+      );
+    });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-bubbles_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .plan-bubbles_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plan-bubbles_filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .plan-bubbles_canvas {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-7) var(--space-4);
+      padding: var(--space-6) var(--space-3) var(--space-7);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      background-image: radial-gradient(
+        var(--border-subtle) var(--border-width-medium),
+        transparent var(--border-width-medium)
+      );
+      background-size: 1.375rem 1.375rem;
+    }
+
+    .plan-bubbles_bubble {
+      --_scale: 1;
+      --_color: var(--colors-vivid-green);
+      --_shape: 50%;
+      --_float: 5.4s;
+      --_size: calc((5.5rem + var(--_rank) * 1.25rem) * var(--_scale));
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-1);
+      width: var(--_size);
+      height: var(--_size);
+      padding: var(--space-2);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--_shape);
+      background-color: var(--_color);
+      box-shadow: var(--shadow-offset-main);
+      color: var(--colors-on-vivid);
+      text-align: center;
+      outline: var(--border-width-thick) solid transparent;
+      outline-offset: 0;
+      animation:
+        plan-bubbles-pop var(--reveal-duration) var(--ease-spring-soft) backwards,
+        plan-bubbles-float var(--_float) ease-in-out infinite;
+      animation-delay:
+        calc(var(--_i) * var(--stagger-step)),
+        calc(var(--_i) * var(--stagger-step) * -4);
+      transition:
+        transform var(--move-duration) var(--ease-spring),
+        outline-offset var(--move-duration) var(--ease-out),
+        outline-color var(--move-duration) var(--ease-out);
+
+      @media (width < 30rem) {
+        --_scale: 0.82;
+      }
+      &:nth-child(3n + 2) {
+        --_float: 6.2s;
+      }
+      &:nth-child(3n) {
+        --_float: 7s;
+      }
+      &.red {
+        --_color: var(--colors-vivid-red);
+      }
+      &.yellow {
+        --_color: var(--colors-vivid-yellow);
+      }
+      &.blue {
+        --_color: var(--colors-vivid-blue);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+      &.orange {
+        --_color: var(--colors-vivid-orange);
+      }
+      &.shape-1 {
+        --_shape: 58% 42% 55% 45% / 48% 56% 44% 52%;
+      }
+      &.shape-2 {
+        --_shape: 46% 54% 44% 56% / 54% 46% 56% 44%;
+      }
+      &.shape-3 {
+        --_shape: 52% 48% 60% 40% / 44% 58% 42% 56%;
+      }
+      &.idea {
+        border-style: dashed;
+        box-shadow: var(--shadow-offset-small);
+        animation:
+          plan-bubbles-pop var(--reveal-duration) var(--ease-spring-soft) backwards,
+          plan-bubbles-float var(--_float) ease-in-out infinite,
+          plan-bubbles-wobble 5s ease-in-out infinite;
+      }
+      &[aria-pressed="true"] {
+        outline-color: var(--border-strong);
+        outline-offset: var(--space-0);
+      }
+      &[hidden] {
+        display: none;
+      }
+      @media (hover: hover) {
+        &:hover {
+          transform: scale(1.06) rotate(-1.5deg);
+        }
+      }
+      &:active {
+        transform: scale(0.95);
+      }
+    }
+
+    .plan-bubbles_name {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-bubbles_crew {
+      position: absolute;
+      inset-inline-start: 50%;
+      inset-block-end: calc(var(--space-4) * -0.75);
+      translate: -50% 0;
+      pointer-events: none;
+    }
+
+    .plan-bubbles_legend {
+      color: var(--text-2);
+    }
+
+    .plan-bubbles_detail {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-4) var(--space-5);
+      animation: plan-bubbles-swap var(--reveal-duration) var(--ease-out) backwards;
+    }
+
+    .plan-bubbles_summary {
+      flex: 1 1 var(--card-width-main);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .plan-bubbles_meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plan-bubbles_who {
+      color: var(--text-2);
+    }
+
+    .plan-bubbles_stages {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .plan-bubbles_side {
+      flex: 1 1 var(--card-width-small);
+      max-width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plan-bubbles_cost {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-vivid-yellow);
+      color: var(--colors-on-vivid);
+      text-align: center;
+    }
+
+    @keyframes plan-bubbles-pop {
+      from {
+        opacity: 0.2;
+        scale: 0.55;
+      }
+      to {
+        opacity: 1;
+        scale: 1;
+      }
+    }
+
+    @keyframes plan-bubbles-float {
+      0%,
+      100% {
+        translate: 0 0;
+      }
+      50% {
+        translate: 0 calc(var(--space-1) * -1);
+      }
+    }
+
+    @keyframes plan-bubbles-wobble {
+      0%,
+      100% {
+        border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
+      }
+      50% {
+        border-radius: 44% 56% 42% 58% / 56% 44% 56% 44%;
+      }
+    }
+
+    @keyframes plan-bubbles-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

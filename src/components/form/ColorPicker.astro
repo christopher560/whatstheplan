@@ -1,0 +1,156 @@
+---
+import Icon from "@/components/media/Icon.astro";
+import icon_check from "@/assets/icons/icon_check.svg";
+import icon_plus from "@/assets/icons/icon_plus.svg";
+import { swatches } from "@/data/onboarding.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Unique id for the group label. */
+  id?: string;
+  /** Group label. */
+  label?: string;
+  /** Helper text under the swatches. */
+  hint?: string;
+}
+
+const { render = true, id = "color-label", label = "Your color", hint } = Astro.props;
+---
+
+{
+  render && (
+    <div class="color-picker_wrap" role="group" aria-labelledby={id}>
+      <p id={id} class="color-picker_label text-style-main">{label}</p>
+      <div class="color-picker_row">
+        {swatches.map((swatch) => (
+          <button
+            type="button"
+            class="color-picker_swatch"
+            style={`--_swatch: var(--colors-vivid-${swatch.color});`}
+            aria-pressed="false"
+            aria-label={`Color ${swatch.color}`}
+            data-swatch
+          >
+            <span class="color-picker_mark">
+              <Icon src={icon_check} variant="small" />
+            </span>
+          </button>
+        ))}
+        <label class="color-picker_swatch custom" data-swatch-custom>
+          <span class="color-picker_mark">
+            <Icon src={icon_plus} variant="small" />
+          </span>
+          <input
+            class="color-picker_input"
+            type="color"
+            aria-label="Pick your own color"
+            value="#ffd23f"
+            data-color-input
+          />
+        </label>
+      </div>
+      {hint && <p class="color-picker_hint text-style-small">{hint}</p>}
+    </div>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .color-picker_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .color-picker_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .color-picker_hint {
+      color: var(--text-2);
+    }
+
+    .color-picker_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .color-picker_swatch {
+      --_swatch: var(--colors-vivid-yellow);
+      --_on: var(--colors-on-vivid);
+      position: relative;
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--control-height-main);
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_swatch);
+      color: var(--_on);
+      transition:
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out);
+
+      & > .color-picker_mark {
+        opacity: 0;
+      }
+      &[aria-pressed="true"],
+      &.chosen {
+        overflow: visible;
+        box-shadow:
+          0 0 0 var(--border-width-thick) var(--background-3),
+          0 0 0 calc(var(--border-width-thick) * 2) var(--border-strong);
+        & > .color-picker_mark {
+          opacity: 1;
+        }
+      }
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+
+      &.custom {
+        cursor: pointer;
+        background-color: var(--background-3);
+        border-style: dashed;
+        color: var(--text);
+
+        & > .color-picker_mark {
+          opacity: 1;
+        }
+        &.chosen {
+          border-style: solid;
+          background-color: var(--_swatch);
+          color: var(--_on);
+        }
+        &:has(:focus-visible) {
+          outline: var(--focus-width) solid var(--text);
+          outline-offset: var(--focus-offset);
+        }
+      }
+    }
+
+    .color-picker_mark {
+      display: inline-flex;
+    }
+
+    .color-picker_input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+  }
+</style>

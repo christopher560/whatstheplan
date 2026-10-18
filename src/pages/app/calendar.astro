@@ -1,0 +1,38 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import DashboardColumns from "@/components/wrapper/DashboardColumns.astro";
+import CalendarState from "@/components/content/CalendarState.astro";
+import CalendarHeader from "@/components/content/CalendarHeader.astro";
+import FriendOverlap from "@/components/content/FriendOverlap.astro";
+import AvailabilityGrid from "@/components/content/AvailabilityGrid.astro";
+import PlansThisWeek from "@/components/content/PlansThisWeek.astro";
+import WeekSummary from "@/components/content/WeekSummary.astro";
+import ShareCard from "@/components/content/ShareCard.astro";
+import ImportCard from "@/components/content/ImportCard.astro";
+import { calendarRepo } from "@/lib/calendar-repo.ts";
+
+const calendar = await calendarRepo.getCalendar();
+---
+
+<DashboardLayout title="Your calendar">
+  <!-- Calendar -->
+  <DashboardSection paddingTop="small" paddingBottom="small" gap="5">
+    <CalendarState data={calendar} />
+    <CalendarHeader weekStart={calendar.weekStart} />
+    <FriendOverlap friends={calendar.friends} who={calendar.who} />
+    <DashboardColumns>
+      <AvailabilityGrid
+        weekStart={calendar.weekStart}
+        today={calendar.today}
+        cells={calendar.cells}
+      />
+      <Fragment slot="rail">
+        <PlansThisWeek />
+        <WeekSummary />
+        <ShareCard share={calendar.share} />
+        <ImportCard />
+      </Fragment>
+    </DashboardColumns>
+  </DashboardSection>
+</DashboardLayout>

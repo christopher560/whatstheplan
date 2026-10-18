@@ -1,0 +1,256 @@
+---
+import { DAYS, HOURS } from "@/data/calendar.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+/** Where the hour ticks sit: 8a, 12p, 4p, 8p, each three columns wide. */
+const ticks = [
+  { hour: 8, label: "8a" },
+  { hour: 12, label: "12p" },
+  { hour: 16, label: "4p" },
+  { hour: 20, label: "8p" },
+];
+---
+
+{
+  render && (
+    <div class="overlap-strips_wrap" data-strips>
+      <div class="overlap-strips_row">
+        <span />
+        <div class="overlap-strips_ticks" aria-hidden="true">
+          {ticks.map((tick) => (
+            <span
+              class="overlap-strips_tick text-style-tiny"
+              style={`--_column: ${tick.hour - HOURS[0] + 1};`}
+            >
+              {tick.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {DAYS.map((day, index) => (
+        <div class="overlap-strips_row" role="img" data-strip={index}>
+          <span class="overlap-strips_label text-style-small" data-label>
+            {day}
+          </span>
+          <div class="overlap-strips_hours">
+            {HOURS.map((hour) => (
+              <span class="overlap-strips_hour" data-hour={hour} />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <ul class="overlap-strips_legend">
+        <li class="overlap-strips_key">
+          <span class="overlap-strips_swatch all" />
+          <span class="text-style-tiny" data-all-label>You are free</span>
+        </li>
+        <li class="overlap-strips_key" data-friends-key>
+          <span class="overlap-strips_swatch some" />
+          <span class="text-style-tiny">Some friends</span>
+        </li>
+        <li class="overlap-strips_key" data-friends-key>
+          <span class="overlap-strips_swatch alone" />
+          <span class="text-style-tiny">Only you</span>
+        </li>
+        <li class="overlap-strips_key">
+          <span class="overlap-strips_swatch plan" />
+          <span class="text-style-tiny">Plan</span>
+        </li>
+      </ul>
+    </div>
+  )
+}
+
+<script>
+  import {
+    describeCell,
+    freeRuns,
+    hourLabel,
+    isToday,
+    monthDay,
+    selectedFriends,
+    subscribe,
+    weekDates,
+  } from "@/lib/calendar-store.ts";
+  import { DAYS } from "@/data/calendar.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-strips]").forEach((root) => {
+    const strips = root.querySelectorAll<HTMLElement>("[data-strip]");
+    const allLabel = root.querySelector<HTMLElement>("[data-all-label]")!;
+    const friendKeys = root.querySelectorAll<HTMLElement>("[data-friends-key]");
+
+    subscribe(() => {
+      const friends = selectedFriends();
+      const dates = weekDates();
+      const runs = freeRuns();
+      allLabel.textContent = friends.length ? "Everyone free" : "You are free";
+      friendKeys.forEach((key) => (key.hidden = friends.length === 0));
+
+      strips.forEach((strip) => {
+        const day = Number(strip.dataset.strip);
+        const date = dates[day];
+        const label = strip.querySelector<HTMLElement>("[data-label]")!;
+        label.textContent = `${DAYS[day]} ${date.getDate()}`;
+        label.classList.toggle("today", isToday(date));
+
+        let hasFree = false;
+        strip.querySelectorAll<HTMLElement>("[data-hour]").forEach((segment) => {
+          const cell = describeCell(day, Number(segment.dataset.hour));
+          segment.dataset.state = cell.state;
+          segment.dataset.match = cell.match;
+          if (cell.state === "free") hasFree = true;
+        });
+
+        const best = runs.filter((run) => run.day === day).sort((a, b) => b.length - a.length)[0];
+        strip.setAttribute(
+          "aria-label",
+          `${DAYS[day]} ${monthDay(date)}: ${
+            best
+              ? `everyone free ${hourLabel(best.start)} to ${hourLabel(best.end)}`
+              : friends.length === 0
+                ? "your free hours"
+                : hasFree
+                  ? "no shared free time"
+                  : "no shared free time"
+          }`,
+        );
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .overlap-strips_wrap {
+      --_label: 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--space-3) var(--space-3) var(--space-2);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .overlap-strips_row {
+      display: grid;
+      grid-template-columns: var(--_label) minmax(0, 1fr);
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .overlap-strips_ticks,
+    .overlap-strips_hours {
+      display: grid;
+      grid-template-columns: repeat(16, minmax(0, 1fr));
+      gap: var(--space-0);
+    }
+
+    .overlap-strips_tick {
+      grid-column: var(--_column) / span 3;
+      color: var(--text-2);
+      text-transform: none;
+    }
+
+    .overlap-strips_label {
+      justify-self: start;
+      font-weight: var(--primary-bold);
+
+      &.today {
+        margin-inline-start: calc(var(--space-1) * -1);
+        padding: var(--space-0) var(--space-1);
+        border-radius: var(--radius-small);
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .overlap-strips_hour {
+      display: block;
+      height: var(--space-5);
+      border: var(--border-width) solid transparent;
+      border-radius: 0.3125rem;
+      background-color: var(--background-muted);
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      &[data-state="free"] {
+        border: var(--border-width-medium) solid var(--colors-vivid-green);
+        background-color: var(--status-free);
+      }
+      &[data-state="free"][data-match="all"] {
+        border-color: var(--border-strong);
+      }
+      &[data-state="free"][data-match="some"] {
+        border: var(--border-width) solid var(--border-strong);
+        background-color: var(--status-free-background);
+      }
+      &[data-state="free"][data-match="none"] {
+        border: var(--border-width-medium) dashed var(--colors-vivid-green);
+        background-color: var(--background-3);
+      }
+      &[data-state="plan"] {
+        border: var(--border-width-medium) solid var(--border-strong);
+        background-color: var(--colors-vivid-purple);
+      }
+      &[data-state="pending"] {
+        border: var(--border-width-medium) dashed var(--border-strong);
+        background-color: var(--colors-secondary-purple);
+      }
+    }
+
+    .overlap-strips_legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1) var(--space-4);
+      margin: 0;
+      padding: var(--space-2) 0 0;
+      list-style: none;
+
+      & .text-style-tiny {
+        text-transform: none;
+      }
+    }
+
+    .overlap-strips_key {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .overlap-strips_swatch {
+      flex: none;
+      width: 0.875rem;
+      aspect-ratio: 1 / 1;
+      border-radius: 0.25rem;
+
+      &.all {
+        border: var(--border-width-medium) solid var(--border-strong);
+        background-color: var(--status-free);
+      }
+      &.some {
+        border: var(--border-width) solid var(--border-strong);
+        background-color: var(--status-free-background);
+      }
+      &.alone {
+        border: var(--border-width-medium) dashed var(--colors-vivid-green);
+        background-color: var(--background-3);
+      }
+      &.plan {
+        border: var(--border-width-medium) solid var(--border-strong);
+        background-color: var(--colors-vivid-purple);
+      }
+    }
+  }
+</style>

@@ -1,3 +1,13 @@
+/** Vivid accent swatches from `dashboard-base.css`. */
+export type AccentColor =
+  | "red"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "blue"
+  | "purple"
+  | "pink";
+
 /** Page metadata for `BaseHead` and layouts. */
 export interface SeoProps {
   /** Page title. The site name is appended. */

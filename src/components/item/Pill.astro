@@ -1,0 +1,212 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { AccentColor } from "@/types.ts";
+import { slotContent } from "@/utils/slots.ts";
+
+type Base = {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Pill size. */
+  size?: "tiny" | "small" | "main";
+  /** Pill style. */
+  variant?: "outline" | "filled" | "dashed";
+  /** Fill color. Applies when pressed or filled. Omit for ink. */
+  color?: AccentColor;
+};
+
+type Props = Base &
+  (
+    | (Omit<HTMLAttributes<"span">, "color"> & {
+        /** Rendered element. */
+        element?: "span";
+        pressed?: never;
+        href?: never;
+      })
+    | (Omit<HTMLAttributes<"button">, "color"> & {
+        element: "button";
+        /** Show the selected state. */
+        pressed?: boolean;
+        href?: never;
+      })
+    | (Omit<HTMLAttributes<"a">, "color"> & {
+        element: "link";
+        /** Link destination. */
+        href?: string;
+        pressed?: never;
+      })
+  );
+
+type AllProps = Base &
+  Omit<HTMLAttributes<"span">, "color"> &
+  Omit<HTMLAttributes<"button">, "color"> &
+  Omit<HTMLAttributes<"a">, "color"> & {
+    element?: "span" | "button" | "link";
+    pressed?: boolean;
+    href?: string;
+  };
+
+const {
+  render = true,
+  size = "small",
+  variant = "outline",
+  color,
+  element = "span",
+  pressed,
+  href,
+  class: className,
+  ...rest
+} = Astro.props as AllProps;
+
+const Tag = element === "link" ? "a" : element;
+const tagAttrs =
+  element === "link"
+    ? { href: href || "#" }
+    : element === "button"
+      ? { type: "button", "aria-pressed": String(pressed ?? false) }
+      : {};
+
+const before = await slotContent(Astro.slots, "before");
+const content = await slotContent(Astro.slots);
+const after = await slotContent(Astro.slots, "after");
+---
+
+{
+  render && content && (
+    <Tag
+      class:list={[
+        "pill_wrap",
+        size !== "small" && size,
+        variant !== "outline" && variant,
+        color,
+        className,
+      ]}
+      {...tagAttrs}
+      {...rest}
+    >
+      {before && <Fragment set:html={before} />}
+      <span
+        class:list={[
+          "pill_text",
+          size === "tiny" ? "text-style-tiny" : "text-style-small",
+        ]}
+      >
+        <Fragment set:html={content} />
+      </span>
+      {after && <Fragment set:html={after} />}
+    </Tag>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .pill_wrap {
+      --_color: var(--text);
+      --_fill: var(--_color);
+      --_on-fill: var(--background);
+      --_height: var(--control-height-small);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      min-height: var(--_height);
+      padding-inline: var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      color: var(--text);
+      text-align: center;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        color var(--hover-duration) var(--hover-ease),
+        border-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      &.tiny {
+        --_height: var(--control-height-tiny);
+        padding-inline: var(--space-2);
+        gap: var(--space-1);
+      }
+      &.main {
+        --_height: var(--control-height-main);
+        padding-inline: var(--space-4);
+      }
+
+      &.red {
+        --_color: var(--colors-vivid-red);
+      }
+      &.orange {
+        --_color: var(--colors-vivid-orange);
+      }
+      &.yellow {
+        --_color: var(--colors-vivid-yellow);
+      }
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.blue {
+        --_color: var(--colors-vivid-blue);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+      &:is(.red, .orange, .yellow, .green, .blue, .purple, .pink) {
+        --_on-fill: var(--colors-on-vivid);
+      }
+
+      &.filled {
+        background-color: var(--_fill);
+        border-color: var(--border);
+        color: var(--_on-fill);
+      }
+      &.dashed {
+        border-style: dashed;
+        border-color: var(--border-strong);
+      }
+
+      &:is(button, a) {
+        cursor: pointer;
+        @media (hover: hover) {
+          &:hover {
+            translate: 0 var(--hover-lift);
+          }
+        }
+        &:active {
+          scale: 0.95;
+        }
+      }
+
+      &[aria-pressed="true"] {
+        background-color: var(--_fill);
+        border-color: var(--border);
+        color: var(--_on-fill);
+        box-shadow: 0 0 0 var(--border-width-thick) var(--border-strong);
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .pill_text {
+      font-weight: var(--primary-bold);
+      line-height: var(--line-height-medium);
+      white-space: nowrap;
+      text-box: trim-both cap alphabetic;
+
+      &::before,
+      &::after {
+        content: none;
+      }
+    }
+  }
+</style>

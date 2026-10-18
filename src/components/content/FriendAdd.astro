@@ -1,0 +1,86 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The link the viewer sends so someone can add them. */
+  link?: string;
+}
+
+const { render = true, link = "" } = Astro.props;
+---
+
+{
+  render && link && (
+    <Panel variant="tint" tint="yellow" aria-labelledby="friend-add-title">
+      <div class="friend-add_wrap" data-friend-add data-link={link}>
+        <h2 id="friend-add-title" class="friend-add_title text-style-h4">
+          Add a friend
+        </h2>
+        <p class="text-style-main">
+          Send your link. They tap it and they're in. No account needed to answer a plan.
+        </p>
+        <div class="friend-add_row">
+          <p class="friend-add_link text-style-small">{link}</p>
+          <ActionButton size="small" data-copy>
+            Copy
+          </ActionButton>
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, subscribe, update } from "@/lib/friends-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-friend-add]").forEach((root) => {
+    const button = root.querySelector<HTMLElement>("[data-copy]")!;
+    button.addEventListener("click", () => {
+      void navigator.clipboard?.writeText(`https://${root.dataset.link}`).catch(() => {});
+      update({ copied: true });
+    });
+    subscribe(() => {
+      const copied = get().copied;
+      button.classList.toggle("green", copied);
+      button.querySelector<HTMLElement>(".action-button_text")!.textContent = copied
+        ? "Copied"
+        : "Copy";
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-add_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .friend-add_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-add_row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .friend-add_link {
+      flex: 1;
+      min-width: 0;
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+</style>

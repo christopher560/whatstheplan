@@ -1,0 +1,192 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { AccentColor } from "@/types.ts";
+import { slotContent } from "@/utils/slots.ts";
+
+type Base = {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Button size. */
+  size?: "small" | "main" | "large";
+  /** Fill color. `ink` follows the text color and `white` is an outline. */
+  color?: AccentColor | "ink" | "white";
+  /** Add the hard offset shadow that presses in on click. */
+  raised?: boolean;
+};
+
+type Props = Base &
+  (
+    | (Omit<HTMLAttributes<"button">, "color"> & {
+        /** Rendered element. */
+        element?: "button";
+        /** Native button type. */
+        type?: "button" | "submit" | "reset";
+        /** Disable the button. */
+        disabled?: boolean;
+        href?: never;
+      })
+    | (Omit<HTMLAttributes<"a">, "type" | "color"> & {
+        element: "link";
+        /** Link destination. */
+        href?: string;
+        type?: never;
+        disabled?: never;
+      })
+  );
+
+type AllProps = Base &
+  Omit<HTMLAttributes<"button">, "color"> &
+  Omit<HTMLAttributes<"a">, "type" | "color"> & {
+    element?: "button" | "link";
+    href?: string;
+    type?: "button" | "submit" | "reset";
+  };
+
+const {
+  render = true,
+  size = "main",
+  color = "orange",
+  raised = false,
+  element = "button",
+  href,
+  type = "button",
+  class: className,
+  ...rest
+} = Astro.props as AllProps;
+
+const isLink = element === "link";
+const Tag = isLink ? "a" : "button";
+const tagAttrs = isLink ? { href: href || "#" } : { type };
+
+const before = await slotContent(Astro.slots, "before");
+const content = await slotContent(Astro.slots);
+---
+
+{
+  render && content && (
+    <Tag
+      class:list={[
+        "action-button_wrap",
+        size !== "main" && size,
+        color,
+        raised && "raised",
+        className,
+      ]}
+      {...tagAttrs}
+      {...rest}
+    >
+      {before && <Fragment set:html={before} />}
+      <span
+        class:list={[
+          "action-button_text",
+          size === "small" ? "text-style-small" : "text-style-main",
+        ]}
+      >
+        <Fragment set:html={content} />
+      </span>
+    </Tag>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .action-button_wrap {
+      --_fill: var(--colors-vivid-orange);
+      --_ink: var(--colors-on-vivid);
+      --_height: var(--control-height-main);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      min-height: var(--_height);
+      padding-inline: var(--space-4);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--_fill);
+      color: var(--_ink);
+      text-align: center;
+      text-decoration: none;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      &.small {
+        --_height: var(--control-height-small);
+        padding-inline: var(--space-3);
+      }
+      &.large {
+        --_height: var(--control-height-large);
+        padding-inline: var(--space-5);
+      }
+
+      &.red {
+        --_fill: var(--colors-vivid-red);
+      }
+      &.yellow {
+        --_fill: var(--colors-vivid-yellow);
+      }
+      &.green {
+        --_fill: var(--colors-vivid-green);
+      }
+      &.blue {
+        --_fill: var(--colors-vivid-blue);
+      }
+      &.purple {
+        --_fill: var(--colors-vivid-purple);
+      }
+      &.pink {
+        --_fill: var(--colors-vivid-pink);
+      }
+      &.white {
+        --_fill: var(--background-3);
+        --_ink: var(--text);
+      }
+      &.ink {
+        --_fill: var(--text);
+        --_ink: var(--background);
+      }
+
+      &.raised {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-offset-main);
+      }
+
+      @media (hover: hover) {
+        &:hover:not(:disabled) {
+          translate: 0 var(--hover-lift);
+        }
+        &.ink:hover:not(:disabled) {
+          --_fill: var(--colors-vivid-orange);
+          --_ink: var(--colors-on-vivid);
+        }
+      }
+      &:active:not(:disabled) {
+        scale: 0.97;
+        &.raised {
+          translate: 0 0.125rem;
+          box-shadow: none;
+        }
+      }
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+    }
+
+    .action-button_text {
+      font-weight: var(--primary-bold);
+      line-height: 1.2;
+      white-space: nowrap;
+      text-box: trim-both cap alphabetic;
+
+      &::before,
+      &::after {
+        content: none;
+      }
+    }
+  }
+</style>

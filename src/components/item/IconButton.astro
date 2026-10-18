@@ -1,0 +1,83 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { slotContent } from "@/utils/slots.ts";
+
+interface Props extends HTMLAttributes<"button"> {
+  /** Makes the button a link to this address. */
+  href?: string;
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Accessible name, since the button shows only an icon. */
+  label?: string;
+  /** Button size. */
+  size?: "small" | "main";
+}
+
+const {
+  render = true,
+  label,
+  size = "main",
+  href,
+  class: className,
+  ...rest
+} = Astro.props;
+
+// A link and a button share every style here, so one element type stands in for both.
+const Tag = (href ? "a" : "button") as "button";
+const tagAttrs = (href ? { href } : { type: "button" }) as { type: "button" };
+
+const content = await slotContent(Astro.slots);
+---
+
+{
+  render && label && content && (
+    <Tag
+      class:list={["icon-button_wrap", size !== "main" && size, className]}
+      aria-label={label}
+      {...tagAttrs}
+      {...rest}
+    >
+      <Fragment set:html={content} />
+    </Tag>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .icon-button_wrap {
+      --_size: var(--control-height-small);
+      display: inline-grid;
+      flex: none;
+      place-items: center;
+      width: var(--_size);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      color: var(--text);
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        color var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      &.small {
+        --_size: var(--control-height-tiny);
+      }
+      @media (hover: hover) {
+        &:hover:not(:disabled) {
+          translate: 0 var(--hover-lift);
+          background-color: var(--text);
+          color: var(--background);
+        }
+      }
+      &:active:not(:disabled) {
+        scale: 0.95;
+      }
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+    }
+  }
+</style>

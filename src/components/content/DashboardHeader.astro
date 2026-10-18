@@ -1,0 +1,86 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { Person } from "@/data/dashboard.ts";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_plus from "@/assets/icons/icon_plus.svg";
+
+interface Props extends HTMLAttributes<"header"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** First name of the signed-in person. */
+  name?: string;
+  /** Friends who are free right now. */
+  people?: Person[];
+  /** One line about what is going on. Supports inline markup. */
+  summary?: string;
+  /** Where the call to action goes. */
+  buttonHref?: string;
+  class?: string;
+}
+
+const {
+  render = true,
+  name,
+  people = [],
+  summary,
+  buttonHref = "#builder",
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+{
+  render && name && (
+    <header class:list={["dashboard-header_wrap", className]} {...rest}>
+      <div class="dashboard-header_intro">
+        <h1 class="dashboard-header_title text-style-title">
+          What's the plan, {name}?
+        </h1>
+        <div class="dashboard-header_meta">
+          <AvatarStack people={people} size="small" />
+          {summary && (
+            <p class="dashboard-header_summary text-style-main">
+              <Fragment set:html={summary} />
+            </p>
+          )}
+        </div>
+      </div>
+      <ActionButton element="link" href={buttonHref} size="large">
+        <Icon slot="before" src={icon_plus} variant="small" />
+        Start a plan
+      </ActionButton>
+    </header>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .dashboard-header_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .dashboard-header_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+
+    .dashboard-header_meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .dashboard-header_summary {
+      color: var(--text-2);
+    }
+  }
+</style>

@@ -1,0 +1,38 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import FriendsState from "@/components/content/FriendsState.astro";
+import FriendsHeader from "@/components/content/FriendsHeader.astro";
+import FriendCircle from "@/components/content/FriendCircle.astro";
+import FriendAdd from "@/components/content/FriendAdd.astro";
+import FriendRequests from "@/components/content/FriendRequests.astro";
+import FriendList from "@/components/content/FriendList.astro";
+import { friendsRepo } from "@/lib/friends-repo.ts";
+
+const data = await friendsRepo.getFriends();
+---
+
+<DashboardLayout title="Your people">
+  <!-- Friends -->
+  <DashboardSection paddingTop="small" paddingBottom="small" gap="5">
+    <FriendsState data={data} />
+    <FriendsHeader />
+    <FriendCircle viewer={data.viewer} />
+    <div class="friends-page_pair">
+      <FriendAdd link={data.addLink} />
+      <FriendRequests requests={data.requests} />
+    </div>
+    <FriendList friends={[...data.friends, ...data.requests]} />
+  </DashboardSection>
+</DashboardLayout>
+
+<style is:global>
+  @layer components {
+    .friends-page_pair {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-width-large)), 1fr));
+      gap: var(--space-4);
+      align-items: start;
+    }
+  }
+</style>

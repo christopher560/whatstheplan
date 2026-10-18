@@ -1,0 +1,162 @@
+---
+import type { AccentColor } from "@/types.ts";
+import Pill from "@/components/item/Pill.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Every interest that can appear as a tag. */
+  interests?: { id: string; name: string; color: AccentColor }[];
+  /** Shown to everyone but minors. */
+  note?: string;
+  /** Shown to minors. */
+  minorNote?: string;
+}
+
+const {
+  render = true,
+  interests = [],
+  note = "Never your last name or exact location.",
+  minorNote = "Only people in your age group can see this.",
+} = Astro.props;
+---
+
+{
+  render && (
+    <aside
+      class="profile-preview_wrap"
+      aria-label="Profile preview"
+      data-preview
+      data-note={note}
+      data-minor-note={minorNote}
+    >
+      <p class="profile-preview_label text-style-small">What others will see</p>
+      <div class="profile-preview_card">
+        <div class="profile-preview_head">
+          <span class="profile-preview_avatar" data-preview-avatar>
+            <span data-preview-initial>?</span>
+          </span>
+          <div class="profile-preview_who">
+            <p class="profile-preview_name text-style-h4" data-preview-name>
+              Your first name
+            </p>
+            <p class="profile-preview_area text-style-small" data-preview-area>
+              Your area
+            </p>
+          </div>
+        </div>
+        <div class="profile-preview_tags">
+          <Pill size="tiny" variant="filled" color="yellow" hidden data-preview-style>
+            Style
+          </Pill>
+          {interests.map((interest) => (
+            <Pill
+              size="tiny"
+              variant="filled"
+              color={interest.color}
+              hidden
+              data-preview-tag={interest.id}
+            >
+              {interest.name}
+            </Pill>
+          ))}
+        </div>
+        <p class="profile-preview_empty text-style-small" data-preview-empty>
+          Your interests show up here as you pick them.
+        </p>
+        <p class="profile-preview_note text-style-small" data-preview-note>
+          {note}
+        </p>
+      </div>
+    </aside>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .profile-preview_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .profile-preview_label {
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .profile-preview_card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .profile-preview_head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .profile-preview_avatar {
+      --_color: var(--colors-vivid-yellow);
+      --_on: var(--colors-on-vivid);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-xlarge);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_color);
+      box-shadow: var(--shadow-offset-small);
+      color: var(--_on);
+      font-family: var(--secondary-family);
+      font-size: var(--h4);
+      font-weight: var(--secondary-bold);
+      line-height: 1;
+      transition: background-color var(--move-duration) var(--ease-out);
+    }
+
+    .profile-preview_who {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .profile-preview_name {
+      font-weight: var(--secondary-bold);
+      overflow-wrap: anywhere;
+    }
+
+    .profile-preview_area {
+      color: var(--text-2);
+    }
+
+    .profile-preview_tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .profile-preview_empty {
+      color: var(--text-2);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .profile-preview_note {
+      padding-top: var(--space-3);
+      border-top: var(--border-width) dashed var(--border);
+    }
+  }
+</style>

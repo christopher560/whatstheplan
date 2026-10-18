@@ -1,0 +1,21 @@
+---
+import type { DiscoverData } from "@/data/discover.ts";
+
+interface Props {
+  /** Everything the Discover components start from. */
+  data?: DiscoverData;
+}
+
+const { data } = Astro.props;
+---
+
+{
+  data && (
+    <script
+      is:inline
+      type="application/json"
+      id="discover-data"
+      set:html={JSON.stringify(data).replace(/</g, "\\u003c")}
+    />
+  )
+}

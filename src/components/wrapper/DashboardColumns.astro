@@ -1,0 +1,89 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { slotContent } from "@/utils/slots.ts";
+
+interface Props extends HTMLAttributes<"div"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true, class: className, ...rest } = Astro.props;
+
+const content = await slotContent(Astro.slots);
+const rail = await slotContent(Astro.slots, "rail");
+---
+
+{
+  render && (content || rail) && (
+    <div class:list={["dashboard-columns_wrap", className]} {...rest}>
+      <div class="dashboard-columns_main">
+        <Fragment set:html={content} />
+      </div>
+      {rail && (
+        <aside class="dashboard-columns_rail">
+          <Fragment set:html={rail} />
+        </aside>
+      )}
+    </div>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .dashboard-columns_wrap {
+      --_gap: var(--space-5);
+      --_rail-width: var(--card-width-large);
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--_gap);
+      align-items: start;
+
+      @media (width >= 64rem) {
+        --_rail-width: 22rem;
+        grid-template-columns: minmax(0, 1fr) minmax(var(--card-width-large), var(--_rail-width));
+      }
+    }
+
+    .dashboard-columns_main,
+    .dashboard-columns_rail {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      gap: var(--space-6);
+    }
+
+    .dashboard-columns_rail {
+      gap: var(--space-4);
+    }
+
+    .dashboard-columns_main > *,
+    .dashboard-columns_rail > * {
+      animation: dashboard-columns-rise var(--enter-duration) var(--ease-out) backwards;
+    }
+
+    :is(.dashboard-columns_main, .dashboard-columns_rail) > :nth-child(2) {
+      animation-delay: calc(var(--stagger-step) * 1);
+    }
+    :is(.dashboard-columns_main, .dashboard-columns_rail) > :nth-child(3) {
+      animation-delay: calc(var(--stagger-step) * 2);
+    }
+    :is(.dashboard-columns_main, .dashboard-columns_rail) > :nth-child(4) {
+      animation-delay: calc(var(--stagger-step) * 3);
+    }
+    :is(.dashboard-columns_main, .dashboard-columns_rail) > :nth-child(5) {
+      animation-delay: calc(var(--stagger-step) * 4);
+    }
+
+    @keyframes dashboard-columns-rise {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-3);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

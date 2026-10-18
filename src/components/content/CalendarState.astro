@@ -1,0 +1,21 @@
+---
+import type { CalendarData } from "@/data/calendar.ts";
+
+interface Props {
+  /** Everything the calendar components start from. */
+  data?: CalendarData;
+}
+
+const { data } = Astro.props;
+---
+
+{
+  data && (
+    <script
+      is:inline
+      type="application/json"
+      id="calendar-data"
+      set:html={JSON.stringify(data).replace(/</g, "\u003c")}
+    />
+  )
+}

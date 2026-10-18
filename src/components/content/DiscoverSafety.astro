@@ -1,0 +1,91 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { safetyPoints } from "@/data/discover.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <Panel aria-labelledby="discover-safety-title" class="discover-safety_wrap">
+      <h2 id="discover-safety-title" class="discover-safety_title text-style-h4">
+        Built to keep you comfortable
+      </h2>
+      <ul class="discover-safety_list">
+        {safetyPoints.map((point) => (
+          <li class="discover-safety_item">
+            <span class={`discover-safety_icon ${point.color}`}>
+              <PathIcon d={point.icon} />
+            </span>
+            <span class="discover-safety_text text-style-main">{point.text}</span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .discover-safety_wrap {
+      gap: var(--space-4);
+    }
+
+    .discover-safety_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .discover-safety_list {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, var(--card-width-small)), 1fr)
+      );
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .discover-safety_item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+
+    .discover-safety_icon {
+      --_color: var(--colors-vivid-blue);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.yellow {
+        --_color: var(--colors-vivid-yellow);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+    }
+
+    .discover-safety_text {
+      font-weight: var(--primary-bold);
+      padding-block-start: var(--space-1);
+    }
+  }
+</style>

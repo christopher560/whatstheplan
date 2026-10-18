@@ -1,0 +1,176 @@
+---
+import PathIcon from "@/components/media/PathIcon.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const tabs = [
+  {
+    id: "friends",
+    label: "With friends",
+    hint: "Plans you made or got invited to",
+    color: "yellow",
+    icon: "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 3-5 6-5s6 2 6 5M17 11a2.5 2.5 0 100-5M21 19c0-2-1.5-3.5-3.5-4",
+  },
+  {
+    id: "groups",
+    label: "New groups",
+    hint: "People you met on Discover",
+    color: "green",
+    icon: "M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z",
+  },
+];
+---
+
+{
+  render && (
+    <div class="plans-tabs_wrap" role="group" aria-label="Plan type" data-plans-tabs>
+      {tabs.map((tab) => (
+        <button
+          type="button"
+          class={`plans-tabs_tile ${tab.color}`}
+          aria-pressed="false"
+          data-tab={tab.id}
+        >
+          <span class="plans-tabs_icon">
+            <PathIcon d={tab.icon} />
+          </span>
+          <span class="plans-tabs_text">
+            <span class="plans-tabs_label text-style-h4">{tab.label}</span>
+            <span class="plans-tabs_hint text-style-small">{tab.hint}</span>
+          </span>
+          <span class="plans-tabs_badge text-style-small" hidden data-badge />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+<script>
+  import { get, getHub, pendingCount, subscribe, update } from "@/lib/plans-store.ts";
+  import type { PlansTab } from "@/lib/plans-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-plans-tabs]").forEach((root) => {
+    const tiles = root.querySelectorAll<HTMLElement>("[data-tab]");
+    tiles.forEach((tile) =>
+      tile.addEventListener("click", () => update({ tab: tile.dataset.tab as PlansTab })),
+    );
+
+    subscribe(() => {
+      const unread = getHub().groups.reduce((sum, group) => sum + group.unread, 0);
+      const counts: Record<string, number> = { friends: pendingCount(), groups: unread };
+      tiles.forEach((tile) => {
+        const id = tile.dataset.tab!;
+        tile.setAttribute("aria-pressed", String(get().tab === id));
+        const badge = tile.querySelector<HTMLElement>("[data-badge]")!;
+        badge.hidden = !counts[id];
+        badge.textContent = String(counts[id]);
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-tabs_wrap {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-width-main)), 1fr));
+      gap: var(--space-3);
+    }
+
+    .plans-tabs_tile {
+      --_tile: var(--colors-vivid-yellow);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-height: 4.5rem;
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--_tile);
+      color: var(--colors-on-vivid);
+      text-align: start;
+      cursor: pointer;
+      opacity: 0.8;
+      transition:
+        opacity var(--hover-duration) var(--hover-ease),
+        border-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      &.green {
+        --_tile: var(--colors-vivid-green);
+      }
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+      &:active {
+        scale: 0.98;
+      }
+      &[aria-pressed="true"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        box-shadow: var(--shadow-offset-main);
+        opacity: 1;
+      }
+    }
+
+    .plans-tabs_icon {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--control-height-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: color-mix(in srgb, var(--background-3) 80%, transparent);
+    }
+
+    .plans-tabs_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .plans-tabs_label,
+    .plans-tabs_hint {
+      display: block;
+    }
+
+    .plans-tabs_label {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-tabs_hint {
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-tabs_badge {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--space-6);
+      height: var(--space-6);
+      padding-inline: var(--space-1);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-red);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>

@@ -1,0 +1,25 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import DiscoverState from "@/components/content/DiscoverState.astro";
+import DiscoverHeader from "@/components/content/DiscoverHeader.astro";
+import DiscoverFinder from "@/components/content/DiscoverFinder.astro";
+import DiscoverBrowse from "@/components/content/DiscoverBrowse.astro";
+import DiscoverKnow from "@/components/content/DiscoverKnow.astro";
+import DiscoverSafety from "@/components/content/DiscoverSafety.astro";
+import { discoverRepo } from "@/lib/discover-repo.ts";
+
+const data = await discoverRepo.getDiscover();
+---
+
+<DashboardLayout title="Discover">
+  <!-- Discover -->
+  <DashboardSection paddingTop="small" paddingBottom="small" gap="6">
+    <DiscoverState data={data} />
+    <DiscoverHeader data={data} />
+    <DiscoverFinder />
+    <DiscoverBrowse days={data.days} />
+    <DiscoverKnow />
+    <DiscoverSafety />
+  </DashboardSection>
+</DashboardLayout>

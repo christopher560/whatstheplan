@@ -1,0 +1,100 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  plan?: PlanDetail;
+  /** Where the cheaper swaps link to. */
+  ideasHref?: string;
+}
+
+const { render = true, plan, ideasHref = "/app/plans" } = Astro.props;
+
+const over = plan ? plan.perPerson > plan.comfort : false;
+---
+
+{
+  render && plan && (
+    <Panel variant="tint" tint="orange" aria-labelledby="plan-budget-title">
+      <div class="plan-budget_wrap">
+        <h2 id="plan-budget-title" class="plan-budget_title text-style-h5">
+          Budget check
+        </h2>
+        <div class="plan-budget_figure">
+          <p class="plan-budget_amount text-style-h3">
+            {plan.perPerson === 0 ? "Free" : `$${plan.perPerson}`}
+          </p>
+          <p class="plan-budget_vs text-style-small">
+            per person vs the group's ${plan.comfort} comfort zone
+          </p>
+        </div>
+        <p class="plan-budget_text text-style-small">
+          {
+            over
+              ? "This is above what the group is comfortable with, so someone may quietly skip. Friends only ever see the group's number, never each person's."
+              : "This is inside what the group is comfortable with. Friends only ever see the group's number, never each person's."
+          }
+        </p>
+        {over && (
+          <>
+            <p class="plan-budget_label text-style-small">
+              Cheaper swaps from your idea stash
+            </p>
+            <div class="plan-budget_swaps">
+              {plan.swaps.map((swap) => (
+                <Pill element="link" href={ideasHref}>
+                  {swap.label}
+                  <span slot="after" class="plan-budget_cost">{swap.cost}</span>
+                </Pill>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .plan-budget_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plan-budget_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-budget_figure {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-2) var(--space-3);
+    }
+
+    .plan-budget_amount {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-budget_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-budget_swaps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .plan-budget_cost {
+      color: var(--text-2);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-medium);
+    }
+  }
+</style>

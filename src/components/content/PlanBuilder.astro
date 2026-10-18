@@ -1,0 +1,1316 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import Button from "@/components/Button.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import Input from "@/components/form/Input.astro";
+import icon_close from "@/assets/icons/close.svg";
+import icon_plus from "@/assets/icons/icon_plus.svg";
+import icon_lock from "@/assets/icons/icon_lock.svg";
+import icon_check from "@/assets/icons/icon_check.svg";
+import icon_type_hangout from "@/assets/icons/icon_type_hangout.svg";
+import icon_type_casual from "@/assets/icons/icon_type_casual.svg";
+import icon_type_event from "@/assets/icons/icon_type_event.svg";
+import icon_type_formal from "@/assets/icons/icon_type_formal.svg";
+import icon_type_school from "@/assets/icons/icon_type_school.svg";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Group comfort limit per person, in dollars. */
+  comfort?: number;
+  /** Where the full idea list lives. */
+  ideasHref?: string;
+}
+
+const { render = true, comfort = 15, ideasHref = "/app/plans" } = Astro.props;
+
+const stepLabels = ["Type", "Vibe", "Budget", "Friends", "Send"];
+
+const types: {
+  id: string;
+  label: string;
+  sub: string;
+  color: AccentColor;
+  icon: typeof icon_type_hangout;
+  note: string;
+}[] = [
+  {
+    id: "hangout",
+    label: "Hangout",
+    sub: "Open and easy. See who is around.",
+    color: "yellow",
+    icon: icon_type_hangout,
+    note: "A hangout stays loose: no set time, we find when everyone is free.",
+  },
+  {
+    id: "casual",
+    label: "Casual meetup",
+    sub: "Informal: food, games, a walk.",
+    color: "green",
+    icon: icon_type_casual,
+    note: "Casual meetups get a vibe, a rough budget and a quick yes, maybe or out.",
+  },
+  {
+    id: "event",
+    label: "Specific event",
+    sub: "Set date and place: concert, game.",
+    color: "blue",
+    icon: icon_type_event,
+    note: "Events have a fixed date and place, so friends just confirm if they are in.",
+  },
+  {
+    id: "formal",
+    label: "Formal",
+    sub: "Wedding, dinner, ceremony.",
+    color: "pink",
+    icon: icon_type_formal,
+    note: "Formal invites add an RSVP, dress code and a plus-one option.",
+  },
+  {
+    id: "school",
+    label: "School",
+    sub: "Study group, club, class event.",
+    color: "purple",
+    icon: icon_type_school,
+    note: "School plans can go to a class or club list and stay free by default.",
+  },
+];
+
+const vibes: {
+  id: string;
+  label: string;
+  color?: AccentColor;
+  ideas: { label: string; cost: number }[];
+}[] = [
+  {
+    id: "chill",
+    label: "Chill",
+    color: "blue",
+    ideas: [
+      { label: "Sunset sit at the lakefront", cost: 0 },
+      { label: "Coffee and a walk", cost: 6 },
+      { label: "Park picnic", cost: 9 },
+      { label: "Lakeside brunch", cost: 28 },
+    ],
+  },
+  {
+    id: "chaotic",
+    label: "Chaotic",
+    color: "red",
+    ideas: [
+      { label: "Dumb Olympics at the park", cost: 0 },
+      { label: "Thrift store challenge", cost: 12 },
+      { label: "Midnight diner run", cost: 14 },
+      { label: "Karaoke till close", cost: 22 },
+    ],
+  },
+  {
+    id: "cozy",
+    label: "Cozy",
+    color: "yellow",
+    ideas: [
+      { label: "Movie night in", cost: 0 },
+      { label: "Soup and board games", cost: 7 },
+      { label: "Bake-off", cost: 10 },
+      { label: "Cooking class", cost: 45 },
+    ],
+  },
+  {
+    id: "fancy",
+    label: "Fancy",
+    color: "pink",
+    ideas: [
+      { label: "Window-shop in fancy outfits", cost: 0 },
+      { label: "Dress-up picnic", cost: 12 },
+      { label: "Gallery night", cost: 18 },
+      { label: "Rooftop drinks", cost: 35 },
+      { label: "Dinner reservation", cost: 55 },
+    ],
+  },
+  {
+    id: "outdoorsy",
+    label: "Outdoorsy",
+    color: "green",
+    ideas: [
+      { label: "Sunrise hike", cost: 0 },
+      { label: "Beach volleyball", cost: 0 },
+      { label: "Bike the lakefront", cost: 12 },
+      { label: "Kayak rental", cost: 30 },
+    ],
+  },
+  {
+    id: "broke",
+    label: "Broke but fun",
+    ideas: [
+      { label: "Free museum night", cost: 0 },
+      { label: "Park games", cost: 0 },
+      { label: "Thrift swap", cost: 3 },
+      { label: "Potluck", cost: 5 },
+    ],
+  },
+];
+
+const budgets = [
+  { label: "Free", max: 0 },
+  { label: "Under $15", max: 15 },
+  { label: "$15 to $40", max: 40 },
+  { label: "$40 and up", max: 9999 },
+];
+
+const people: { id: string; name: string; color: AccentColor }[] = [
+  { id: "maya", name: "Maya", color: "red" },
+  { id: "dev", name: "Dev", color: "blue" },
+  { id: "jo", name: "Jo", color: "yellow" },
+  { id: "sam", name: "Sam", color: "green" },
+  { id: "priya", name: "Priya", color: "pink" },
+  { id: "leo", name: "Leo", color: "purple" },
+  { id: "alex", name: "Alex", color: "orange" },
+  { id: "riley", name: "Riley", color: "blue" },
+];
+
+/** Friends shown from the start; the rest appear when a link pre-fills them. */
+const everyday = ["maya", "dev", "jo", "sam", "priya", "leo"];
+const descriptionChips = [
+  "Bring a snack",
+  "Dress comfy",
+  "Parking nearby",
+  "Plus-ones welcome",
+];
+
+const start = { type: "hangout", vibe: "cozy", budget: 1, who: ["maya", "dev", "sam"] };
+const startType = types.find((type) => type.id === start.type)!;
+const comfortHome = `Within your group's $${comfort} comfort zone.`;
+const comfortOver = `Above your group's $${comfort} comfort zone.`;
+---
+
+{
+  render && (
+    <Panel
+      variant="tint"
+      tint="yellow"
+      id="builder"
+      aria-labelledby="plan-builder-title"
+    >
+      <div
+        class="plan-builder_wrap"
+        data-plan-builder
+        data-comfort-home={comfortHome}
+        data-comfort-over={comfortOver}
+        data-everyday={JSON.stringify(everyday)}
+        data-budgets={JSON.stringify(budgets)}
+        data-types={JSON.stringify(
+          Object.fromEntries(types.map((type) => [type.id, type.label])),
+        )}
+        data-vibes={JSON.stringify(
+          Object.fromEntries(vibes.map((vibe) => [vibe.id, vibe.label])),
+        )}
+      >
+        <div class="plan-builder_intro">
+          <div class="plan-builder_kicker">
+            <Pill size="tiny">For friends you already know</Pill>
+            <a class="plan-builder_discover text-style-small" href="/app/discover">
+              Want to meet new people? Try Discover
+            </a>
+          </div>
+          <h2 id="plan-builder-title" class="plan-builder_title text-style-h4">
+            Make a plan with friends in 5 taps
+          </h2>
+        </div>
+
+        <div class="plan-builder_prefill" hidden data-prefill>
+          <span class="plan-builder_prefill_mark">
+            <Icon src={icon_check} variant="small" />
+          </span>
+          <div class="plan-builder_prefill_text">
+            <p class="plan-builder_prefill_label text-style-tiny" data-prefill-title />
+            <p class="plan-builder_prefill_value text-style-main" data-prefill-text />
+          </div>
+          <ActionButton color="white" size="small" data-prefill-clear>
+            Start over
+          </ActionButton>
+        </div>
+
+        <div class="plan-builder_steps" role="group" aria-label="Steps">
+          {
+            stepLabels.map((label, index) => (
+              <Pill
+                element="button"
+                size="main"
+                pressed={index === 0}
+                data-step-go={index}
+              >
+                <span slot="before" class="plan-builder_number" data-number>
+                  {index + 1}
+                </span>
+                {label}
+              </Pill>
+            ))
+          }
+        </div>
+
+        <div class="plan-builder_progress" aria-hidden="true">
+          <div class="plan-builder_bar"></div>
+        </div>
+
+        <div class="plan-builder_stage">
+          <div class="plan-builder_panel" data-step-panel="0">
+            <h3 class="plan-builder_question text-style-h5">
+              What kind of plan is it?
+            </h3>
+            <div
+              class="plan-builder_options"
+              role="group"
+              aria-label="Plan type"
+            >
+              {
+                types.map((type) => (
+                  <button
+                    type="button"
+                    class:list={["plan-builder_type", type.color]}
+                    aria-pressed={String(type.id === start.type)}
+                    data-type={type.id}
+                    data-note={type.note}
+                  >
+                    <span class="plan-builder_type_icon">
+                      <Icon src={type.icon} variant="small" />
+                    </span>
+                    <span class="plan-builder_type_copy">
+                      <span class="plan-builder_type_label text-style-main">
+                        {type.label}
+                      </span>
+                      <span class="plan-builder_type_sub text-style-small">
+                        {type.sub}
+                      </span>
+                    </span>
+                  </button>
+                ))
+              }
+            </div>
+            <p class="plan-builder_hint text-style-small" data-type-note>
+              {startType.note}
+            </p>
+          </div>
+
+          <div class="plan-builder_panel" data-step-panel="1" hidden>
+            <h3 class="plan-builder_question text-style-h5">
+              How should it feel?
+            </h3>
+            <div class="plan-builder_pills" role="group" aria-label="Vibe">
+              {
+                vibes.map((vibe) => (
+                  <Pill
+                    element="button"
+                    size="main"
+                    color={vibe.color}
+                    pressed={vibe.id === start.vibe}
+                    data-vibe={vibe.id}
+                  >
+                    {vibe.label}
+                  </Pill>
+                ))
+              }
+            </div>
+          </div>
+
+          <div class="plan-builder_panel" data-step-panel="2" hidden>
+            <h3 class="plan-builder_question text-style-h5">
+              What's everyone comfortable spending?
+            </h3>
+            <div
+              class="plan-builder_pills"
+              role="group"
+              aria-label="Budget per person"
+            >
+              {
+                budgets.map((budget, index) => (
+                  <Pill
+                    element="button"
+                    size="main"
+                    color="green"
+                    pressed={index === start.budget}
+                    data-budget={index}
+                  >
+                    {budget.label}
+                  </Pill>
+                ))
+              }
+            </div>
+            <div class="plan-builder_note" data-comfort>
+              <Icon src={icon_lock} variant="small" />
+              <p class="plan-builder_note_text text-style-small" data-comfort-text>
+                {comfortHome}
+              </p>
+            </div>
+          </div>
+
+          <div class="plan-builder_panel" data-step-panel="3" hidden>
+            <h3 class="plan-builder_question text-style-h5">Who's coming?</h3>
+            <div class="plan-builder_pills" role="group" aria-label="Friends">
+              {
+                people.map((person) => (
+                  <Pill
+                    element="button"
+                    size="main"
+                    color={person.color}
+                    pressed={start.who.includes(person.id)}
+                    hidden={!everyday.includes(person.id)}
+                    data-person={person.id}
+                  >
+                    <Avatar
+                      slot="before"
+                      initial={person.name}
+                      color={person.color}
+                      size="small"
+                    />
+                    {person.name}
+                    <span slot="after" class="plan-builder_check">
+                      <Icon src={icon_check} variant="small" />
+                    </span>
+                  </Pill>
+                ))
+              }
+            </div>
+            <div class="plan-builder_pills" data-others>
+              <Pill element="button" size="main" variant="dashed" data-other-open>
+                <Icon slot="before" src={icon_plus} variant="small" />
+                Someone else
+              </Pill>
+            </div>
+            <div class="plan-builder_other_form" hidden data-other-form>
+              <label class="plan-builder_label text-style-small" for="plan-other">
+                Name of someone without the app
+              </label>
+              <div class="plan-builder_other_row">
+                <input
+                  id="plan-other"
+                  class="field-control text-style-main"
+                  type="text"
+                  maxlength="24"
+                  placeholder="Name"
+                  data-other-input
+                />
+                <ActionButton size="small" data-other-add>Add</ActionButton>
+              </div>
+              <p class="plan-builder_hint text-style-small">
+                They get your link. No account needed.
+              </p>
+            </div>
+            <template data-other-template>
+              <button type="button" class="plan-builder_other" data-other-chip>
+                <span class="plan-builder_other_avatar" data-initial />
+                <span class="plan-builder_other_name text-style-small" data-name />
+                <span class="plan-builder_other_tag text-style-tiny">link</span>
+                <span class="plan-builder_other_close">
+                  <Icon src={icon_close} variant="small" />
+                </span>
+              </button>
+            </template>
+          </div>
+
+          <div class="plan-builder_panel" data-step-panel="4" hidden>
+            <h3 class="plan-builder_question text-style-h5" data-summary></h3>
+            <div class="plan-builder_when" hidden data-when>
+              <p class="plan-builder_hint text-style-small">Suggested time</p>
+              <Pill element="button" variant="filled" color="yellow" data-when-drop>
+                <span data-when-text>Time</span>
+                <span slot="after" class="plan-builder_other_close">
+                  <Icon src={icon_close} variant="small" />
+                </span>
+              </Pill>
+            </div>
+            <div class="plan-builder_ideas">
+              <p class="plan-builder_hint text-style-small">Ideas that fit</p>
+              {
+                vibes.flatMap((vibe) =>
+                  vibe.ideas.map((idea) => (
+                    <Pill
+                      hidden
+                      data-idea
+                      data-idea-vibe={vibe.id}
+                      data-idea-cost={idea.cost}
+                    >
+                      {idea.label}
+                      <span slot="after" class="plan-builder_cost">
+                        {idea.cost === 0 ? "Free" : `about $${idea.cost}`}
+                      </span>
+                    </Pill>
+                  )),
+                )
+              }
+              <Button element="link" variant="link" href={ideasHref}>
+                See all in Idea stash
+              </Button>
+            </div>
+            <div class="plan-builder_details">
+              <Input
+                label="Name your plan"
+                placeholder="Plan name"
+                name="plan_title"
+                maxlength={40}
+                data-title
+              />
+              <div class="plan-builder_field">
+                <label class="plan-builder_label text-style-main" for="plan-description">
+                  Say a little about it
+                </label>
+                <textarea
+                  id="plan-description"
+                  class="field-control text-style-main"
+                  rows="3"
+                  maxlength="200"
+                  placeholder="What is the plan? Bring anything? Dress code, parking, who to text if you get lost."
+                  data-description
+                />
+                <div class="plan-builder_chips">
+                  {descriptionChips.map((chip) => (
+                    <Pill element="button" data-chip={chip}>
+                      + {chip}
+                    </Pill>
+                  ))}
+                  <p class="plan-builder_counter text-style-small" data-counter>
+                    0 of 200
+                  </p>
+                </div>
+              </div>
+              <Input
+                label="Where? (optional)"
+                placeholder="An address, a spot, or leave it for friends to suggest"
+                name="plan_place"
+                maxlength={60}
+                data-place
+              />
+            </div>
+            <div class="plan-builder_share">
+              <p class="plan-builder_link text-style-small">
+                whatstheplan.app/p/<span data-slug></span>
+              </p>
+              <Pill element="button" variant="filled" color="red" data-copy>
+                Copy
+              </Pill>
+            </div>
+            <a class="plan-builder_preview text-style-small" href="/p/preview" data-preview>
+              Preview what your friends see
+            </a>
+            <div class="plan-builder_created" role="status" hidden data-created>
+              <p class="plan-builder_created_title text-style-h5">
+                <span data-created-title /> is live
+              </p>
+              <p class="plan-builder_created_text text-style-small">
+                It now sits in Plans, under Voting. Replies appear there the moment a
+                friend taps your link, and we ping you for each one.
+              </p>
+              <ol class="plan-builder_created_steps text-style-small">
+                <li><strong>1.</strong> Friends tap your link. No account needed.</li>
+                <li>
+                  <strong>2.</strong> Their reply, time picks and comfortable spend land
+                  in your plan.
+                </li>
+                <li><strong>3.</strong> You lock a time and everyone is notified.</li>
+              </ol>
+              <div class="plan-builder_created_actions">
+                <ActionButton element="link" href="/app/plans" color="ink" size="small" data-replies>
+                  See replies
+                </ActionButton>
+                <ActionButton element="link" href="/app/plans" color="white" size="small">
+                  Go to Plans
+                </ActionButton>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="plan-builder_actions">
+          <span data-back-wrap hidden>
+            <ActionButton color="white" size="large" data-back>Back</ActionButton>
+          </span>
+          <ActionButton color="yellow" size="large" raised data-next>
+            Next: vibe
+          </ActionButton>
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { dashboardRepo } from "@/lib/dashboard-repo.ts";
+
+  type Budget = { label: string; max: number };
+
+  const nextLabels = [
+    "Next: vibe",
+    "Next: budget",
+    "Next: friends",
+    "Next: send",
+    "Create plan",
+  ];
+
+  document
+    .querySelectorAll<HTMLElement>("[data-plan-builder]")
+    .forEach((root) => {
+      const budgets: Budget[] = JSON.parse(root.dataset.budgets ?? "[]");
+      const typeNames: Record<string, string> = JSON.parse(
+        root.dataset.types ?? "{}",
+      );
+      const vibeNames: Record<string, string> = JSON.parse(
+        root.dataset.vibes ?? "{}",
+      );
+
+      const panels = root.querySelectorAll<HTMLElement>("[data-step-panel]");
+      const stepPills = root.querySelectorAll<HTMLButtonElement>("[data-step-go]");
+      const typeButtons = root.querySelectorAll<HTMLButtonElement>("[data-type]");
+      const vibePills = root.querySelectorAll<HTMLButtonElement>("[data-vibe]");
+      const budgetPills = root.querySelectorAll<HTMLButtonElement>("[data-budget]");
+      const personPills = root.querySelectorAll<HTMLButtonElement>("[data-person]");
+      const ideaPills = root.querySelectorAll<HTMLElement>("[data-idea]");
+      const back = root.querySelector<HTMLButtonElement>("[data-back]")!;
+      const backWrap = root.querySelector<HTMLElement>("[data-back-wrap]")!;
+      const next = root.querySelector<HTMLButtonElement>("[data-next]")!;
+      const nextText = next.querySelector<HTMLElement>(".action-button_text")!;
+      const copy = root.querySelector<HTMLButtonElement>("[data-copy]")!;
+      const copyText = copy.querySelector<HTMLElement>(".pill_text")!;
+      const note = root.querySelector<HTMLElement>("[data-comfort]")!;
+      const noteText = root.querySelector<HTMLElement>("[data-comfort-text]")!;
+      const typeNote = root.querySelector<HTMLElement>("[data-type-note]")!;
+      const summary = root.querySelector<HTMLElement>("[data-summary]")!;
+      const slug = root.querySelector<HTMLElement>("[data-slug]")!;
+      const everyday: string[] = JSON.parse(root.dataset.everyday ?? "[]");
+      const prefill = root.querySelector<HTMLElement>("[data-prefill]")!;
+      const othersBox = root.querySelector<HTMLElement>("[data-others]")!;
+      const otherOpen = root.querySelector<HTMLElement>("[data-other-open]")!;
+      const otherForm = root.querySelector<HTMLElement>("[data-other-form]")!;
+      const otherInput = root.querySelector<HTMLInputElement>("[data-other-input]")!;
+      const otherTemplate = root.querySelector<HTMLTemplateElement>("[data-other-template]")!;
+      const whenBox = root.querySelector<HTMLElement>("[data-when]")!;
+      const titleInput = root.querySelector<HTMLInputElement>("input[data-title]")!;
+      const descInput = root.querySelector<HTMLTextAreaElement>("[data-description]")!;
+      const placeInput = root.querySelector<HTMLInputElement>("input[data-place]")!;
+      const counter = root.querySelector<HTMLElement>("[data-counter]")!;
+      const created = root.querySelector<HTMLElement>("[data-created]")!;
+      const repliesLink = root.querySelector<HTMLAnchorElement>("[data-replies]")!;
+      const previewLink = root.querySelector<HTMLAnchorElement>("[data-preview]")!;
+      const defaultWho = ["maya", "dev", "sam"];
+
+      const state = {
+        step: 0,
+        type: "hangout",
+        vibe: "cozy",
+        budget: 1,
+        who: new Set(
+          [...personPills]
+            .filter((pill) => pill.getAttribute("aria-pressed") === "true")
+            .map((pill) => pill.dataset.person!),
+        ),
+        created: false,
+        from: "",
+        when: "",
+        others: [] as string[],
+        title: "",
+        description: "",
+        place: "",
+        planId: "",
+      };
+
+      const knownIds = [...personPills].map((pill) => pill.dataset.person!);
+      const query = new URLSearchParams(window.location.search);
+      const withIds = (query.get("with") ?? "")
+        .split(",")
+        .filter((id) => knownIds.includes(id));
+      if (withIds.length) {
+        state.who = new Set(withIds);
+        state.when = query.get("when") ?? "";
+        state.from = query.get("from") ?? "";
+        window.setTimeout(
+          () => root.scrollIntoView({ behavior: "smooth", block: "start" }),
+          400,
+        );
+      }
+
+      const nameOf = (id: string) =>
+        root.querySelector<HTMLElement>(`[data-person="${id}"] .pill_text`)
+          ?.textContent?.trim() ?? id;
+      const fromTitle: Record<string, string> = {
+        group: "From your group",
+        friend: "From Friends",
+        calendar: "From your calendar",
+      };
+
+      const select = (
+        pills: NodeListOf<HTMLElement>,
+        active: (pill: HTMLElement) => boolean,
+      ) =>
+        pills.forEach((pill) =>
+          pill.setAttribute("aria-pressed", String(active(pill))),
+        );
+
+      const render = () => {
+        panels.forEach((panel, index) => {
+          panel.hidden = index !== state.step;
+        });
+        root.style.setProperty("--_progress", `${(state.step + 1) * 20}%`);
+
+        stepPills.forEach((pill, index) => {
+          const done = index < state.step;
+          pill.setAttribute("aria-pressed", String(index === state.step));
+          pill.classList.toggle("filled", done);
+          pill.classList.toggle("green", done);
+          pill.querySelector("[data-number]")!.textContent = done
+            ? "✓"
+            : String(index + 1);
+        });
+
+        select(typeButtons, (pill) => pill.dataset.type === state.type);
+        select(vibePills, (pill) => pill.dataset.vibe === state.vibe);
+        select(budgetPills, (pill) => Number(pill.dataset.budget) === state.budget);
+        select(personPills, (pill) => state.who.has(pill.dataset.person!));
+        personPills.forEach((pill) => {
+          const id = pill.dataset.person!;
+          pill.hidden = !everyday.includes(id) && !state.who.has(id);
+        });
+
+        const showPrefill = !!state.from && state.who.size > 0;
+        prefill.hidden = !showPrefill;
+        if (showPrefill) {
+          root.querySelector<HTMLElement>("[data-prefill-title]")!.textContent =
+            fromTitle[state.from] ?? "Pre-filled";
+          root.querySelector<HTMLElement>("[data-prefill-text]")!.textContent =
+            [...state.who].map(nameOf).join(", ") +
+            (state.when ? ` \u00B7 ${state.when}` : "");
+        }
+
+        othersBox.querySelectorAll("[data-other-chip]").forEach((chip) => chip.remove());
+        state.others.forEach((name) => {
+          const chip = otherTemplate.content
+            .querySelector<HTMLElement>("[data-other-chip]")!
+            .cloneNode(true) as HTMLElement;
+          chip.querySelector<HTMLElement>("[data-initial]")!.textContent = name[0].toUpperCase();
+          chip.querySelector<HTMLElement>("[data-name]")!.textContent = name;
+          chip.setAttribute("aria-label", `Remove ${name}`);
+          chip.dataset.otherChip = name;
+          othersBox.insertBefore(chip, otherOpen);
+        });
+        otherOpen.hidden = !otherForm.hidden;
+
+        whenBox.hidden = !state.when;
+        root.querySelector<HTMLElement>("[data-when-text]")!.textContent = state.when;
+
+        const activeType = [...typeButtons].find(
+          (button) => button.dataset.type === state.type,
+        );
+        typeNote.textContent = activeType?.dataset.note ?? "";
+
+        const over = state.budget > 1;
+        note.classList.toggle("over", over);
+        noteText.textContent = over
+          ? root.dataset.comfortOver!
+          : root.dataset.comfortHome!;
+
+        const budget = budgets[state.budget];
+        const low = state.budget === 0 ? -1 : budgets[state.budget - 1].max;
+        const forVibe = [...ideaPills].filter(
+          (pill) => pill.dataset.ideaVibe === state.vibe,
+        );
+        const cost = (pill: HTMLElement) => Number(pill.dataset.ideaCost);
+        let fit = forVibe.filter((pill) => cost(pill) <= budget.max && cost(pill) > low);
+        if (fit.length === 0) fit = forVibe.filter((pill) => cost(pill) <= budget.max);
+        const shown = new Set(fit.slice(0, 3));
+        ideaPills.forEach((pill) => {
+          pill.hidden = !shown.has(pill);
+        });
+
+        const count = state.who.size + state.others.length;
+        summary.textContent = `${typeNames[state.type]} · ${vibeNames[state.vibe]} · ${budget.label.toLowerCase()} · ${count} ${count === 1 ? "friend" : "friends"}${state.when ? ` · ${state.when}` : ""}`;
+        slug.textContent = `${state.type}-${state.vibe}-${count}x9k`;
+        previewLink.href = `/p/${slug.textContent}`;
+
+        const placeholder = `${vibeNames[state.vibe]} ${typeNames[state.type].toLowerCase()}`;
+        titleInput.placeholder = placeholder;
+        counter.textContent = `${state.description.length} of 200`;
+        created.hidden = !(state.created && state.step === 4);
+        root.querySelector<HTMLElement>("[data-created-title]")!.textContent =
+          state.title.trim() || placeholder;
+        repliesLink.href = `/app/plans/${state.planId}`;
+
+        backWrap.hidden = state.step === 0;
+        nextText.textContent =
+          state.step === 4 && state.created ? "Plan created" : nextLabels[state.step];
+        next.disabled = state.created && state.step === 4;
+        next.classList.remove("yellow", "orange", "green");
+        next.classList.add(
+          state.step < 4 ? "yellow" : state.created ? "green" : "orange",
+        );
+      };
+
+      stepPills.forEach((pill) =>
+        pill.addEventListener("click", () => {
+          state.step = Number(pill.dataset.stepGo);
+          render();
+        }),
+      );
+      typeButtons.forEach((button) =>
+        button.addEventListener("click", () => {
+          state.type = button.dataset.type!;
+          render();
+        }),
+      );
+      vibePills.forEach((pill) =>
+        pill.addEventListener("click", () => {
+          state.vibe = pill.dataset.vibe!;
+          render();
+        }),
+      );
+      budgetPills.forEach((pill) =>
+        pill.addEventListener("click", () => {
+          state.budget = Number(pill.dataset.budget);
+          render();
+        }),
+      );
+      personPills.forEach((pill) =>
+        pill.addEventListener("click", () => {
+          const id = pill.dataset.person!;
+          if (state.who.has(id)) state.who.delete(id);
+          else state.who.add(id);
+          render();
+        }),
+      );
+      back.addEventListener("click", () => {
+        state.step = Math.max(0, state.step - 1);
+        render();
+      });
+      next.addEventListener("click", async () => {
+        if (state.step < 4) {
+          state.step += 1;
+          return render();
+        }
+        next.disabled = true;
+        const result = await dashboardRepo.createPlan({
+          type: state.type,
+          vibe: state.vibe,
+          budgetTier: state.budget,
+          friendIds: [...state.who],
+          guestNames: state.others,
+          title: state.title.trim() || titleInput.placeholder,
+          description: state.description,
+          place: state.place,
+          when: state.when,
+        });
+        state.planId = result.id;
+        state.created = true;
+        render();
+      });
+
+      prefill
+        .querySelector("[data-prefill-clear]")!
+        .addEventListener("click", () => {
+          state.from = "";
+          state.when = "";
+          state.who = new Set(defaultWho);
+          render();
+        });
+      root.querySelector("[data-when-drop]")!.addEventListener("click", () => {
+        state.when = "";
+        render();
+      });
+      otherOpen.addEventListener("click", () => {
+        otherForm.hidden = false;
+        otherInput.focus();
+        render();
+      });
+      const addOther = () => {
+        const name = otherInput.value.trim().slice(0, 24);
+        if (!name) return;
+        state.others = [...state.others, name];
+        otherInput.value = "";
+        otherForm.hidden = true;
+        render();
+      };
+      root.querySelector("[data-other-add]")!.addEventListener("click", addOther);
+      otherInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addOther();
+        }
+      });
+      othersBox.addEventListener("click", (event) => {
+        const chip = (event.target as HTMLElement).closest<HTMLElement>("[data-other-chip]");
+        if (!chip) return;
+        state.others = state.others.filter((name) => name !== chip.dataset.otherChip);
+        render();
+      });
+      titleInput.addEventListener("input", () => {
+        state.title = titleInput.value;
+        render();
+      });
+      descInput.addEventListener("input", () => {
+        state.description = descInput.value;
+        render();
+      });
+      placeInput.addEventListener("input", () => {
+        state.place = placeInput.value;
+      });
+      root.querySelectorAll<HTMLElement>("[data-chip]").forEach((chip) =>
+        chip.addEventListener("click", () => {
+          const base = state.description.replace(/\s+$/, "");
+          state.description = `${base ? `${base} ` : ""}${chip.dataset.chip}.`.slice(0, 200);
+          descInput.value = state.description;
+          render();
+        }),
+      );
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(
+            `whatstheplan.app/p/${slug.textContent}`,
+          );
+        } catch {}
+        copy.classList.replace("red", "green");
+        copyText.textContent = "Copied";
+      });
+
+      render();
+    });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-builder_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .plan-builder_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plan-builder_kicker {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+    }
+
+    .plan-builder_discover {
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.25em;
+    }
+
+    .plan-builder_prefill {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      animation: plan-builder-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plan-builder_prefill_mark {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--status-free);
+      color: var(--colors-on-vivid);
+    }
+
+    .plan-builder_prefill_text {
+      display: flex;
+      flex: 1 1 var(--card-width-small);
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .plan-builder_prefill_label {
+      color: var(--text-2);
+    }
+
+    .plan-builder_prefill_value {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-builder_other_form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plan-builder_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-builder_other_row {
+      display: flex;
+      gap: var(--space-2);
+
+      & > input {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .plan-builder_other {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      min-height: var(--control-height-main);
+      padding: 0 var(--space-3) 0 var(--space-1);
+      border: var(--border-width-medium) dashed var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-secondary-purple);
+      color: var(--text);
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-builder_other_avatar {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-size: var(--text-tiny);
+      line-height: 1;
+    }
+
+    .plan-builder_other_tag {
+      color: var(--text-2);
+      text-transform: none;
+      letter-spacing: var(--letter-spacing-normal);
+    }
+
+    .plan-builder_other_close {
+      display: inline-flex;
+      font-size: var(--text-tiny);
+    }
+
+    .plan-builder_when {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plan-builder_details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .plan-builder_field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plan-builder_chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plan-builder_counter {
+      margin-inline-start: auto;
+      color: var(--text-2);
+    }
+
+    .plan-builder_preview {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--control-height-small);
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-builder_created {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--status-free-background);
+      animation: plan-builder-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plan-builder_created_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-builder_created_steps {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .plan-builder_created_actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .plan-builder_steps {
+      display: flex;
+      gap: var(--space-1);
+      padding: var(--space-0) var(--space-0) var(--space-1);
+      overflow-x: auto;
+      scrollbar-width: none;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .plan-builder_number {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-small);
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-round);
+      background-color: var(--background);
+      color: var(--text);
+      font-size: var(--text-small);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+
+      .pill_wrap[aria-pressed="true"] & {
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .plan-builder_progress {
+      height: var(--space-1);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .plan-builder_bar {
+      width: var(--_progress, 20%);
+      height: 100%;
+      border-radius: inherit;
+      background-color: var(--colors-vivid-orange);
+      transition: width var(--reveal-duration) var(--ease-out);
+    }
+
+    .plan-builder_stage {
+      padding: var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+    }
+
+    .plan-builder_panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      animation: plan-builder-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plan-builder_options {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, var(--card-width-small)), 1fr)
+      );
+      gap: var(--space-2);
+    }
+
+    .plan-builder_type {
+      --_color: var(--colors-vivid-yellow);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-height: 4.25rem;
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      color: var(--text);
+      text-align: start;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out);
+
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.blue {
+        --_color: var(--colors-vivid-blue);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+      &[aria-pressed="true"] {
+        background-color: var(--_color);
+        color: var(--colors-on-vivid);
+        box-shadow: 0 0 0 var(--border-width-thick) var(--border-strong);
+      }
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+    }
+
+    .plan-builder_type_icon {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--control-height-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+      font-size: var(--text-large);
+    }
+
+    .plan-builder_type_copy {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .plan-builder_type_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-builder_type_sub {
+      opacity: 0.7;
+    }
+
+    .plan-builder_hint {
+      color: var(--text-2);
+    }
+
+    .plan-builder_pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .plan-builder_note {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+      font-size: var(--text-small);
+
+      &.over {
+        border-style: dashed;
+        border-color: var(--border-strong);
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .plan-builder_check {
+      display: none;
+
+      .pill_wrap[aria-pressed="true"] & {
+        display: inline-flex;
+      }
+    }
+
+    .plan-builder_ideas {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plan-builder_cost {
+      color: var(--text-2);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-medium);
+    }
+
+    .plan-builder_share {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plan-builder_link {
+      flex: 1;
+      min-width: 0;
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+      font-weight: var(--primary-medium);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .plan-builder_actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    @keyframes plan-builder-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

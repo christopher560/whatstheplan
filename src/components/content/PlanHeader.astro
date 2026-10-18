@@ -1,0 +1,112 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_chevron from "@/assets/icons/icon_chevron.svg";
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  plan?: PlanDetail;
+  /** Where "Your plans" goes. */
+  plansHref?: string;
+}
+
+const { render = true, plan, plansHref = "/app/plans" } = Astro.props;
+
+const replied = plan?.friends.filter((friend) => friend.reply).length ?? 0;
+---
+
+{
+  render && plan && (
+    <header class="plan-header_wrap" data-plan-header data-slug={plan.slug}>
+      <div class="plan-header_intro">
+        <a class="plan-header_back" href={plansHref}>
+          <span class="plan-header_arrow">
+            <Icon src={icon_chevron} variant="small" />
+          </span>
+          <span class="text-style-small">Your plans</span>
+        </a>
+        <h1 class="plan-header_title text-style-title">{plan.title}</h1>
+        <p class="plan-header_lead text-style-large" data-summary>
+          You are hosting. {plan.place}, about ${plan.perPerson} each, {replied} of{" "}
+          {plan.friends.length} have replied.
+        </p>
+      </div>
+      <div class="plan-header_actions">
+        <ActionButton size="large" data-copy>Copy invite link</ActionButton>
+        <ActionButton element="link" href={`/p/${plan.slug}`} color="white" size="large">
+          Preview as a friend
+        </ActionButton>
+      </div>
+    </header>
+  )
+}
+
+<script>
+  import { get, update, subscribe, getPlan, counts } from "@/lib/plan-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-plan-header]").forEach((root) => {
+    const button = root.querySelector<HTMLElement>("[data-copy]")!;
+    const text = button.querySelector<HTMLElement>(".action-button_text")!;
+    const summary = root.querySelector<HTMLElement>("[data-summary]")!;
+
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(`whatstheplan.app/p/${root.dataset.slug}`);
+      } catch {}
+      update({ copied: true });
+    });
+
+    subscribe(() => {
+      const plan = getPlan();
+      const replied = plan.friends.length - counts().wait;
+      summary.textContent = `You are hosting. ${plan.place}, about $${plan.perPerson} each, ${replied} of ${plan.friends.length} have replied.`;
+      text.textContent = get().copied ? "Link copied" : "Copy invite link";
+      button.classList.remove("orange", "green");
+      button.classList.add(get().copied ? "green" : "orange");
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-header_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .plan-header_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+
+    .plan-header_back {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      min-height: var(--control-height-small);
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-header_arrow {
+      display: inline-flex;
+      rotate: 180deg;
+    }
+
+    .plan-header_lead {
+      color: var(--text-2);
+    }
+
+    .plan-header_actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+  }
+</style>

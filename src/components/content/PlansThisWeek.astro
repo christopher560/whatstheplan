@@ -1,0 +1,272 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Plans page link. Plans you host open at `{planHref}/{id}`. */
+  planHref?: string;
+}
+
+const { render = true, planHref = "/app/plans" } = Astro.props;
+---
+
+{
+  render && (
+    <Panel
+      variant="tint"
+      tint="purple"
+      aria-labelledby="plans-week-title"
+    >
+      <div class="plans-week_wrap" data-plans-week data-plan-href={planHref}>
+        <div class="plans-week_head">
+          <h2 id="plans-week-title" class="plans-week_title text-style-h5">
+            Plans this week
+          </h2>
+          <span class="plans-week_count text-style-small" data-count>0</span>
+        </div>
+
+        <div class="plans-week_list" data-list></div>
+        <p class="plans-week_note text-style-small" hidden data-none>
+          Nothing planned this week.
+        </p>
+
+        <div class="plans-week_detail" hidden data-detail>
+          <p class="plans-week_kind text-style-tiny" data-kind />
+          <p class="plans-week_name text-style-h5" data-name />
+          <p class="plans-week_when text-style-small" data-when />
+          <p class="text-style-small" data-place />
+          <ActionButton element="link" href={planHref} color="ink" size="small" data-cta>
+            Open
+          </ActionButton>
+        </div>
+        <p class="plans-week_note text-style-small" hidden data-hint>
+          Tap a plan to see where it is on your week.
+        </p>
+
+        <template data-item-template>
+          <button type="button" class="plans-week_item" aria-pressed="false">
+            <span class="plans-week_dot" />
+            <span class="plans-week_text">
+              <span class="plans-week_item_title text-style-small" data-title></span>
+              <span class="plans-week_item_when text-style-tiny" data-when></span>
+            </span>
+            <Pill size="tiny" variant="filled" data-tag>Tag</Pill>
+          </button>
+        </template>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { planKinds } from "@/data/calendar.ts";
+  import {
+    get,
+    selectedPlan,
+    subscribe,
+    update,
+    weekPlans,
+  } from "@/lib/calendar-store.ts";
+  import { cloneFirst, setAccent, setText } from "@/lib/ui.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-plans-week]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const list = $("[data-list]");
+    const none = $("[data-none]");
+    const hint = $("[data-hint]");
+    const detail = $("[data-detail]");
+    const cta = $<HTMLAnchorElement>("[data-cta]");
+    const template = $<HTMLTemplateElement>("[data-item-template]");
+    const base = root.dataset.planHref!;
+    let listKey = "";
+
+    root.addEventListener("click", (event) => {
+      const id = (event.target as HTMLElement).closest<HTMLElement>("[data-plan]")?.dataset.plan;
+      if (id) update({ selPlan: get().selPlan === id ? null : id });
+    });
+
+    subscribe(() => {
+      const plans = weekPlans();
+      const picked = selectedPlan();
+
+      /* The list only rebuilds when the week changes; picks just flip the state. */
+      const key = plans.map((plan) => plan.id).join();
+      if (key !== listKey) {
+        listKey = key;
+        list.replaceChildren(
+          ...plans.map((plan) => {
+            const kind = planKinds[plan.kind];
+            const item = cloneFirst(template);
+            item.dataset.plan = plan.id;
+            item.classList.toggle("pending", plan.kind === "pending");
+            setText(item, "[data-title]", plan.title);
+            setText(item, "[data-when]", plan.when);
+            const tag = item.querySelector<HTMLElement>("[data-tag]")!;
+            setText(tag, ".pill_text", kind.tag);
+            if (kind.color === "white") tag.classList.remove("filled");
+            else setAccent(tag, kind.color);
+            return item;
+          }),
+        );
+      }
+      list
+        .querySelectorAll<HTMLElement>("[data-plan]")
+        .forEach((item) => item.setAttribute("aria-pressed", String(item.dataset.plan === picked?.id)));
+
+      setText(root, "[data-count]", String(plans.length));
+      none.hidden = plans.length > 0;
+      hint.hidden = plans.length === 0 || !!picked;
+      detail.hidden = !picked;
+      if (picked) {
+        const kind = planKinds[picked.kind];
+        setText(detail, "[data-kind]", kind.label);
+        setText(detail, "[data-name]", picked.title);
+        setText(detail, "[data-when]", picked.when);
+        setText(detail, "[data-place]", picked.place);
+        setText(cta, ".action-button_text", kind.cta);
+        cta.href = picked.kind === "host" ? `${base}/${picked.id}` : base;
+      }
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-week_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    .plans-week_head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .plans-week_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-week_count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--control-height-tiny);
+      height: var(--control-height-tiny);
+      padding-inline: var(--space-1);
+      border-radius: var(--radius-round);
+      background-color: var(--text);
+      color: var(--background);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+    }
+
+    .plans-week_list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .plans-week_item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      width: 100%;
+      min-height: var(--control-height-main);
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      color: var(--text);
+      text-align: start;
+      cursor: pointer;
+      animation: plans-week-swap var(--reveal-duration) var(--ease-out) backwards;
+      transition:
+        border-color var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+      &[aria-pressed="true"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+      }
+    }
+
+    .plans-week_dot {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: 0.3125rem;
+      background-color: var(--colors-vivid-purple);
+
+      .plans-week_item.pending & {
+        border-style: dashed;
+        background-color: var(--colors-secondary-purple);
+      }
+    }
+
+    .plans-week_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-0);
+      min-width: 0;
+    }
+
+    .plans-week_item_title {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-week_item_when {
+      display: block;
+      color: var(--text-2);
+      text-transform: none;
+      letter-spacing: var(--letter-spacing-normal);
+    }
+
+    .plans-week_note {
+      color: var(--text-2);
+    }
+
+    .plans-week_detail {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      animation: plans-week-swap var(--reveal-duration) var(--ease-out) backwards;
+    }
+
+    .plans-week_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    @keyframes plans-week-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

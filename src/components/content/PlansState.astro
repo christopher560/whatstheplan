@@ -1,0 +1,21 @@
+---
+import type { PlansHub } from "@/data/plans-hub.ts";
+
+interface Props {
+  /** Everything the plans components start from. */
+  hub?: PlansHub;
+}
+
+const { hub } = Astro.props;
+---
+
+{
+  hub && (
+    <script
+      is:inline
+      type="application/json"
+      id="plans-data"
+      set:html={JSON.stringify(hub).replace(/</g, "\\u003c")}
+    />
+  )
+}

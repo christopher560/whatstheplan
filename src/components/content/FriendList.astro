@@ -1,0 +1,635 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import IconButton from "@/components/item/IconButton.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { dayLetters } from "@/data/friends.ts";
+import type { Friend, FriendRequest } from "@/data/friends.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Friends, then the requests that become friends when accepted. */
+  friends?: (Friend | FriendRequest)[];
+}
+
+const { render = true, friends = [] } = Astro.props;
+
+const tones = {
+  free: { color: "green", filled: true },
+  maybe: { color: "yellow", filled: true },
+  busy: { color: undefined, filled: false },
+  away: { color: "purple", filled: true },
+} as const;
+---
+
+{
+  render && friends.length > 0 && (
+    <section id="everyone" class="friend-list_wrap" aria-labelledby="friend-list-title" data-list>
+      <div class="friend-list_head">
+        <h2 id="friend-list-title" class="friend-list_title text-style-h3">Everyone</h2>
+        <div class="friend-list_search">
+          <label class="friend-list_label" for="friend-search">
+            Search friends
+          </label>
+          <span class="friend-list_search_icon">
+            <PathIcon d="M11 4.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM16 16l4.5 4.5" variant="small" />
+          </span>
+          <input
+            id="friend-search"
+            class="field-control friend-list_input text-style-main"
+            type="search"
+            placeholder="Search friends"
+            data-search
+          />
+        </div>
+      </div>
+
+      <div class="friend-list_filters" role="group" aria-label="Filter friends" data-filters></div>
+
+      <div class="friend-list_grid">
+        {friends.map((friend) => (
+          <Panel tag="article" class="friend-card_wrap" data-friend={friend.id}>
+            <div class="friend-card_body">
+              <div class="friend-card_top">
+                <span class={`friend-card_avatar avatar_wrap ${friend.color}`}>
+                  <span>{friend.name.charAt(0).toUpperCase()}</span>
+                  <span class="friend-card_status" data-tone={friend.tone} />
+                </span>
+                <div class="friend-card_who">
+                  <h3 class="friend-card_name text-style-h4">{friend.name}</h3>
+                  <Pill
+                    size="tiny"
+                    variant={tones[friend.tone].filled ? "filled" : "outline"}
+                    color={tones[friend.tone].color}
+                  >
+                    {friend.status}
+                  </Pill>
+                </div>
+              </div>
+
+              <div class="friend-card_tags" data-tags>
+                <Pill
+                  element="button"
+                  size="tiny"
+                  variant="dashed"
+                  aria-label={`Edit tags for ${friend.name}`}
+                  data-edit
+                >
+                  <PathIcon slot="before" d="M12 5v14M5 12h14" variant="small" />
+                  Tag
+                </Pill>
+              </div>
+
+              <div class="friend-card_edit" hidden data-editor>
+                <div class="friend-card_chips" data-chips></div>
+                <form class="friend-card_form" data-form>
+                  <input
+                    class="field-control text-style-main"
+                    type="text"
+                    maxlength="20"
+                    placeholder="Swim, Bio, roommate..."
+                    aria-label={`Add a tag for ${friend.name}`}
+                    data-draft
+                  />
+                  <ActionButton type="submit" size="small">
+                    Add
+                  </ActionButton>
+                </form>
+                <div class="friend-card_chips" data-suggest></div>
+                <ActionButton color="ink" size="small" data-done>
+                  Done
+                </ActionButton>
+              </div>
+
+              <div class="friend-card_week">
+                <div class="friend-card_week_head">
+                  <span class="text-style-small" data-week-title>Free this week</span>
+                  <span class="text-style-small">{friend.shared}</span>
+                </div>
+                <div class="friend-card_days">
+                  {dayLetters.map((letter, day) => (
+                    <span class="friend-card_day" data-day={day}>
+                      <span class="friend-card_letter text-style-tiny">
+                        {letter}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <p class="friend-card_next text-style-main">{friend.nextFree}</p>
+
+              <div class="friend-card_actions">
+                <ActionButton color="white" class="friend-card_group" data-circle>
+                  <PathIcon slot="before" d="M12 5v14M5 12h14" variant="small" data-circle-icon />
+                  Add to group
+                </ActionButton>
+                <IconButton
+                  href="#"
+                  label={`Plan something with ${friend.name}`}
+                  title="Plan something"
+                  class="friend-card_plan"
+                  data-plan
+                >
+                  <PathIcon d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M12 13v5M9.5 15.5h5" />
+                </IconButton>
+                <IconButton label={`Make ${friend.name} a favorite`} title="Favorite" class="friend-card_fav" data-favorite>
+                  <PathIcon d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
+                </IconButton>
+              </div>
+            </div>
+          </Panel>
+        ))}
+      </div>
+
+      <p class="friend-list_empty text-style-main" hidden data-empty>
+        Nobody matches that. Try another filter or clear the search.
+      </p>
+
+      <template data-filter-template>
+        <Pill element="button" size="small" data-filter>
+          Filter
+          <span slot="after" class="friend-list_count" data-count>0</span>
+        </Pill>
+      </template>
+      <template data-tag-template>
+        <Pill size="tiny">Tag</Pill>
+      </template>
+      <template data-chip-template>
+        <Pill element="button" size="small" variant="filled" color="yellow" data-remove-tag>
+          Tag
+          <PathIcon slot="after" d="M6 6l12 12M18 6L6 18" variant="small" />
+        </Pill>
+      </template>
+      <template data-suggest-template>
+        <Pill element="button" size="small" data-suggest-tag>Tag</Pill>
+      </template>
+    </section>
+  )
+}
+
+<script>
+  import { tagSuggestions } from "@/data/friends.ts";
+  import {
+    activeFilter,
+    addTag,
+    filterOptions,
+    get,
+    isInCircle,
+    listed,
+    personById,
+    planHref,
+    removeTag,
+    subscribe,
+    tagChoices,
+    tagsOf,
+    toggleCircle,
+    toggleFavorite,
+    update,
+    weekLabel,
+    weekOf,
+    whenHint,
+  } from "@/lib/friends-store.ts";
+  import { cloneFirst, setIconPath, setText } from "@/lib/ui.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-list]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const filters = $("[data-filters]");
+    const empty = $("[data-empty]");
+    const search = $<HTMLInputElement>("[data-search]");
+    const templates = {
+      filter: $<HTMLTemplateElement>("[data-filter-template]"),
+      tag: $<HTMLTemplateElement>("[data-tag-template]"),
+      chip: $<HTMLTemplateElement>("[data-chip-template]"),
+      suggest: $<HTMLTemplateElement>("[data-suggest-template]"),
+    };
+    const cards = [...root.querySelectorAll<HTMLElement>("[data-friend]")];
+    let filterKey = "";
+
+    const idOf = (element: HTMLElement) => element.closest<HTMLElement>("[data-friend]")!.dataset.friend!;
+
+    search.addEventListener("input", () => update({ query: search.value }));
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const hit = (selector: string) => target.closest<HTMLElement>(selector);
+
+      const filter = hit("[data-filter]");
+      if (filter) return update({ filter: filter.dataset.filter! });
+      const circle = hit("[data-circle]");
+      if (circle) return toggleCircle(idOf(circle));
+      const favorite = hit("[data-favorite]");
+      if (favorite) return toggleFavorite(idOf(favorite));
+      const edit = hit("[data-edit]");
+      if (edit) return update({ tagEdit: idOf(edit), draft: "" });
+      if (hit("[data-done]")) return update({ tagEdit: null, draft: "" });
+      const remove = hit("[data-remove-tag]");
+      if (remove) return removeTag(idOf(remove), remove.dataset.removeTag!);
+      const suggest = hit("[data-suggest-tag]");
+      if (suggest) addTag(idOf(suggest), suggest.dataset.suggestTag!, tagSuggestions);
+    });
+
+    root.addEventListener("input", (event) => {
+      const input = (event.target as HTMLElement).closest<HTMLInputElement>("[data-draft]");
+      if (input) update({ draft: input.value });
+    });
+    root.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const form = (event.target as HTMLElement).closest<HTMLElement>("[data-form]");
+      if (form) addTag(idOf(form), get().draft, tagSuggestions);
+    });
+
+    const renderFilters = () => {
+      const options = filterOptions();
+      const key = options.map((option) => option.id).join("|");
+      if (key !== filterKey) {
+        filterKey = key;
+        filters.replaceChildren(
+          ...options.map((option) => {
+            const pill = cloneFirst(templates.filter);
+            pill.dataset.filter = option.id;
+            setText(pill, ".pill_text", option.label);
+            return pill;
+          }),
+        );
+      }
+      const current = activeFilter();
+      options.forEach((option) => {
+        const pill = filters.querySelector<HTMLElement>(`[data-filter="${CSS.escape(option.id)}"]`)!;
+        pill.setAttribute("aria-pressed", String(option.id === current));
+        pill.querySelector<HTMLElement>("[data-count]")!.textContent = String(option.count);
+      });
+    };
+
+    subscribe(() => {
+      const s = get();
+      renderFilters();
+      if (search.value !== s.query) search.value = s.query;
+
+      const order = listed().map((friend) => friend.id);
+      empty.hidden = order.length > 0;
+
+      cards.forEach((card) => {
+        const id = card.dataset.friend!;
+        const friend = personById(id);
+        const index = order.indexOf(id);
+        card.hidden = index < 0;
+        if (!friend || index < 0) return;
+
+        const inCircle = isInCircle(id);
+        const favorite = !!s.favorites[id];
+        card.style.order = String(index);
+        card.classList.toggle("yellow", inCircle);
+        card.classList.toggle("in-circle", inCircle);
+
+        /* Tags: shown as pills, or editable while the editor is open. */
+        const editing = s.tagEdit === id;
+        const tags = tagsOf(id);
+        const tagArea = card.querySelector<HTMLElement>("[data-tags]")!;
+        tagArea.hidden = editing;
+        [...tagArea.querySelectorAll(".pill_wrap:not([data-edit])")].forEach((pill) => pill.remove());
+        const edit = tagArea.querySelector("[data-edit]")!;
+        tags.forEach((tag) => {
+          const pill = cloneFirst(templates.tag);
+          setText(pill, ".pill_text", tag);
+          tagArea.insertBefore(pill, edit);
+        });
+
+        const editor = card.querySelector<HTMLElement>("[data-editor]")!;
+        editor.hidden = !editing;
+        if (editing) {
+          card.querySelector<HTMLElement>("[data-chips]")!.replaceChildren(
+            ...tags.map((tag) => {
+              const chip = cloneFirst(templates.chip);
+              chip.dataset.removeTag = tag;
+              chip.setAttribute("aria-label", `Remove tag ${tag} from ${friend.name}`);
+              setText(chip, ".pill_text", tag);
+              return chip;
+            }),
+          );
+          card.querySelector<HTMLElement>("[data-suggest]")!.replaceChildren(
+            ...tagChoices(id, tagSuggestions).map((tag) => {
+              const pill = cloneFirst(templates.suggest);
+              pill.dataset.suggestTag = tag;
+              setText(pill, ".pill_text", `+ ${tag}`);
+              return pill;
+            }),
+          );
+          const draft = card.querySelector<HTMLInputElement>("[data-draft]")!;
+          if (draft.value !== s.draft) draft.value = s.draft;
+        }
+
+        /* Week strip follows the group's week. */
+        setText(card, "[data-week-title]", s.week === 0 ? "Free this week" : `Free ${weekLabel().toLowerCase()}`);
+        weekOf(friend).forEach((free, day) => {
+          const cell = card.querySelector<HTMLElement>(`[data-day="${day}"]`)!;
+          cell.dataset.free = String(!!free);
+          cell.classList.toggle("today", s.week === 0 && day === 3);
+        });
+
+        const circleButton = card.querySelector<HTMLElement>("[data-circle]")!;
+        circleButton.classList.toggle("white", !inCircle);
+        circleButton.classList.toggle("yellow", inCircle);
+        circleButton.setAttribute("aria-pressed", String(inCircle));
+        circleButton.setAttribute(
+          "aria-label",
+          inCircle ? `Remove ${friend.name} from the group` : `Add ${friend.name} to the group`,
+        );
+        setText(circleButton, ".action-button_text", inCircle ? "In group" : "Add to group");
+        setIconPath(circleButton, inCircle ? "M5 12l5 5 9-10" : "M12 5v14M5 12h14");
+
+        const fav = card.querySelector<HTMLElement>("[data-favorite]")!;
+        fav.setAttribute("aria-pressed", String(favorite));
+        fav.setAttribute(
+          "aria-label",
+          favorite ? `${friend.name} is a favorite. Tap to remove` : `Make ${friend.name} a favorite`,
+        );
+        card.querySelector<HTMLAnchorElement>("[data-plan]")!.href = planHref(
+          [id],
+          whenHint(friend),
+          "friend",
+        );
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-list_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      scroll-margin-block-start: var(--space-4);
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    .friend-list_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .friend-list_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-list_search {
+      position: relative;
+      flex: 1 1 15rem;
+      max-width: 22.5rem;
+    }
+
+    .friend-list_label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .friend-list_search_icon {
+      position: absolute;
+      inset-inline-start: var(--space-4);
+      inset-block-start: 50%;
+      translate: 0 -50%;
+      pointer-events: none;
+    }
+
+    .friend-list_input {
+      width: 100%;
+      min-height: var(--control-height-main);
+      padding-inline: calc(var(--space-4) + var(--icon-small) + var(--space-2)) var(--space-4);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+    }
+
+    .friend-list_filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .friend-list_count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--space-5);
+      height: var(--space-5);
+      padding-inline: var(--space-1);
+      border-radius: var(--radius-round);
+      background-color: var(--background);
+      color: var(--text);
+      font-size: var(--text-tiny);
+      line-height: 1;
+
+      .pill_wrap[aria-pressed="true"] & {
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .friend-list_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-width-main)), 1fr));
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+
+    .friend-list_empty {
+      padding: var(--space-5) var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-large);
+      color: var(--text-2);
+      text-align: center;
+    }
+
+    /* Card */
+    .friend-card_wrap {
+      height: 100%;
+
+      &.in-circle {
+        border: var(--border-width-thick) solid var(--border-strong);
+      }
+    }
+
+    .friend-card_body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-3);
+      height: 100%;
+    }
+
+    .friend-card_top {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+
+    .friend-card_avatar {
+      --_size: var(--avatar-large);
+      position: relative;
+      box-shadow: var(--shadow-offset-small);
+      font-family: var(--secondary-family);
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-card_status {
+      position: absolute;
+      inset-inline-end: calc(var(--space-0) * -1);
+      inset-block-end: calc(var(--space-0) * -1);
+      width: var(--space-4);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--status-busy);
+
+      &[data-tone="free"] {
+        background-color: var(--status-free);
+      }
+      &[data-tone="maybe"] {
+        background-color: var(--status-maybe);
+      }
+      &[data-tone="away"] {
+        background-color: var(--status-away);
+      }
+    }
+
+    .friend-card_who {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .friend-card_name {
+      font-weight: var(--secondary-bold);
+      overflow-wrap: anywhere;
+    }
+
+    .friend-card_tags,
+    .friend-card_chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .friend-card_edit {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background);
+    }
+
+    .friend-card_form {
+      display: flex;
+      gap: var(--space-2);
+      width: 100%;
+
+      & input {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .friend-card_week {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .friend-card_week_head {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-2);
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .friend-card_days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: var(--space-0);
+    }
+
+    .friend-card_letter {
+      display: block;
+      letter-spacing: 0;
+    }
+
+    .friend-card_day {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      height: var(--space-6);
+      border: var(--border-width) dashed var(--border);
+      border-radius: 0.375rem;
+      background-color: var(--background);
+      color: var(--text-2);
+
+      &[data-free="true"] {
+        border: var(--border-width-medium) solid var(--border-strong);
+        background-color: var(--status-free);
+        color: var(--colors-on-vivid);
+      }
+      &.today {
+        outline: var(--border-width-medium) solid var(--border-strong);
+        outline-offset: var(--border-width);
+      }
+    }
+
+    .friend-card_next {
+      margin-block-start: auto;
+    }
+
+    .friend-card_actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .friend-card_group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .friend-card_plan,
+    .friend-card_fav {
+      --_size: var(--control-height-main);
+    }
+
+    .friend-card_plan {
+      border-color: var(--border);
+      background-color: var(--text);
+      color: var(--background);
+    }
+
+    .friend-card_fav[aria-pressed="true"] {
+      border: var(--border-width-thick) solid var(--border-strong);
+      background-color: var(--colors-secondary-pink);
+      color: var(--text);
+
+      & svg {
+        fill: var(--colors-vivid-pink);
+      }
+    }
+  }
+</style>

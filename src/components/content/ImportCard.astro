@@ -1,0 +1,87 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Where busy times can come from. */
+  sources?: { id: string; label: string }[];
+}
+
+const {
+  render = true,
+  sources = [
+    { id: "google", label: "Google Calendar" },
+    { id: "apple", label: "Apple Calendar" },
+    { id: "school", label: "School timetable" },
+  ],
+} = Astro.props;
+---
+
+{
+  render && sources.length > 0 && (
+    <Panel variant="tint" tint="yellow" aria-labelledby="import-title">
+      <div class="import-card_wrap" data-import>
+        <h2 id="import-title" class="import-card_title text-style-h5">
+          Bring your schedule in
+        </h2>
+        <p class="import-card_text text-style-small">
+          Skip the painting. Import busy times and we only keep free or busy.
+        </p>
+        <div class="import-card_sources">
+          {sources.map((source) => (
+            <ActionButton
+              color="white"
+              class="width-full"
+              data-source={source.id}
+            >
+              {source.label}
+            </ActionButton>
+          ))}
+        </div>
+        <p class="import-card_status text-style-small" role="status" hidden data-status />
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-import]").forEach((root) => {
+    const status = root.querySelector<HTMLElement>("[data-status]")!;
+    root.querySelectorAll<HTMLElement>("[data-source]").forEach((button) =>
+      button.addEventListener("click", () => {
+        status.hidden = false;
+        status.textContent = `${button.textContent?.trim()} import is coming soon. Paint your week for now.`;
+      }),
+    );
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .import-card_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .import-card_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .import-card_sources {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .import-card_status {
+      font-weight: var(--primary-bold);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>

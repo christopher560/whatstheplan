@@ -1,0 +1,359 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_lock from "@/assets/icons/icon_lock.svg";
+import icon_plus from "@/assets/icons/icon_plus.svg";
+import icon_minus from "@/assets/icons/icon_minus.svg";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Month the budget covers. */
+  month?: string;
+  /** Monthly budget, in dollars. */
+  total?: number;
+  /** Dollars already spent. */
+  spent?: number;
+  /** Dollars set aside for plans. */
+  planned?: number;
+  /** Names the planned amount. */
+  plannedLabel?: string;
+  /** Group comfort limit per person, in dollars. */
+  comfort?: number;
+}
+
+const {
+  render = true,
+  month,
+  total = 0,
+  spent = 0,
+  planned = 0,
+  plannedLabel = "Planned",
+  comfort,
+} = Astro.props;
+
+const percent = (value: number) =>
+  Math.max(0, Math.min(100, (value / total) * 100));
+const spentPercent = percent(spent);
+const plannedPercent = Math.min(percent(planned), 100 - spentPercent);
+const left = total - spent - planned;
+const leftLine =
+  left >= 0
+    ? `$${left} left after your plans`
+    : `Over budget by $${Math.abs(left)}. Trim a plan or raise it.`;
+---
+
+{
+  render && total > 0 && (
+    <Panel aria-labelledby="budget-card-title">
+      <div
+        class="budget-card_wrap"
+        data-budget-card
+        data-spent={spent}
+        data-planned={planned}
+        data-total={total}
+        style={`--_spent: ${spentPercent}%; --_planned: ${plannedPercent}%;`}
+      >
+        <div class="budget-card_head">
+          <h2 id="budget-card-title" class="budget-card_title text-style-h5">
+            Hangout budget
+          </h2>
+          {month && <Pill size="tiny">{month}</Pill>}
+        </div>
+
+        <div class="budget-card_stepper">
+          <button
+            type="button"
+            class="budget-card_step"
+            aria-label="Lower monthly budget by 10 dollars"
+            data-step="-10"
+          >
+            <Icon src={icon_minus} variant="small" />
+          </button>
+          <div class="budget-card_figure">
+            <p class="budget-card_amount text-style-h3">
+              $<span data-total-label>{total}</span>
+            </p>
+            <p class="budget-card_caption text-style-small">
+              to spend this month
+            </p>
+          </div>
+          <button
+            type="button"
+            class="budget-card_step"
+            aria-label="Raise monthly budget by 10 dollars"
+            data-step="10"
+          >
+            <Icon src={icon_plus} variant="small" />
+          </button>
+        </div>
+
+        <div
+          class="budget-card_meter"
+          role="img"
+          aria-label={`$${spent} spent, $${planned} planned, ${left >= 0 ? `$${left} left` : `$${Math.abs(left)} over`} of $${total}`}
+          data-meter
+        >
+          <div class="budget-card_spent"></div>
+          <div class="budget-card_planned"></div>
+        </div>
+
+        <ul class="budget-card_legend">
+          <li class="budget-card_row">
+            <span class="budget-card_swatch spent"></span>
+            <span class="budget-card_label text-style-small">Spent so far</span>
+            <strong class="text-style-small">${spent}</strong>
+          </li>
+          <li class="budget-card_row">
+            <span class="budget-card_swatch planned"></span>
+            <span class="budget-card_label text-style-small">{plannedLabel}</span>
+            <strong class="text-style-small">${planned}</strong>
+          </li>
+        </ul>
+
+        <p
+          class:list={["budget-card_left text-style-small", left < 0 && "over"]}
+          data-left
+        >
+          {leftLine}
+        </p>
+
+        {comfort && (
+          <div class="budget-card_comfort">
+            <div class="budget-card_comfort_head">
+              <Icon src={icon_lock} variant="small" />
+              <p class="budget-card_comfort_title text-style-small">
+                Group comfort zone: up to ${comfort} each
+              </p>
+            </div>
+            <p class="budget-card_comfort_text text-style-small">
+              Everyone sets a number privately. Only the group's cap is shown,
+              so nobody has to say "I'm broke."
+            </p>
+            <Pill element="button" class="align-self-start">Set my number</Pill>
+          </div>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-budget-card]").forEach((root) => {
+    const spent = Number(root.dataset.spent);
+    const planned = Number(root.dataset.planned);
+    let total = Number(root.dataset.total);
+
+    const label = root.querySelector<HTMLElement>("[data-total-label]")!;
+    const meter = root.querySelector<HTMLElement>("[data-meter]")!;
+    const leftLine = root.querySelector<HTMLElement>("[data-left]")!;
+
+    const render = () => {
+      const percent = (value: number) =>
+        Math.max(0, Math.min(100, (value / total) * 100));
+      const spentPercent = percent(spent);
+      const left = total - spent - planned;
+      root.style.setProperty("--_spent", `${spentPercent}%`);
+      root.style.setProperty(
+        "--_planned",
+        `${Math.min(percent(planned), 100 - spentPercent)}%`,
+      );
+      label.textContent = String(total);
+      meter.setAttribute(
+        "aria-label",
+        `$${spent} spent, $${planned} planned, ${left >= 0 ? `$${left} left` : `$${Math.abs(left)} over`} of $${total}`,
+      );
+      leftLine.textContent =
+        left >= 0
+          ? `$${left} left after your plans`
+          : `Over budget by $${Math.abs(left)}. Trim a plan or raise it.`;
+      leftLine.classList.toggle("over", left < 0);
+    };
+
+    root.querySelectorAll<HTMLElement>("[data-step]").forEach((button) =>
+      button.addEventListener("click", () => {
+        total = Math.max(10, total + Number(button.dataset.step));
+        render();
+      }),
+    );
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .budget-card_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .budget-card_head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-1);
+    }
+
+    .budget-card_stepper {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .budget-card_step {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: var(--control-height-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-size: var(--text-main);
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        color var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+          background-color: var(--text);
+          color: var(--background);
+        }
+      }
+    }
+
+    .budget-card_figure {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-2);
+      text-align: center;
+    }
+
+    .budget-card_amount {
+      font-weight: var(--primary-bold);
+    }
+
+    .budget-card_caption {
+      color: var(--text-2);
+    }
+
+    .budget-card_meter {
+      display: flex;
+      height: var(--space-5);
+      border: var(--border-width) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      overflow: hidden;
+    }
+
+    .budget-card_spent,
+    .budget-card_planned {
+      height: 100%;
+      transform-origin: left;
+      transition: width var(--reveal-duration) var(--ease-out);
+      animation: budget-card-grow var(--enter-duration) var(--ease-out) backwards;
+    }
+
+    .budget-card_spent {
+      width: var(--_spent);
+      border-right: var(--border-width-thick) solid var(--border-strong);
+      background-color: var(--colors-vivid-orange);
+    }
+
+    .budget-card_planned {
+      width: var(--_planned);
+      background-image: repeating-linear-gradient(
+        45deg,
+        var(--colors-secondary-yellow) 0 0.375rem,
+        var(--background-3) 0.375rem 0.75rem
+      );
+      animation-delay: var(--stagger-step);
+    }
+
+    .budget-card_legend {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .budget-card_row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .budget-card_label {
+      flex: 1;
+    }
+
+    .budget-card_swatch {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-small);
+
+      &.spent {
+        background-color: var(--colors-vivid-orange);
+      }
+      &.planned {
+        background-image: repeating-linear-gradient(
+          45deg,
+          var(--colors-vivid-yellow) 0 0.25rem,
+          var(--background-3) 0.25rem 0.5rem
+        );
+      }
+    }
+
+    .budget-card_left {
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-main);
+      background-color: var(--status-free-background);
+      font-weight: var(--primary-bold);
+
+      &.over {
+        background-color: var(--colors-secondary-red);
+      }
+    }
+
+    .budget-card_comfort {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+    }
+
+    .budget-card_comfort_head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .budget-card_comfort_title {
+      font-weight: var(--primary-bold);
+    }
+
+    .budget-card_comfort_text {
+      color: var(--text-2);
+      text-transform: none;
+      letter-spacing: var(--letter-spacing-normal);
+      font-weight: var(--primary-regular);
+    }
+
+    @keyframes budget-card-grow {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+  }
+</style>

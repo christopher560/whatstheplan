@@ -1,0 +1,30 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import Icon from "@/components/media/Icon.astro";
+import icon_home from "@/assets/icons/icon_home.svg";
+import icon_discover from "@/assets/icons/icon_discover.svg";
+import icon_calendar from "@/assets/icons/icon_calendar.svg";
+import icon_plans from "@/assets/icons/icon_plans.svg";
+import icon_friends from "@/assets/icons/icon_friends.svg";
+
+interface Props extends HTMLAttributes<"svg"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Which navigation icon to show. */
+  name?: "home" | "discover" | "calendar" | "plans" | "friends";
+  /** Icon size. */
+  variant?: "small" | "medium" | "large";
+}
+
+const { render = true, name, variant = "medium", ...rest } = Astro.props;
+
+const icons = {
+  home: icon_home,
+  discover: icon_discover,
+  calendar: icon_calendar,
+  plans: icon_plans,
+  friends: icon_friends,
+};
+---
+
+{render && name && <Icon src={icons[name]} variant={variant} {...rest} />}

@@ -1,0 +1,404 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import IconButton from "@/components/item/IconButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_chevron from "@/assets/icons/icon_chevron.svg";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <div class="friend-group_wrap" data-group>
+      <div class="friend-group_intro">
+        <h2 id="friend-group-title" class="friend-group_title text-style-h3">Build a group</h2>
+        <p class="friend-group_hint text-style-small">
+          Pick up to 6 friends to see when you're all free.
+        </p>
+      </div>
+
+      <p class="friend-group_empty text-style-main" hidden data-empty>
+        Pick friends below to start a group.
+      </p>
+
+      <div class="friend-group_pulse" data-pulse>
+        <div class="friend-group_pulse_head">
+          <h3 class="friend-group_pulse_title text-style-h5">When you're all free</h3>
+          <div class="friend-group_nav">
+            <span class="friend-group_back">
+              <IconButton label="Previous week" data-week="-1">
+                <Icon src={icon_chevron} variant="small" />
+              </IconButton>
+            </span>
+            <p class="friend-group_week text-style-small" data-week-label />
+            <IconButton label="Next week" data-week="1">
+              <Icon src={icon_chevron} variant="small" />
+            </IconButton>
+          </div>
+        </div>
+
+        <div class="friend-group_best" data-best>
+          <div class="friend-group_best_text">
+            <p class="friend-group_best_title text-style-h5" data-best-title />
+            <p class="text-style-small" data-best-note />
+          </div>
+          <ActionButton element="link" href="#" color="ink" size="small" data-best-plan>
+            Plan it
+          </ActionButton>
+        </div>
+
+        <div class="friend-group_heat" role="img" data-heat></div>
+      </div>
+
+      <p class="friend-group_notice text-style-small" role="status" hidden data-notice />
+
+      <div class="friend-group_foot" data-foot>
+        <ActionButton element="link" href="#" color="ink" size="large" data-plan>
+          Plan with this group
+        </ActionButton>
+        <p class="friend-group_free text-style-small" data-free />
+      </div>
+    </div>
+  )
+}
+
+<script>
+  import { MAX_FRIEND_WEEK, dayLetters, dayNames } from "@/data/friends.ts";
+  import {
+    circleWeek,
+    get,
+    planHref,
+    subscribe,
+    update,
+    weekLabel,
+    weekOf,
+  } from "@/lib/friends-store.ts";
+  import { avatarElement } from "@/lib/ui.ts";
+
+  const span = (className: string, text = "") => {
+    const element = document.createElement("span");
+    element.className = className;
+    element.textContent = text;
+    return element;
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-group]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const empty = $("[data-empty]");
+    const pulse = $("[data-pulse]");
+    const best = $("[data-best]");
+    const bestPlan = $<HTMLAnchorElement>("[data-best-plan]");
+    const heat = $("[data-heat]");
+    const notice = $("[data-notice]");
+    const foot = $("[data-foot]");
+    const plan = $<HTMLAnchorElement>("[data-plan]");
+    const buttons = root.querySelectorAll<HTMLButtonElement>("[data-week]");
+
+    buttons.forEach((button) =>
+      button.addEventListener("click", () =>
+        update({ week: Math.min(MAX_FRIEND_WEEK, Math.max(0, get().week + Number(button.dataset.week))) }),
+      ),
+    );
+
+    subscribe(() => {
+      const s = get();
+      const week = circleWeek();
+      const has = week.total > 0;
+      empty.hidden = has;
+      pulse.hidden = !has;
+      foot.hidden = !has;
+      notice.hidden = !s.notice;
+      notice.textContent = s.notice;
+      buttons.forEach((button) => {
+        const next = s.week + Number(button.dataset.week);
+        button.disabled = next < 0 || next > MAX_FRIEND_WEEK;
+      });
+      root.querySelector<HTMLElement>("[data-week-label]")!.textContent = weekLabel();
+
+      const ids = week.members.map((member) => member.id);
+      plan.href = planHref(ids, week.when, "group");
+      bestPlan.hidden = !week.canPlan;
+      bestPlan.href = plan.href;
+      const free = week.members.filter((member) => member.tone === "free").length;
+      root.querySelector<HTMLElement>("[data-free]")!.textContent = has
+        ? `${free} of ${week.total} free tonight`
+        : "";
+
+      if (!has) return;
+
+      best.dataset.state = week.allFree ? "all" : week.canPlan ? "some" : "none";
+      root.querySelector<HTMLElement>("[data-best-title]")!.textContent = week.canPlan
+        ? week.bestDay === week.today
+          ? "Tonight works"
+          : `${dayNames[week.bestDay]} works`
+        : "No shared night left";
+      root.querySelector<HTMLElement>("[data-best-note]")!.textContent = week.canPlan
+        ? week.allFree
+          ? "Everyone is free"
+          : `${week.bestCount} of ${week.total} free`
+        : "Try next week";
+
+      /* The heatmap is small, so it is redrawn rather than patched. */
+      const rows: HTMLElement[] = [span("friend-group_cell blank")];
+      dayLetters.forEach((letter, day) => {
+        const head = span("friend-group_day", letter);
+        head.classList.toggle("today", day === week.today);
+        rows.push(head);
+      });
+      week.members.forEach((member) => {
+        const label = span("friend-group_who");
+        label.append(avatarElement(member.name, member.color), span("friend-group_who_name text-style-small", member.name));
+        rows.push(label);
+        weekOf(member).forEach((free, day) => {
+          const cell = span("friend-group_cell");
+          cell.dataset.free = String(!!free);
+          cell.classList.toggle("today", day === week.today);
+          rows.push(cell);
+        });
+      });
+      rows.push(span("friend-group_who_name text-style-small", "All"));
+      week.counts.forEach((count, day) => {
+        const cell = span("friend-group_count text-style-small", String(count));
+        cell.dataset.level =
+          week.total > 0 && count === week.total ? "all" : count >= 2 ? "some" : "none";
+        cell.classList.toggle("best", day === week.bestDay);
+        rows.push(cell);
+      });
+      heat.replaceChildren(...rows);
+      heat.setAttribute(
+        "aria-label",
+        `Group availability, ${weekLabel().toLowerCase()}. ${week.counts
+          .map((count, day) => `${dayNames[day]} ${count} of ${week.total}`)
+          .join(", ")}`,
+      );
+    });
+
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-group_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+      container-type: inline-size;
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    .friend-group_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .friend-group_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-group_hint {
+      color: var(--text-2);
+    }
+
+    .friend-group_empty {
+      padding: var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      color: var(--text-2);
+    }
+
+    .friend-group_pulse {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .friend-group_pulse_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .friend-group_pulse_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-group_nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+
+      & button:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+    }
+
+    .friend-group_back {
+      display: inline-flex;
+      rotate: 180deg;
+    }
+
+    .friend-group_week {
+      min-width: 6.5rem;
+      text-align: center;
+      font-weight: var(--primary-bold);
+    }
+
+    .friend-group_best {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-muted);
+
+      &[data-state="all"] {
+        background-color: var(--status-free);
+        color: var(--colors-on-vivid);
+      }
+      &[data-state="some"] {
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .friend-group_best_text {
+      display: flex;
+      flex: 1 1 9rem;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .friend-group_best_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-group_heat {
+      display: grid;
+      grid-template-columns: max-content repeat(7, minmax(0, 1fr));
+      gap: var(--space-1);
+      align-items: center;
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .friend-group_day {
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+      color: var(--text-2);
+      text-align: center;
+
+      &.today {
+        color: var(--text);
+      }
+    }
+
+    .friend-group_who {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding-inline-end: var(--space-1);
+
+      & .avatar_wrap {
+        --_size: var(--avatar-small);
+      }
+    }
+
+    .friend-group_who_name {
+      font-weight: var(--primary-bold);
+    }
+
+    @container (width < 25rem) {
+      .friend-group_who .friend-group_who_name {
+        display: none;
+      }
+    }
+
+    .friend-group_cell {
+      display: block;
+      height: var(--space-6);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-small);
+      background-color: var(--background);
+
+      &.blank {
+        border: 0;
+        background: none;
+      }
+      &[data-free="true"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--status-free);
+      }
+      &.today {
+        outline: var(--border-width-thick) solid var(--border-strong);
+        outline-offset: var(--border-width-thick);
+      }
+    }
+
+    .friend-group_count {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: var(--space-6);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-small);
+      background-color: var(--background);
+      color: var(--colors-on-vivid);
+      font-weight: var(--primary-bold);
+
+      &[data-level="some"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--colors-vivid-yellow);
+      }
+      &[data-level="all"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--status-free);
+      }
+      &.best {
+        box-shadow: var(--shadow-offset-small);
+      }
+    }
+
+    .friend-group_notice {
+      padding: var(--space-3) var(--space-3);
+      border: var(--border-width-medium) dashed var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-vivid-yellow);
+      color: var(--colors-on-vivid);
+      font-weight: var(--primary-bold);
+    }
+
+    .friend-group_foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+
+      & > .action-button_wrap {
+        flex: 1 1 12.5rem;
+      }
+    }
+
+    .friend-group_free {
+      color: var(--text-2);
+    }
+  }
+</style>

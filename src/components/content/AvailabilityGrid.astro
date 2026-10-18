@@ -1,0 +1,660 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import { DAYS, HOURS, weekDatesFor } from "@/data/calendar.ts";
+import type { Cell } from "@/data/calendar.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** First day of the week shown, as `YYYY-MM-DD`. */
+  weekStart: string;
+  /** Today, as `YYYY-MM-DD`. */
+  today: string;
+  /** The person's weekly pattern, keyed `weekday-hour`. */
+  cells?: Record<string, Cell>;
+}
+
+const { render = true, weekStart, today, cells = {} } = Astro.props;
+
+const dates = weekDatesFor(weekStart);
+const hourText = (hour: number) =>
+  `${hour % 12 === 0 ? 12 : hour % 12} ${hour < 12 ? "AM" : "PM"}`;
+
+const brushes = [
+  { id: "free", label: "Free" },
+  { id: "busy", label: "Busy" },
+  { id: "erase", label: "Erase" },
+];
+const fills = [
+  { id: "evenings", label: "Weekday evenings free" },
+  { id: "weekends", label: "Weekends free" },
+  { id: "clear", label: "Clear week" },
+];
+const presets = [
+  { id: "weekdays", label: "Weekdays" },
+  { id: "all", label: "Every day" },
+  { id: "none", label: "Just this day" },
+];
+---
+
+{
+  render && weekStart && (
+    <Panel aria-labelledby="availability-title">
+      <div class="availability-grid_wrap" data-grid>
+        <div class="availability-grid_head">
+          <h2 id="availability-title" class="availability-grid_title text-style-h5">
+            Paint your week
+          </h2>
+          <div class="availability-grid_brushes" role="group" aria-label="Brush">
+            {brushes.map((brush) => (
+              <Pill
+                element="button"
+                color={brush.id === "free" ? "green" : undefined}
+                pressed={brush.id === "free"}
+                data-brush={brush.id}
+              >
+                <span
+                  slot="before"
+                  class={`availability-grid_dot ${brush.id}`}
+                  aria-hidden="true"
+                />
+                {brush.label}
+              </Pill>
+            ))}
+          </div>
+        </div>
+
+        <div class="availability-grid_fills">
+          {fills.map((fill) => (
+            <Pill element="button" data-fill={fill.id}>
+              {fill.label}
+            </Pill>
+          ))}
+        </div>
+
+        <div class="availability-grid_repeat">
+          <p class="availability-grid_repeat_label text-style-small">Repeat on</p>
+          <div class="availability-grid_days" role="group" aria-label="Repeat on days">
+            {DAYS.map((day, index) => (
+              <button
+                type="button"
+                class="availability-grid_day"
+                aria-pressed="false"
+                aria-label={`Also repeat on ${day}`}
+                data-repeat={index}
+              >
+                {day[0]}
+              </button>
+            ))}
+          </div>
+          <div class="availability-grid_presets">
+            {presets.map((preset) => (
+              <Pill element="button" size="tiny" data-preset={preset.id}>
+                {preset.label}
+              </Pill>
+            ))}
+          </div>
+          <p class="availability-grid_hint text-style-small" data-repeat-hint>
+            Optional. Pick days and each hour you paint also fills the same hour on
+            them, like class every Mon, Wed and Fri.
+          </p>
+        </div>
+
+        <ul class="availability-grid_legend text-style-small">
+          <li class="availability-grid_key">
+            <span class="availability-grid_swatch free" />Free
+          </li>
+          <li class="availability-grid_key">
+            <span class="availability-grid_swatch busy" />Busy
+          </li>
+          <li class="availability-grid_key">
+            <span class="availability-grid_swatch none" />Not set
+          </li>
+          <li class="availability-grid_key">
+            <span class="availability-grid_swatch plan" />Plan
+          </li>
+          <li class="availability-grid_key">
+            <span class="availability-grid_swatch pending" />Waiting on you
+          </li>
+          <li class="availability-grid_key" hidden data-partial-key>
+            <span class="availability-grid_swatch some" />Some friends free (2/3)
+          </li>
+        </ul>
+
+        <div class="availability-grid_scroll">
+          <div class="availability-grid_table" data-table>
+            <div class="availability-grid_row head">
+              <span />
+              {DAYS.map((day, index) => (
+                <button
+                  type="button"
+                  class="availability-grid_header"
+                  title="Paint the whole day"
+                  aria-label={`Paint all of ${day}`}
+                  data-paint-day={index}
+                >
+                  <span class="availability-grid_name text-style-tiny">{day}</span>
+                  <span class="availability-grid_date" data-date={index}>
+                    {dates[index].getDate()}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {HOURS.map((hour) => (
+              <div class="availability-grid_row">
+                <button
+                  type="button"
+                  class="availability-grid_hour"
+                  title="Paint this hour all week"
+                  aria-label={`Paint ${hourText(hour)} all week`}
+                  data-paint-hour={hour}
+                >
+                  {hourText(hour)}
+                </button>
+                {DAYS.map((day, index) => (
+                  <button
+                    type="button"
+                    class="availability-grid_cell"
+                    data-day={index}
+                    data-hour={hour}
+                    data-state={cells[`${index}-${hour}`] ?? "none"}
+                    aria-label={`${day} ${hourText(hour)}`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p class="availability-grid_help text-style-small">
+          Drag across hours to paint a block. Tap a day or an hour label to paint
+          the whole day or that hour all week. Pick days under Repeat on and every
+          paint repeats on them.
+        </p>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import {
+    get,
+    update,
+    subscribe,
+    selectedFriends,
+    describeCell,
+    planAt,
+    weekDates,
+    isToday,
+  } from "@/lib/calendar-store.ts";
+  import { DAYS, HOURS } from "@/data/calendar.ts";
+  import type { Cell } from "@/data/calendar.ts";
+  import { toggle } from "@/lib/profile-form.ts";
+
+  const repeatText = (days: number[]) =>
+    days.length === 0
+      ? "Optional. Pick days and each hour you paint also fills the same hour on them, like class every Mon, Wed and Fri."
+      : `Painting now also repeats on ${[...days].sort().map((day) => DAYS[day]).join(", ")}.`;
+
+  document.querySelectorAll<HTMLElement>("[data-grid]").forEach((root) => {
+    const $$ = <T extends HTMLElement>(selector: string) =>
+      root.querySelectorAll<T>(selector);
+    const cellEls = $$<HTMLButtonElement>(".availability-grid_cell");
+    const table = root.querySelector<HTMLElement>("[data-table]")!;
+    const partialKey = root.querySelector<HTMLElement>("[data-partial-key]")!;
+    const hint = root.querySelector<HTMLElement>("[data-repeat-hint]")!;
+
+    const paintValue = (current: Cell | undefined): Cell | null => {
+      const { brush } = get();
+      return brush === "erase" || brush === current ? null : brush;
+    };
+
+    /** Plans sit on top of the grid, so painting skips their hours. */
+    const covered = (key: string) => {
+      const [day, hour] = key.split("-").map(Number);
+      return !!planAt(day, hour);
+    };
+
+    const write = (keys: string[], value: Cell | null) => {
+      const next = { ...get().cells };
+      keys.filter((key) => !covered(key)).forEach((key) => {
+        if (value === null) delete next[key];
+        else next[key] = value;
+      });
+      update({ cells: next });
+    };
+
+    const paintCell = (day: number, hour: number, value: Cell | null) => {
+      const days = [day, ...get().repeat.filter((other) => other !== day)];
+      write(days.map((d) => `${d}-${hour}`), value);
+    };
+
+    const brushValue = (): Cell | null => {
+      const { brush } = get();
+      return brush === "erase" ? null : brush;
+    };
+
+    const fill = (day: number[], from: number, to: number) => {
+      const next = { ...get().cells };
+      day.forEach((d) => {
+        for (let hour = from; hour <= to; hour++) {
+          if (!covered(`${d}-${hour}`) && next[`${d}-${hour}`] !== "busy") {
+            next[`${d}-${hour}`] = "free";
+          }
+        }
+      });
+      update({ cells: next });
+    };
+
+    const cellOf = (target: EventTarget | null) =>
+      (target as HTMLElement | null)?.closest<HTMLElement>(".availability-grid_cell") ?? null;
+
+    let painting: { value: Cell | null } | null = null;
+    let swallow = false;
+
+    table.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "mouse" || event.button !== 0) return;
+      const cell = cellOf(event.target);
+      if (!cell || cell.dataset.plan) return;
+      const key = `${cell.dataset.day}-${cell.dataset.hour}`;
+      painting = { value: paintValue(get().cells[key]) };
+      swallow = true;
+      paintCell(Number(cell.dataset.day), Number(cell.dataset.hour), painting.value);
+    });
+    table.addEventListener("pointerover", (event) => {
+      if (!painting || event.pointerType !== "mouse") return;
+      const cell = cellOf(event.target);
+      if (cell) paintCell(Number(cell.dataset.day), Number(cell.dataset.hour), painting.value);
+    });
+    const stop = () => {
+      painting = null;
+      setTimeout(() => {
+        swallow = false;
+      }, 0);
+    };
+    window.addEventListener("pointerup", stop);
+    table.addEventListener("pointerleave", stop);
+
+    root.addEventListener("click", (event) => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>(
+        ".availability-grid_cell, [data-paint-day], [data-paint-hour], [data-brush], [data-fill], [data-repeat], [data-preset]",
+      );
+      if (!target) return;
+      const data = target.dataset;
+
+      if (target.matches(".availability-grid_cell")) {
+        if (data.plan) {
+          return update({ selPlan: get().selPlan === data.plan ? null : data.plan! });
+        }
+        if (swallow) {
+          swallow = false;
+          return;
+        }
+        const key = `${data.day}-${data.hour}`;
+        return paintCell(Number(data.day), Number(data.hour), paintValue(get().cells[key]));
+      }
+      if (data.paintDay !== undefined) {
+        return write(HOURS.map((hour) => `${data.paintDay}-${hour}`), brushValue());
+      }
+      if (data.paintHour !== undefined) {
+        return write(DAYS.map((_, day) => `${day}-${data.paintHour}`), brushValue());
+      }
+      if (data.brush) return update({ brush: data.brush as "free" | "busy" | "erase" });
+      if (data.fill === "evenings") return fill([0, 1, 2, 3, 4], 17, 22);
+      if (data.fill === "weekends") return fill([5, 6], 10, 22);
+      if (data.fill === "clear") return update({ cells: {} });
+      if (data.repeat !== undefined)
+        return update({ repeat: toggle(get().repeat.map(String), data.repeat).map(Number) });
+      if (data.preset === "weekdays") return update({ repeat: [0, 1, 2, 3, 4] });
+      if (data.preset === "all") return update({ repeat: [0, 1, 2, 3, 4, 5, 6] });
+      if (data.preset === "none") return update({ repeat: [] });
+    });
+
+    subscribe(() => {
+      const state = get();
+      const friends = selectedFriends();
+      const dates = weekDates();
+
+      $$("[data-brush]").forEach((pill) => {
+        const on = pill.dataset.brush === state.brush;
+        pill.setAttribute("aria-pressed", String(on));
+        pill.classList.toggle("green", on && pill.dataset.brush === "free");
+      });
+      $$("[data-repeat]").forEach((day) =>
+        day.setAttribute("aria-pressed", String(state.repeat.includes(Number(day.dataset.repeat)))),
+      );
+      hint.textContent = repeatText(state.repeat);
+      partialKey.hidden = friends.length < 2;
+
+      $$("[data-date]").forEach((el) => {
+        const date = dates[Number(el.dataset.date)];
+        el.textContent = String(date.getDate());
+        el.closest(".availability-grid_header")!.classList.toggle("today", isToday(date));
+      });
+
+      cellEls.forEach((cell) => {
+        const day = Number(cell.dataset.day);
+        const hour = Number(cell.dataset.hour);
+        const view = describeCell(day, hour);
+        cell.dataset.state = view.state;
+        cell.dataset.match = view.match;
+        cell.dataset.plan = view.plan?.id ?? "";
+        cell.dataset.selected = String(!!view.plan && view.plan.id === state.selPlan);
+        cell.dataset.text =
+          view.match === "all"
+            ? "✓"
+            : view.match === "some"
+              ? `${view.free}/${view.total}`
+              : view.plan && hour === view.plan.from
+                ? view.plan.short
+                : "";
+        cell.setAttribute("aria-label", view.label);
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .availability-grid_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+
+    .availability-grid_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .availability-grid_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .availability-grid_brushes {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .availability-grid_dot {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+
+      &.free {
+        background-color: var(--status-free);
+      }
+      &.busy {
+        background-color: var(--text);
+      }
+      &.erase {
+        background-color: var(--background-3);
+      }
+    }
+
+    .availability-grid_fills {
+      display: flex;
+      gap: var(--space-1);
+      overflow-x: auto;
+      padding-block: var(--space-0);
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .availability-grid_repeat {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+    }
+
+    .availability-grid_repeat_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .availability-grid_days {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .availability-grid_day {
+      display: inline-grid;
+      place-items: center;
+      width: var(--control-height-tiny);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        border-color var(--hover-duration) var(--hover-ease);
+
+      &[aria-pressed="true"] {
+        border-color: var(--border-strong);
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .availability-grid_presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .availability-grid_hint {
+      flex: 1 1 100%;
+      color: var(--text-2);
+    }
+
+    .availability-grid_help {
+      color: var(--text-2);
+    }
+
+    .availability-grid_legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1) var(--space-4);
+    }
+
+    .availability-grid_key {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-weight: var(--primary-medium);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .availability-grid_swatch {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-small);
+
+      &.free {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--status-free);
+      }
+      &.busy {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-image: repeating-linear-gradient(
+          135deg,
+          var(--text) 0 0.25rem,
+          color-mix(in srgb, var(--text) 80%, var(--background)) 0.25rem 0.5rem
+        );
+      }
+      &.none {
+        border: var(--border-width-medium) dashed var(--border);
+        background-color: var(--background-3);
+      }
+      &.some {
+        border: var(--border-width-medium) solid var(--border-strong);
+        background-color: var(--status-free-background);
+      }
+      &.plan {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--colors-vivid-purple);
+      }
+      &.pending {
+        border: var(--border-width-thick) dashed var(--border-strong);
+        background-color: var(--colors-secondary-purple);
+      }
+    }
+
+    .availability-grid_scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: var(--space-0);
+      margin: calc(var(--space-0) * -1);
+    }
+
+    .availability-grid_table {
+      --_label: 2.75rem;
+      --_cell: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-0);
+      min-width: 0;
+      user-select: none;
+
+      @media (width < 30rem) {
+        --_cell: 2.5rem;
+      }
+    }
+
+    .availability-grid_row {
+      display: grid;
+      grid-template-columns: var(--_label) repeat(7, minmax(0, 1fr));
+      gap: var(--space-0);
+      align-items: center;
+    }
+
+    .availability-grid_header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-0);
+      padding: var(--space-1) 0;
+      border: var(--border-width-thick) solid transparent;
+      border-radius: var(--radius-small);
+      text-align: center;
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      &.today {
+        border-color: var(--border-strong);
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+      @media (hover: hover) {
+        &:not(.today):hover {
+          background-color: var(--background);
+        }
+      }
+    }
+
+    .availability-grid_name {
+      text-transform: none;
+      letter-spacing: var(--letter-spacing-normal);
+    }
+
+    .availability-grid_date {
+      font-size: var(--text-small);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+    }
+
+    .availability-grid_hour {
+      padding-inline: 0 var(--space-1);
+      color: var(--text-2);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+      text-align: end;
+    }
+
+    .availability-grid_cell {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: var(--_cell);
+      padding: 0;
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-small);
+      background-color: var(--background-3);
+      color: var(--colors-on-vivid);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease);
+
+      &:hover {
+        box-shadow: 0 0 0 var(--border-width-thick) var(--border-strong);
+      }
+      &[data-state="busy"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-image: repeating-linear-gradient(
+          135deg,
+          var(--text) 0 0.3rem,
+          color-mix(in srgb, var(--text) 80%, var(--background)) 0.3rem 0.6rem
+        );
+      }
+      &[data-state="free"] {
+        border: var(--border-width-medium) solid var(--colors-vivid-green);
+        background-color: var(--status-free);
+      }
+      &[data-state="free"][data-match="none"] {
+        border-color: color-mix(in srgb, var(--status-free) 60%, var(--background-3));
+        background-color: color-mix(in srgb, var(--status-free) 15%, var(--background-3));
+      }
+      &[data-state="free"][data-match="some"] {
+        border: var(--border-width-medium) solid var(--border-strong);
+        background-color: var(--status-free-background);
+      }
+      &[data-state="free"][data-match="all"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+      }
+      &[data-state="plan"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--colors-vivid-purple);
+      }
+      &[data-state="pending"] {
+        border: var(--border-width-thick) dashed var(--border-strong);
+        background-color: var(--colors-secondary-purple);
+      }
+      &[data-selected="true"] {
+        z-index: 1;
+        box-shadow: 0 0 0 var(--border-width-thick) var(--background-3), 0 0 0 calc(var(--border-width-thick) * 2) var(--border-strong);
+      }
+      &::after {
+        content: attr(data-text);
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      &:focus-visible {
+        outline: var(--focus-width) solid var(--text);
+        outline-offset: var(--focus-offset);
+      }
+    }
+  }
+</style>

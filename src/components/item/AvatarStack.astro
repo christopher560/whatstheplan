@@ -1,0 +1,46 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { AccentColor } from "@/types.ts";
+import Avatar from "@/components/item/Avatar.astro";
+
+interface Props extends HTMLAttributes<"span"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** People shown, in front-to-back order. */
+  people?: { initial: string; color?: AccentColor }[];
+  /** Avatar size. */
+  size?: "small" | "main" | "large" | "xlarge";
+}
+
+const {
+  render = true,
+  people = [],
+  size = "main",
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+{
+  render && people.length > 0 && (
+    <span class:list={["avatar-stack_wrap", className]} {...rest}>
+      {people.map((person) => (
+        <Avatar initial={person.initial} color={person.color} size={size} />
+      ))}
+    </span>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .avatar-stack_wrap {
+      display: inline-flex;
+      align-items: center;
+      flex: none;
+
+      & > .avatar_wrap + .avatar_wrap {
+        margin-inline-start: calc(var(--_size) * -0.28);
+      }
+    }
+  }
+</style>

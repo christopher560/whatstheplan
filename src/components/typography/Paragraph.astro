@@ -5,6 +5,7 @@ import { slotContent } from "@/utils/slots.ts";
 type ParagraphStyle =
   | "inherit"
   | "display"
+  | "title"
   | "h1"
   | "h2"
   | "h3"
@@ -13,7 +14,8 @@ type ParagraphStyle =
   | "h6"
   | "large"
   | "main"
-  | "small";
+  | "small"
+  | "tiny";
 
 interface Props extends HTMLAttributes<"p"> {
   /** Set to `false` to omit the component. */

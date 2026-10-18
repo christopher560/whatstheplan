@@ -1,0 +1,229 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  plan?: PlanDetail;
+}
+
+const { render = true, plan } = Astro.props;
+---
+
+{
+  render && plan && plan.slots.length > 0 && (
+    <Panel aria-labelledby="plan-times-title">
+      <div class="plan-times_wrap" data-times>
+        <h2 id="plan-times-title" class="plan-times_title text-style-h5">
+          Which time wins?
+        </h2>
+        <div class="plan-times_list">
+          {plan.slots.map((slot) => (
+            <div class="plan-times_slot" data-slot={slot.id}>
+              <div class="plan-times_top">
+                <p class="plan-times_label text-style-main">{slot.label}</p>
+                <Pill size="tiny" variant="filled" color="yellow" hidden data-tag>
+                  Most votes
+                </Pill>
+              </div>
+              <div class="plan-times_meter">
+                <span class="plan-times_track" aria-hidden="true">
+                  <span class="plan-times_bar" data-bar />
+                </span>
+                <p class="plan-times_count text-style-small" data-slot-count />
+              </div>
+              <div class="plan-times_bottom">
+                <span class="plan-times_voters">
+                  {plan.friends.map((friend) => (
+                    <Avatar
+                      initial={friend.name}
+                      color={friend.color}
+                      size="small"
+                      hidden
+                      data-voter={friend.id}
+                    />
+                  ))}
+                </span>
+                <ActionButton color="ink" size="small" data-lock={slot.id}>
+                  Lock this in
+                </ActionButton>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p class="plan-times_note text-style-small">
+          Locking a time notifies everyone and adds it to their calendars.
+        </p>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, subscribe, getPlan, tally, toggleLock } from "@/lib/plan-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-times]").forEach((root) => {
+    const slots = root.querySelectorAll<HTMLElement>("[data-slot]");
+    root.querySelectorAll<HTMLElement>("[data-lock]").forEach((button) =>
+      button.addEventListener("click", () => toggleLock(button.dataset.lock!)),
+    );
+
+    subscribe(() => {
+      const { locked } = get();
+      const friends = getPlan().friends;
+      const counts = [...slots].map((slot) => tally(slot.dataset.slot!).length);
+      const max = Math.max(...counts);
+      const topId = [...slots].find((_, i) => counts[i] === max)?.dataset.slot;
+
+      slots.forEach((slot, index) => {
+        const id = slot.dataset.slot!;
+        const voters = tally(id);
+        const isLocked = locked === id;
+        const isTop = id === topId && max > 0 && !locked;
+
+        slot.classList.toggle("locked", isLocked);
+        slot.classList.toggle("top", isTop);
+        slot.classList.toggle("dim", !!locked && !isLocked);
+        slot.querySelector<HTMLElement>("[data-bar]")!.style.setProperty(
+          "--_fill",
+          `${Math.round((voters.length / friends.length) * 100)}%`,
+        );
+        slot.querySelector<HTMLElement>("[data-slot-count]")!.textContent =
+          `${counts[index]} of ${friends.length}`;
+
+        const tag = slot.querySelector<HTMLElement>("[data-tag]")!;
+        tag.hidden = !(isLocked || isTop);
+        tag.querySelector<HTMLElement>(".pill_text")!.textContent = isLocked
+          ? "Locked in"
+          : "Most votes";
+
+        slot.querySelectorAll<HTMLElement>("[data-voter]").forEach((avatar) => {
+          const at = voters.findIndex((friend) => friend.id === avatar.dataset.voter);
+          avatar.hidden = at < 0;
+          avatar.style.order = String(at);
+        });
+
+        const button = slot.querySelector<HTMLElement>("[data-lock]")!;
+        button.querySelector<HTMLElement>(".action-button_text")!.textContent = isLocked
+          ? "Unlock"
+          : "Lock this in";
+        button.classList.remove("ink", "white");
+        button.classList.add(isLocked ? "white" : "ink");
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-times_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .plan-times_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-times_list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plan-times_slot {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-large);
+      background-color: var(--background);
+      transition:
+        opacity var(--move-duration) var(--ease-out),
+        background-color var(--hover-duration) var(--hover-ease);
+
+      &.locked {
+        border-color: var(--border-strong);
+        background-color: var(--status-free-background);
+      }
+      &.dim {
+        opacity: 0.55;
+      }
+    }
+
+    .plan-times_top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plan-times_label {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-times_meter {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plan-times_track {
+      flex: 1;
+      height: var(--space-2);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .plan-times_bar {
+      display: block;
+      width: var(--_fill, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background-color: var(--colors-vivid-yellow);
+      transition: width var(--reveal-duration) var(--ease-out);
+
+      .plan-times_slot.top & {
+        background-color: var(--colors-vivid-orange);
+      }
+      .plan-times_slot.locked & {
+        background-color: var(--status-free);
+      }
+    }
+
+    .plan-times_count {
+      flex: none;
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-times_bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plan-times_voters {
+      display: inline-flex;
+      min-height: var(--avatar-small);
+
+      & > .avatar_wrap {
+        margin-inline-end: calc(var(--space-1) * -1);
+      }
+      & > .avatar_wrap[hidden] {
+        display: none;
+      }
+    }
+
+    .plan-times_note {
+      color: var(--text-2);
+    }
+  }
+</style>

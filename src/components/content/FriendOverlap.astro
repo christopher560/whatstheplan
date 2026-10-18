@@ -1,0 +1,109 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import FriendPicker from "@/components/content/FriendPicker.astro";
+import OverlapStrips from "@/components/content/OverlapStrips.astro";
+import BestTimes from "@/components/content/BestTimes.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import type { CalendarFriend } from "@/data/calendar.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Friends who can be compared. */
+  friends?: CalendarFriend[];
+  /** Friend ids picked at the start. */
+  who?: string[];
+  /** Where "Plan it" goes. */
+  planHref?: string;
+}
+
+const { render = true, friends = [], who = [], planHref } = Astro.props;
+---
+
+{
+  render && friends.length > 0 && (
+    <Panel variant="tint" tint="yellow" aria-labelledby="friend-overlap-title">
+      <div class="friend-overlap_wrap" data-overlap>
+        <div class="friend-overlap_head">
+          <span class="friend-overlap_avatars">
+            {friends.map((friend) => (
+              <Avatar
+                initial={friend.name}
+                color={friend.color}
+                size="small"
+                hidden
+                data-who-avatar={friend.id}
+              />
+            ))}
+          </span>
+          <h2 id="friend-overlap-title" class="friend-overlap_title text-style-h4">
+            When are you free with friends?
+          </h2>
+        </div>
+        <FriendPicker friends={friends} who={who} />
+        <OverlapStrips />
+        <BestTimes friends={friends} planHref={planHref} />
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { selectedFriends, subscribe } from "@/lib/calendar-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-overlap]").forEach((root) => {
+    const avatars = root.querySelectorAll<HTMLElement>("[data-who-avatar]");
+    subscribe(() => {
+      const friends = selectedFriends();
+      avatars.forEach((avatar) => {
+        const index = friends.findIndex((friend) => friend.id === avatar.dataset.whoAvatar);
+        avatar.hidden = index < 0;
+        avatar.style.order = String(index);
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-overlap_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .friend-overlap_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .friend-overlap_avatars {
+      display: inline-flex;
+
+      & > .avatar_wrap {
+        margin-inline-end: calc(var(--space-1) * -1);
+        animation: friend-overlap-pop var(--reveal-duration) var(--ease-spring-soft) backwards;
+      }
+      & > .avatar_wrap[hidden] {
+        display: none;
+      }
+    }
+
+    .friend-overlap_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    @keyframes friend-overlap-pop {
+      from {
+        opacity: 0.2;
+        scale: 0.55;
+      }
+      to {
+        opacity: 1;
+        scale: 1;
+      }
+    }
+  }
+</style>

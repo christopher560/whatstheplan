@@ -1,0 +1,189 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_check from "@/assets/icons/icon_check.svg";
+import { stages } from "@/data/plans.ts";
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  plan?: PlanDetail;
+  /** Where "Open Plans" goes. */
+  plansHref?: string;
+}
+
+const { render = true, plan, plansHref = "/app/plans" } = Astro.props;
+---
+
+{
+  render && plan && (
+    <div class="plan-stage_wrap" data-plan-stage data-stage={plan.stage}>
+      <Panel variant="tint" tint="yellow" aria-label="Where this plan lives">
+        <div class="plan-stage_row">
+          <div class="plan-stage_text">
+            <p class="plan-stage_label text-style-tiny">Lives in Plans</p>
+            <p class="plan-stage_sentence text-style-h5" data-sentence />
+          </div>
+          <ol class="plan-stage_steps">
+            {stages.map((stage, index) => (
+              <li class="plan-stage_step" data-step={index}>
+                <span class="plan-stage_dot" />
+                <span class="text-style-small">{stage.label}</span>
+              </li>
+            ))}
+          </ol>
+          <a class="plan-stage_open text-style-small" href={plansHref}>
+            Open Plans
+          </a>
+        </div>
+      </Panel>
+      <p class="plan-stage_locked" role="status" hidden data-locked>
+        <Icon src={icon_check} />
+        <span class="text-style-main" data-locked-text />
+      </p>
+    </div>
+  )
+}
+
+<script>
+  import { get, subscribe, counts, slotLabel } from "@/lib/plan-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-plan-stage]").forEach((root) => {
+    const sentence = root.querySelector<HTMLElement>("[data-sentence]")!;
+    const steps = root.querySelectorAll<HTMLElement>("[data-step]");
+    const locked = root.querySelector<HTMLElement>("[data-locked]")!;
+    const lockedText = root.querySelector<HTMLElement>("[data-locked-text]")!;
+
+    subscribe(() => {
+      const slot = get().locked;
+      const stage = slot ? 2 : Number(root.dataset.stage);
+      sentence.textContent = slot
+        ? "Locked in. It moved to the Locked in column."
+        : stage === 0
+          ? "Just an idea. Turn it into a plan to start voting."
+          : "Voting. It moves to Locked in when you pick a time.";
+      steps.forEach((step, index) => {
+        step.classList.toggle("current", index === stage);
+        step.classList.toggle("past", index < stage);
+        step.classList.toggle("future", index > stage);
+      });
+      locked.hidden = !slot;
+      if (slot) {
+        const going = counts().in + counts().maybe;
+        lockedText.textContent = `${slotLabel(slot).replace(" · ", " at ")} is locked. ${going} friends were notified and it is on their calendars.`;
+      }
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-stage_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .plan-stage_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3) var(--space-5);
+    }
+
+    .plan-stage_text {
+      display: flex;
+      flex: 1 1 var(--card-width-large);
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .plan-stage_sentence {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-stage_steps {
+      display: grid;
+      flex: 1 1 var(--card-width-large);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .plan-stage_step {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      min-height: var(--control-height-small);
+      padding-inline: var(--space-2);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      font-weight: var(--primary-bold);
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      &.current {
+        border-color: var(--border-strong);
+        background-color: var(--background-3);
+      }
+      &.future {
+        opacity: 0.55;
+      }
+    }
+
+    .plan-stage_dot {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+
+      .plan-stage_step.past & {
+        background-color: var(--status-free);
+      }
+      .plan-stage_step.current & {
+        background-color: var(--colors-vivid-yellow);
+      }
+      .plan-stage_step.current:last-child & {
+        background-color: var(--status-free);
+      }
+    }
+
+    .plan-stage_open {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--control-height-small);
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-stage_locked {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--status-free-background);
+      font-weight: var(--primary-bold);
+      animation: plan-stage-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    @keyframes plan-stage-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

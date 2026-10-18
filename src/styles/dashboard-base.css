@@ -121,10 +121,10 @@
   --title-text-transform: none;
   --title-margin-top: var(--space-7);
   --title-margin-bottom: var(--space-6);
-  --title-font-family: var(--primary-family);
+  --title-font-family: var(--secondary-family);
   --title-font-weight: var(--primary-medium);
-  --title-trim-top: var(--primary-trim-top);
-  --title-trim-bottom: var(--primary-trim-bottom);
+  --title-trim-top: var(--secondary-trim-top);
+  --title-trim-bottom: var(--secondary-trim-bottom);
   --title-text-wrap: balance;
 
   /* Type: tiny (tags, counts, eyebrow) */

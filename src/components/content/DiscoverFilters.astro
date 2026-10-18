@@ -1,0 +1,392 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import { groupCategories, sizeFilters } from "@/data/discover.ts";
+import type { DiscoverDay } from "@/data/discover.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The next seven days, today first. */
+  days?: DiscoverDay[];
+}
+
+const { render = true, days = [] } = Astro.props;
+
+const categories = [{ id: "all", label: "Anything" }, ...groupCategories];
+---
+
+{
+  render && days.length > 0 && (
+    <section class="discover-filters_wrap" aria-labelledby="discover-feed-title" data-filters>
+      <div class="discover-filters_head">
+        <h2 id="discover-feed-title" class="discover-filters_title text-style-h3">
+          Open groups
+        </h2>
+        <p class="discover-filters_count text-style-small" data-count />
+      </div>
+
+      <Panel class="discover-filters_panel">
+        <div class="discover-filters_panel_inner">
+          <div class="discover-filters_week">
+            <div class="discover-filters_week_head">
+              <p class="discover-filters_label text-style-main">Your week</p>
+              <Pill element="button" size="small" data-soon>
+                Next 3 hours
+              </Pill>
+            </div>
+            <div class="discover-filters_days" role="group" aria-label="Pick a day">
+              {days.map((day, index) => (
+                <button
+                  type="button"
+                  class="discover-filters_day"
+                  aria-pressed="false"
+                  data-day={index}
+                >
+                  <span class="discover-filters_day_name text-style-tiny">{day.name}</span>
+                  <span class="discover-filters_day_num">{day.num}</span>
+                  <span class="discover-filters_bar" aria-hidden="true" data-bar />
+                  <span class="discover-filters_day_count text-style-tiny" data-day-count>-</span>
+                </button>
+              ))}
+            </div>
+            <ul class="discover-filters_legend">
+              <li class="discover-filters_legend_item">
+                <span class="discover-filters_key free" />
+                <span class="text-style-tiny">Free</span>
+              </li>
+              <li class="discover-filters_legend_item">
+                <span class="discover-filters_key busy" />
+                <span class="text-style-tiny">Busy</span>
+              </li>
+              <li class="discover-filters_legend_item">
+                <span class="discover-filters_key group" />
+                <span class="text-style-tiny">Group</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="discover-filters_groups">
+            <div class="discover-filters_set">
+              <p class="discover-filters_label text-style-main">What</p>
+              <div class="discover-filters_chips" role="group" aria-label="Type of activity">
+                {categories.map((category) => (
+                  <Pill
+                    element="button"
+                    pressed={category.id === "all"}
+                    data-category={category.id}
+                  >
+                    {category.label}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+            <div class="discover-filters_set">
+              <p class="discover-filters_label text-style-main">Size</p>
+              <div class="discover-filters_chips" role="group" aria-label="Group size">
+                {sizeFilters.map((size) => (
+                  <Pill element="button" pressed={size.id === "any"} data-size={size.id}>
+                    {size.label}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Panel>
+    </section>
+  )
+}
+
+<script>
+  import {
+    get,
+    update,
+    subscribe,
+    feed,
+    week,
+  } from "@/lib/discover-store.ts";
+  import type { GroupCategoryId, SizeId } from "@/data/discover.ts";
+
+  /** The bar shows 8 AM to 11 PM. */
+  const FROM = 8;
+  const SPAN = 15;
+  const percent = (hour: number) => `${((hour - FROM) / SPAN) * 100}%`;
+
+  document.querySelectorAll<HTMLElement>("[data-filters]").forEach((root) => {
+    const days = [...root.querySelectorAll<HTMLElement>("[data-day]")];
+    const soon = root.querySelector<HTMLElement>("[data-soon]")!;
+    const categories = root.querySelectorAll<HTMLElement>("[data-category]");
+    const sizes = root.querySelectorAll<HTMLElement>("[data-size]");
+    const count = root.querySelector<HTMLElement>("[data-count]")!;
+
+    root.addEventListener("click", (event) => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>(
+        "[data-day], [data-soon], [data-category], [data-size]",
+      );
+      if (!target) return;
+      const d = target.dataset;
+      if ("day" in d) {
+        const index = Number(d.day);
+        return update({ filterDay: get().filterDay === index ? null : index });
+      }
+      if ("soon" in d) return update({ filterSoon: !get().filterSoon });
+      if ("category" in d) return update({ filterCategory: d.category as "all" | GroupCategoryId });
+      update({ filterSize: d.size as SizeId });
+    });
+
+    subscribe(() => {
+      const s = get();
+      const columns = week();
+
+      soon.setAttribute("aria-pressed", String(s.filterSoon));
+      categories.forEach((pill) =>
+        pill.setAttribute("aria-pressed", String(pill.dataset.category === s.filterCategory)),
+      );
+      sizes.forEach((pill) =>
+        pill.setAttribute("aria-pressed", String(pill.dataset.size === s.filterSize)),
+      );
+      count.textContent = `${feed().shown} open`;
+
+      days.forEach((button, index) => {
+        const column = columns[index];
+        button.setAttribute("aria-pressed", String(s.filterDay === index));
+        button.setAttribute(
+          "aria-label",
+          `${column.weekday} ${column.num}, ${column.groups.length} groups`,
+        );
+        button.querySelector<HTMLElement>("[data-day-count]")!.textContent =
+          column.groups.length ? String(column.groups.length) : "-";
+
+        const bar = button.querySelector<HTMLElement>("[data-bar]")!;
+        bar.replaceChildren(
+          ...column.busy.map(([from, to]) => {
+            const block = document.createElement("span");
+            block.className = "discover-filters_busy";
+            block.style.setProperty("--_top", percent(from));
+            block.style.setProperty("--_height", `${((to - from) / SPAN) * 100}%`);
+            return block;
+          }),
+          ...column.groups.map((group) => {
+            const dot = document.createElement("span");
+            dot.className = `discover-filters_dot ${group.category}`;
+            dot.style.setProperty("--_top", percent((group.start + group.end) / 2));
+            return dot;
+          }),
+        );
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .discover-filters_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .discover-filters_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .discover-filters_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .discover-filters_count {
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-filters_panel_inner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4) var(--space-6);
+    }
+
+    .discover-filters_week {
+      display: flex;
+      flex: 1 1 var(--card-width-large);
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .discover-filters_week_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .discover-filters_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-filters_days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: var(--space-1);
+    }
+
+    .discover-filters_day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-1);
+      padding-block: var(--space-2);
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      color: var(--text);
+      cursor: pointer;
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+      &:active {
+        scale: 0.96;
+      }
+      &[aria-pressed="true"] {
+        border-color: var(--border-strong);
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+        box-shadow: 0 0 0 var(--border-width-thick) var(--border-strong);
+      }
+    }
+
+    /* Trimmed styles stay off the flex column, so only the counts sit here. */
+    .discover-filters_day_name,
+    .discover-filters_day_count {
+      display: block;
+      text-transform: none;
+    }
+
+    .discover-filters_day_num {
+      font-family: var(--secondary-family);
+      font-size: var(--h5);
+      font-weight: var(--secondary-bold);
+      line-height: 1;
+    }
+
+    .discover-filters_bar {
+      position: relative;
+      display: block;
+      width: var(--space-4);
+      height: 3.75rem;
+      border-radius: var(--radius-small);
+      background-color: var(--status-free-background);
+      overflow: hidden;
+    }
+
+    .discover-filters_busy {
+      position: absolute;
+      inset-inline: 0;
+      top: var(--_top);
+      height: var(--_height);
+      background-color: var(--status-busy-background);
+    }
+
+    .discover-filters_dot {
+      --_dot: var(--colors-vivid-yellow);
+      position: absolute;
+      inset-inline: 0;
+      top: calc(var(--_top) - 0.4375rem);
+      width: 0.875rem;
+      aspect-ratio: 1 / 1;
+      margin-inline: auto;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_dot);
+
+      &.outdoors {
+        --_dot: var(--colors-vivid-green);
+      }
+      &.food {
+        --_dot: var(--colors-vivid-orange);
+      }
+      &.create {
+        --_dot: var(--colors-vivid-pink);
+      }
+      &.active {
+        --_dot: var(--colors-vivid-blue);
+      }
+      &.chill {
+        --_dot: var(--colors-vivid-purple);
+      }
+    }
+
+    .discover-filters_legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1) var(--space-3);
+      margin: 0;
+      padding: 0;
+      color: var(--text-2);
+      list-style: none;
+
+      & .text-style-tiny {
+        text-transform: none;
+      }
+    }
+
+    .discover-filters_legend_item {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .discover-filters_key {
+      width: 0.625rem;
+      aspect-ratio: 1 / 1;
+      border-radius: 0.1875rem;
+
+      &.free {
+        border: var(--border-width) solid var(--border);
+        background-color: var(--status-free-background);
+      }
+      &.busy {
+        background-color: var(--status-busy-background);
+      }
+      &.group {
+        border: var(--border-width-thick) solid var(--border-strong);
+        border-radius: var(--radius-round);
+        background-color: var(--colors-vivid-yellow);
+      }
+    }
+
+    .discover-filters_groups {
+      display: flex;
+      flex: 1 1 var(--card-width-main);
+      flex-direction: column;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+
+    .discover-filters_set {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .discover-filters_chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+  }
+</style>

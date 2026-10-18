@@ -1,0 +1,68 @@
+---
+import Pill from "@/components/item/Pill.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const filters = [
+  { id: "all", label: "All" },
+  { id: "hangout", label: "Hangouts" },
+  { id: "school", label: "School" },
+  { id: "formal", label: "Formal" },
+];
+---
+
+{
+  render && (
+    <div class="plans-filters_wrap" role="group" aria-label="Filter plans" data-plans-filters>
+      {filters.map((filter) => (
+        <Pill
+          element="button"
+          size="small"
+          pressed={filter.id === "all"}
+          data-filter={filter.id}
+        >
+          {filter.label}
+        </Pill>
+      ))}
+    </div>
+  )
+}
+
+<script>
+  import { get, subscribe, update } from "@/lib/plans-store.ts";
+  import type { CategoryFilter } from "@/lib/plans-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-plans-filters]").forEach((root) => {
+    const pills = root.querySelectorAll<HTMLElement>("[data-filter]");
+    pills.forEach((pill) =>
+      pill.addEventListener("click", () =>
+        update({ category: pill.dataset.filter as CategoryFilter }),
+      ),
+    );
+    subscribe(() => {
+      root.hidden = get().tab !== "friends";
+      pills.forEach((pill) =>
+        pill.setAttribute("aria-pressed", String(pill.dataset.filter === get().category)),
+      );
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-filters_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>

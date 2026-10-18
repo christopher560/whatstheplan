@@ -1,0 +1,218 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import { quickUpdates } from "@/data/plan-detail.ts";
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  plan?: PlanDetail;
+}
+
+const { render = true, plan } = Astro.props;
+---
+
+{
+  render && plan && (
+    <Panel aria-labelledby="plan-activity-title">
+      <div class="plan-activity_wrap" data-activity>
+        <div class="plan-activity_feed">
+          <h2 id="plan-activity-title" class="plan-activity_title text-style-h5">
+            What's happening
+          </h2>
+          <ul class="plan-activity_list" data-feed>
+            {plan.feed.map((item) => (
+              <li class="plan-activity_item">
+                <Avatar initial={item.who} color={item.color} size="small" />
+                <div class="plan-activity_text">
+                  <p class="text-style-small">
+                    <strong>{item.who}</strong> {item.text}
+                  </p>
+                  <p class="plan-activity_detail text-style-small">{item.detail}</p>
+                </div>
+                <p class="plan-activity_time text-style-small">{item.time}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div class="plan-activity_updates">
+          <h3 class="plan-activity_subtitle text-style-h6">Send a quick update</h3>
+          <p class="plan-activity_hint text-style-small">
+            One tap tells all {plan.friends.length} friends. They get it as a
+            notification, text or email, whichever they picked when they replied.
+          </p>
+          <div class="plan-activity_buttons">
+            {quickUpdates.map((message) => (
+              <button
+                type="button"
+                class="plan-activity_send"
+                data-update={message}
+              >
+                <span class="text-style-small">{message}</span>
+                <span class="plan-activity_state text-style-tiny">Send</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, subscribe, sendQuickUpdate } from "@/lib/plan-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-activity]").forEach((root) => {
+    const list = root.querySelector<HTMLElement>("[data-feed]")!;
+    const buttons = root.querySelectorAll<HTMLElement>("[data-update]");
+    let shown = list.children.length;
+
+    buttons.forEach((button) =>
+      button.addEventListener("click", () => sendQuickUpdate(button.dataset.update!)),
+    );
+
+    const row = (item: ReturnType<typeof get>["feed"][number]) => {
+      const li = document.createElement("li");
+      li.className = "plan-activity_item";
+      const avatar = document.createElement("span");
+      avatar.className = `avatar_wrap small ${item.color}`;
+      avatar.textContent = item.who[0].toUpperCase();
+      const text = document.createElement("div");
+      text.className = "plan-activity_text";
+      const line = document.createElement("p");
+      line.className = "text-style-small";
+      const who = document.createElement("strong");
+      who.textContent = item.who;
+      line.append(who, ` ${item.text}`);
+      const detail = document.createElement("p");
+      detail.className = "plan-activity_detail text-style-small";
+      detail.textContent = item.detail;
+      text.append(line, detail);
+      const time = document.createElement("p");
+      time.className = "plan-activity_time text-style-small";
+      time.textContent = item.time;
+      li.append(avatar, text, time);
+      return li;
+    };
+
+    subscribe(() => {
+      const { feed, sent } = get();
+      if (feed.length !== shown) {
+        list.replaceChildren(...feed.map(row));
+        shown = feed.length;
+      }
+      buttons.forEach((button) => {
+        const done = !!sent[button.dataset.update!];
+        button.classList.toggle("sent", done);
+        button.querySelector<HTMLElement>(".plan-activity_state")!.textContent = done
+          ? "Sent"
+          : "Send";
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-activity_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-5);
+    }
+
+    .plan-activity_feed {
+      display: flex;
+      flex: 1.2 1 var(--card-width-large);
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .plan-activity_title,
+    .plan-activity_subtitle {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-activity_list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plan-activity_item {
+      display: flex;
+      gap: var(--space-3);
+      padding-block: var(--space-3);
+      border-block-end: var(--border-width) solid var(--border-subtle);
+    }
+
+    .plan-activity_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .plan-activity_detail,
+    .plan-activity_time {
+      color: var(--text-2);
+    }
+
+    .plan-activity_time {
+      flex: none;
+    }
+
+    .plan-activity_updates {
+      display: flex;
+      flex: 1 1 var(--card-width-main);
+      flex-direction: column;
+      align-self: flex-start;
+      gap: var(--space-3);
+      min-width: 0;
+      padding: var(--space-4);
+      border-radius: var(--radius-large);
+      background-color: var(--colors-secondary-blue);
+    }
+
+    .plan-activity_buttons {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .plan-activity_send {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      min-height: var(--control-height-main);
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      text-align: start;
+      font-weight: var(--primary-medium);
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out);
+
+      @media (hover: hover) {
+        &:hover:not(.sent) {
+          translate: 0 var(--hover-lift);
+        }
+      }
+      &.sent {
+        background-color: var(--status-free-background);
+        cursor: default;
+      }
+    }
+
+    .plan-activity_state {
+      flex: none;
+      text-transform: none;
+      letter-spacing: var(--letter-spacing-normal);
+    }
+  }
+</style>

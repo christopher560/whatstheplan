@@ -1,0 +1,217 @@
+---
+import type { Invite } from "@/data/dashboard.ts";
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Invites waiting for an answer. */
+  invites?: Invite[];
+}
+
+const { render = true, invites = [] } = Astro.props;
+
+const answers = [
+  { id: "in", label: "I'm in" },
+  { id: "maybe", label: "Maybe" },
+  { id: "out", label: "Can't" },
+];
+---
+
+{
+  render && invites.length > 0 && (
+    <section class="invite-list_wrap" aria-labelledby="invite-list-title">
+      <h2 id="invite-list-title" class="invite-list_title text-style-h4">
+        Invites for you
+      </h2>
+      <div class="invite-list_cards">
+        {invites.map((invite) => {
+          if (invite.kind === "rsvp") {
+            return (
+              <Panel tag="article" variant="tint" tint={invite.tint}>
+                <div class="invite-list_card" data-rsvp data-invite-id={invite.id}>
+                  <p class="invite-list_tag text-style-tiny">{invite.tag}</p>
+                  <h3 class="invite-list_name text-style-h5">{invite.title}</h3>
+                  <div class="invite-list_details">
+                    {invite.details.map((line) => (
+                      <span class="text-style-small">{line}</span>
+                    ))}
+                  </div>
+                  <div
+                    class="invite-list_answers"
+                    role="group"
+                    aria-label="Your answer"
+                  >
+                    {answers.map((answer) => (
+                      <Pill
+                        class="flex-grow"
+                        element="button"
+                        pressed={answer.id === "in"}
+                        data-answer={answer.id}
+                      >
+                        {answer.label}
+                      </Pill>
+                    ))}
+                  </div>
+                </div>
+              </Panel>
+            );
+          }
+          if (invite.kind === "group") {
+            return (
+              <Panel tag="article" variant="tint" tint={invite.tint}>
+                <div class="invite-list_card">
+                  <p class="invite-list_tag text-style-tiny">{invite.tag}</p>
+                  <h3 class="invite-list_name text-style-h5">{invite.title}</h3>
+                  <div class="invite-list_details">
+                    {invite.details.map((line) => (
+                      <span class="text-style-small">{line}</span>
+                    ))}
+                  </div>
+                  <div class="invite-list_footer">
+                    <AvatarStack people={invite.people} size="small" />
+                    <p class="invite-list_note text-style-small">{invite.note}</p>
+                    <span class="invite-list_action">
+                      <ActionButton color="ink" size="small">{invite.action}</ActionButton>
+                    </span>
+                  </div>
+                </div>
+              </Panel>
+            );
+          }
+          return (
+            <Panel tag="article" class="padding-1">
+              <div class="invite-list_frame">
+                <p class="invite-list_tag formal text-style-tiny">
+                  You are invited
+                </p>
+                <h3 class="invite-list_name text-style-h5">{invite.title}</h3>
+                <div class="invite-list_details">
+                  {invite.details.map((line) => (
+                      <span class="text-style-small">{line}</span>
+                    ))}
+                </div>
+                <p class="invite-list_deadline text-style-small">
+                  {invite.deadline}
+                </p>
+                <div class="invite-list_answers formal">
+                  <Pill element="button" variant="filled" color="purple">
+                    Accept
+                  </Pill>
+                  <Pill element="button">Decline</Pill>
+                </div>
+              </div>
+            </Panel>
+          );
+        })}
+      </div>
+    </section>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-rsvp]").forEach((card) => {
+    const pills = card.querySelectorAll<HTMLElement>("[data-answer]");
+    pills.forEach((pill) =>
+      pill.addEventListener("click", () =>
+        pills.forEach((other) =>
+          other.setAttribute("aria-pressed", String(other === pill)),
+        ),
+      ),
+    );
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .invite-list_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .invite-list_cards {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: var(--space-4);
+
+      & > * {
+        flex: 1 1 var(--card-width-small);
+        min-width: 0;
+      }
+    }
+
+    .invite-list_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    .invite-list_card {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .invite-list_answers {
+      display: flex;
+      gap: var(--space-1);
+      margin-top: auto;
+      padding-top: var(--space-2);
+
+      &.formal {
+        justify-content: center;
+      }
+    }
+
+    .invite-list_footer {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: auto;
+      padding-top: var(--space-2);
+    }
+
+    .invite-list_note {
+      min-width: 0;
+      font-weight: var(--primary-bold);
+      white-space: nowrap;
+    }
+
+    .invite-list_action {
+      margin-inline-start: auto;
+    }
+
+    .invite-list_details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      text-wrap: balance;
+    }
+
+    .invite-list_frame {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: calc(var(--radius-large) - var(--space-1));
+      text-align: center;
+    }
+
+    .invite-list_tag.formal {
+      letter-spacing: var(--letter-spacing-wider);
+    }
+
+    .invite-list_deadline {
+      color: var(--text-2);
+      text-transform: none;
+    }
+  }
+</style>

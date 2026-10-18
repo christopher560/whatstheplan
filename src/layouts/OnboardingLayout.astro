@@ -1,0 +1,74 @@
+---
+import "@/styles/global.css";
+import "../styles/dashboard-base.css";
+import BaseHead from "@/components/utility/BaseHead.astro";
+import SkipLink from "@/components/global/SkipLink.astro";
+import Icon from "@/components/media/Icon.astro";
+import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "Set up your profile" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={title} noindex />
+  </head>
+
+  <body>
+    <SkipLink />
+    <div class="onboarding-layout_wrap">
+      <header class="onboarding-layout_header">
+        <a class="onboarding-layout_brand" href="/" aria-label="whatstheplan home">
+          <Icon src={brand_full_logo_cropped} variant="full-width" />
+        </a>
+      </header>
+      <main class="onboarding-layout_main" id="main-content">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  @layer components {
+    .onboarding-layout_wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--background);
+      background-image: radial-gradient(
+        45rem 20rem at 92% -6%,
+        color-mix(in srgb, var(--colors-vivid-orange) 14%, transparent),
+        transparent 70%
+      );
+      background-repeat: no-repeat;
+    }
+
+    .onboarding-layout_header,
+    .onboarding-layout_main {
+      width: var(--site-width);
+      max-width: 60rem;
+      margin-inline: auto;
+    }
+
+    .onboarding-layout_header {
+      padding-top: var(--space-4);
+    }
+
+    .onboarding-layout_brand {
+      display: block;
+      width: clamp(8rem, 24vw, 10rem);
+    }
+
+    .onboarding-layout_main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+</style>

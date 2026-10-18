@@ -1,0 +1,266 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Choice from "@/components/form/Choice.astro";
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  plan?: PlanDetail;
+}
+
+const { render = true, plan } = Astro.props;
+
+const tiles = [
+  { id: "in", label: "In" },
+  { id: "maybe", label: "Maybe" },
+  { id: "out", label: "Can't" },
+  { id: "wait", label: "Waiting" },
+];
+---
+
+{
+  render && plan && (
+    <Panel aria-labelledby="plan-replies-title">
+      <div class="plan-replies_wrap" data-replies>
+        <div class="plan-replies_head">
+          <h2 id="plan-replies-title" class="plan-replies_title text-style-h5">
+            Who said what
+          </h2>
+          <p class="plan-replies_count text-style-small" data-count />
+        </div>
+
+        <div class="plan-replies_tiles">
+          {tiles.map((tile) => (
+            <div class={`plan-replies_tile ${tile.id}`}>
+              <p class="plan-replies_number text-style-h4" data-tile={tile.id}>0</p>
+              <p class="plan-replies_label text-style-small">{tile.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div class="plan-replies_people">
+          {plan.friends.map((friend) => (
+            <div class="plan-replies_person" data-friend={friend.id}>
+              <Avatar initial={friend.name} color={friend.color} />
+              <div class="plan-replies_who">
+                <p class="plan-replies_name text-style-main">{friend.name}</p>
+                <p class="plan-replies_detail text-style-small" data-detail />
+              </div>
+              <Pill size="tiny" data-status>No reply yet</Pill>
+            </div>
+          ))}
+        </div>
+
+        <div class="plan-replies_actions">
+          <ActionButton color="yellow" size="large" raised class="width-full" data-nudge>
+            Nudge
+          </ActionButton>
+          <div class="plan-replies_auto">
+            <Choice
+              variant="toggle"
+              label="Auto-nudge anyone who has not replied after 24 hours"
+              name="auto_nudge"
+              role="switch"
+              checked={plan.autoNudge}
+            />
+          </div>
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import {
+    get,
+    subscribe,
+    getPlan,
+    counts,
+    shortSlot,
+    waitingFriends,
+    nudgeWaiting,
+    toggleAuto,
+  } from "@/lib/plan-store.ts";
+
+  const statusText = { in: "I'm in", maybe: "Maybe", out: "Can't" } as const;
+  const statusColor = { in: "green", maybe: "yellow", out: "pink" } as const;
+
+  document.querySelectorAll<HTMLElement>("[data-replies]").forEach((root) => {
+    const nudge = root.querySelector<HTMLButtonElement>("[data-nudge]")!;
+    const nudgeText = nudge.querySelector<HTMLElement>(".action-button_text")!;
+    const auto = root.querySelector<HTMLInputElement>("input[name='auto_nudge']")!;
+
+    nudge.addEventListener("click", nudgeWaiting);
+    auto.addEventListener("change", () => {
+      if (auto.checked !== get().auto) toggleAuto();
+    });
+
+    subscribe(() => {
+      const state = get();
+      const total = counts();
+      const friends = getPlan().friends;
+      const waiting = waitingFriends();
+
+      root.querySelector<HTMLElement>("[data-count]")!.textContent =
+        `${friends.length - total.wait} of ${friends.length} replied`;
+      (["in", "maybe", "out", "wait"] as const).forEach((id) => {
+        root.querySelector<HTMLElement>(`[data-tile="${id}"]`)!.textContent = String(total[id]);
+      });
+
+      friends.forEach((friend) => {
+        const row = root.querySelector<HTMLElement>(`[data-friend="${friend.id}"]`)!;
+        const reply = state.replies[friend.id];
+        const votes = state.votes[friend.id] ?? [];
+        const pill = row.querySelector<HTMLElement>("[data-status]")!;
+        pill.querySelector<HTMLElement>(".pill_text")!.textContent = reply
+          ? statusText[reply]
+          : state.nudged
+            ? "Nudged"
+            : "No reply yet";
+        pill.classList.remove("filled", "dashed", "green", "yellow", "pink");
+        if (reply) pill.classList.add("filled", statusColor[reply]);
+        else pill.classList.add("dashed");
+        row.querySelector<HTMLElement>("[data-detail]")!.textContent = reply
+          ? votes.length
+            ? `Can do ${votes.map(shortSlot).join(", ")}`
+            : "No time picked"
+          : state.nudged
+            ? "Reminder sent just now"
+            : "Opened the link 2 h ago";
+      });
+
+      const off = waiting.length === 0 || state.nudged;
+      nudge.disabled = off;
+      nudgeText.textContent =
+        waiting.length === 0
+          ? "Everyone has replied"
+          : `${state.nudged ? "Nudged" : "Nudge"} ${waiting.map((f) => f.name).join(" and ")}`;
+      nudge.classList.remove("yellow", "green");
+      nudge.classList.add(off ? "green" : "yellow");
+      auto.checked = state.auto;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-replies_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .plan-replies_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plan-replies_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-replies_count {
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-replies_tiles {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-1);
+    }
+
+    .plan-replies_tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-1);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      color: var(--colors-on-vivid);
+      text-align: center;
+
+      &.in {
+        background-color: var(--status-free);
+      }
+      &.maybe {
+        background-color: var(--colors-vivid-yellow);
+      }
+      &.out {
+        background-color: var(--colors-secondary-pink);
+      }
+      &.wait {
+        border-style: dashed;
+        color: var(--text);
+      }
+    }
+
+    .plan-replies_number {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-replies_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-replies_people {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .plan-replies_person {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+      animation: plan-replies-swap var(--reveal-duration) var(--ease-out) backwards;
+    }
+
+    .plan-replies_who {
+      display: flex;
+      flex: 1 1 8rem;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .plan-replies_name {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-replies_detail {
+      color: var(--text-2);
+    }
+
+    .plan-replies_actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    @keyframes plan-replies-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

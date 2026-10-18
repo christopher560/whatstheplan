@@ -1,0 +1,253 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import { categoryColor, categoryLabel } from "@/data/plans.ts";
+import { personColor } from "@/data/plans-hub.ts";
+import type { HubHosted } from "@/data/plans-hub.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Plans the viewer hosts. */
+  plans?: HubHosted[];
+  /** Plan page link; the plan id is appended. */
+  planHref?: string;
+}
+
+const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
+---
+
+{
+  render && (
+    <section class="plans-hosting_wrap" aria-labelledby="plans-hosting-title" data-hosting>
+      <div class="plans-hosting_head">
+        <h2 id="plans-hosting-title" class="plans-hosting_title text-style-h4">
+          You're hosting
+        </h2>
+        <p class="plans-hosting_count text-style-small" data-count />
+      </div>
+
+      <div class="plans-hosting_grid">
+        {plans.map((plan) => {
+          const locked = plan.replied >= plan.invited;
+          return (
+            <Panel
+              tag="article"
+              class="plans-hosting_card"
+              data-plan={plan.id}
+              data-category={plan.category}
+            >
+              <div class="plans-hosting_body">
+                <div class="plans-hosting_top">
+                  <Pill size="tiny" variant="filled" color={categoryColor[plan.category]}>
+                    {categoryLabel[plan.category]}
+                  </Pill>
+                  <Pill size="tiny" variant="filled" color={locked ? "green" : "yellow"}>
+                    {locked ? "Locked in" : "Waiting on replies"}
+                  </Pill>
+                </div>
+                <h3 class="plans-hosting_name text-style-h4">{plan.title}</h3>
+                <p class="text-style-small">
+                  {plan.when}
+                  <br />
+                  {plan.place} · {plan.cost}
+                </p>
+                <div class="plans-hosting_crew">
+                  <AvatarStack
+                    size="small"
+                    people={plan.crew.map((name) => ({ initial: name, color: personColor(name) }))}
+                  />
+                  <p class="plans-hosting_who text-style-small">
+                    {locked ? "Everyone is in" : `${plan.replied} of ${plan.invited} have replied`}
+                  </p>
+                </div>
+                <div class="plans-hosting_track" aria-hidden="true">
+                  <div
+                    class:list={["plans-hosting_bar", locked && "locked"]}
+                    style={`--_fill: ${Math.round((plan.replied / plan.invited) * 100)}%;`}
+                  />
+                </div>
+                <div class="plans-hosting_buttons">
+                  <ActionButton element="link" href={`${planHref}/${plan.id}`} color="ink">
+                    See who replied
+                  </ActionButton>
+                  <ActionButton color="white" data-copy>
+                    Share link
+                  </ActionButton>
+                </div>
+              </div>
+            </Panel>
+          );
+        })}
+      </div>
+
+      <p class="plans-hosting_empty text-style-small" hidden data-empty>
+        Nothing here for this filter.
+      </p>
+    </section>
+  )
+}
+
+<script>
+  import { get, matchesCategory, subscribe, toggleCopied } from "@/lib/plans-store.ts";
+  import type { PlanCategory } from "@/data/plans.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-hosting]").forEach((root) => {
+    const cards = [...root.querySelectorAll<HTMLElement>("[data-plan]")];
+    const empty = root.querySelector<HTMLElement>("[data-empty]")!;
+
+    root.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLElement>("[data-copy]");
+      const id = button?.closest<HTMLElement>("[data-plan]")?.dataset.plan;
+      if (!id) return;
+      if (!get().copied[id]) {
+        void navigator.clipboard?.writeText(`${location.origin}/p/${id}`).catch(() => {});
+      }
+      toggleCopied(id);
+    });
+
+    subscribe(() => {
+      const s = get();
+      root.hidden = s.tab !== "friends";
+      let shown = 0;
+      cards.forEach((card) => {
+        const visible = matchesCategory(card.dataset.category as PlanCategory);
+        card.hidden = !visible;
+        if (visible) shown += 1;
+        const copied = !!s.copied[card.dataset.plan!];
+        const button = card.querySelector<HTMLElement>("[data-copy]")!;
+        button.classList.toggle("white", !copied);
+        button.classList.toggle("green", copied);
+        button.setAttribute("aria-pressed", String(copied));
+        button.querySelector<HTMLElement>(".action-button_text")!.textContent = copied
+          ? "Link copied"
+          : "Share link";
+      });
+      root.querySelector<HTMLElement>("[data-count]")!.textContent = String(shown);
+      empty.hidden = shown > 0;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-hosting_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plans-hosting_head {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-3);
+    }
+
+    .plans-hosting_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-hosting_count {
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-hosting_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-width-main)), 1fr));
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+
+    .plans-hosting_card {
+      height: 100%;
+    }
+
+    .plans-hosting_body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-3);
+      height: 100%;
+    }
+
+    .plans-hosting_top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plans-hosting_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-hosting_crew {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plans-hosting_who {
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-hosting_track {
+      height: var(--space-2);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .plans-hosting_bar {
+      width: var(--_fill);
+      height: 100%;
+      border-radius: inherit;
+      background-color: var(--colors-vivid-yellow);
+      transform-origin: left;
+      animation: plans-hosting-grow var(--enter-duration) var(--ease-out) backwards;
+
+      &.locked {
+        background-color: var(--status-free);
+      }
+    }
+
+    .plans-hosting_buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-block-start: auto;
+
+      & > * {
+        flex: 1 1 8rem;
+      }
+    }
+
+    .plans-hosting_empty {
+      padding: var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-large);
+      color: var(--text-2);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    @keyframes plans-hosting-grow {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+  }
+</style>

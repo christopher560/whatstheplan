@@ -33,8 +33,15 @@
   --primary-bold: 700;
   --primary-trim-top: 0.36em;
   --primary-trim-bottom: 0.42em;
+
   --brand-family: var(--font-milkyway, system-ui, sans-serif);
   --brand-regular: 400;
+
+  --secondary-family: var(--font-bricolage-grotesque, system-ui, sans-serif);
+  --secondary-regular: 400;
+  --secondary-bold: 700;
+  --secondary-trim-top: 0.36em;
+  --secondary-trim-bottom: 0.34em;
 
   /* Letter spacing */
   --letter-spacing-tight: -0.03em;
@@ -86,10 +93,10 @@
   --display-text-transform: none;
   --display-margin-top: var(--space-7);
   --display-margin-bottom: var(--space-6);
-  --display-font-family: var(--primary-family);
+  --display-font-family: var(--secondary-family);
   --display-font-weight: var(--primary-medium);
-  --display-trim-top: var(--primary-trim-top);
-  --display-trim-bottom: var(--primary-trim-bottom);
+  --display-trim-top: var(--secondary-trim-top);
+  --display-trim-bottom: var(--secondary-trim-bottom);
   --display-text-wrap: balance;
 
   --h1: clamp(var(--h1-min) / 16 * 1rem, ((var(--h1-min) - ((var(--h1-max) - var(--h1-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--h1-max) - var(--h1-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--h1-max) / 16 * 1rem);
@@ -100,10 +107,10 @@
   --h1-text-transform: none;
   --h1-margin-top: var(--space-7);
   --h1-margin-bottom: var(--space-6);
-  --h1-font-family: var(--primary-family);
+  --h1-font-family: var(--secondary-family);
   --h1-font-weight: var(--primary-medium);
-  --h1-trim-top: var(--primary-trim-top);
-  --h1-trim-bottom: var(--primary-trim-bottom);
+  --h1-trim-top: var(--secondary-trim-top);
+  --h1-trim-bottom: var(--secondary-trim-bottom);
   --h1-text-wrap: balance;
 
   --h2: clamp(var(--h2-min) / 16 * 1rem, ((var(--h2-min) - ((var(--h2-max) - var(--h2-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--h2-max) - var(--h2-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--h2-max) / 16 * 1rem);
@@ -114,10 +121,10 @@
   --h2-text-transform: none;
   --h2-margin-top: var(--space-7);
   --h2-margin-bottom: var(--space-5);
-  --h2-font-family: var(--primary-family);
+  --h2-font-family: var(--secondary-family);
   --h2-font-weight: var(--primary-medium);
-  --h2-trim-top: var(--primary-trim-top);
-  --h2-trim-bottom: var(--primary-trim-bottom);
+  --h2-trim-top: var(--secondary-trim-top);
+  --h2-trim-bottom: var(--secondary-trim-bottom);
   --h2-text-wrap: balance;
 
   --h3: clamp(var(--h3-min) / 16 * 1rem, ((var(--h3-min) - ((var(--h3-max) - var(--h3-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--h3-max) - var(--h3-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--h3-max) / 16 * 1rem);
@@ -128,10 +135,10 @@
   --h3-text-transform: none;
   --h3-margin-top: var(--space-6);
   --h3-margin-bottom: var(--space-5);
-  --h3-font-family: var(--primary-family);
+  --h3-font-family: var(--secondary-family);
   --h3-font-weight: var(--primary-medium);
-  --h3-trim-top: var(--primary-trim-top);
-  --h3-trim-bottom: var(--primary-trim-bottom);
+  --h3-trim-top: var(--secondary-trim-top);
+  --h3-trim-bottom: var(--secondary-trim-bottom);
   --h3-text-wrap: balance;
 
   --h4: clamp(var(--h4-min) / 16 * 1rem, ((var(--h4-min) - ((var(--h4-max) - var(--h4-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--h4-max) - var(--h4-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--h4-max) / 16 * 1rem);
@@ -142,10 +149,10 @@
   --h4-text-transform: none;
   --h4-margin-top: var(--space-6);
   --h4-margin-bottom: var(--space-4);
-  --h4-font-family: var(--primary-family);
+  --h4-font-family: var(--secondary-family);
   --h4-font-weight: var(--primary-medium);
-  --h4-trim-top: var(--primary-trim-top);
-  --h4-trim-bottom: var(--primary-trim-bottom);
+  --h4-trim-top: var(--secondary-trim-top);
+  --h4-trim-bottom: var(--secondary-trim-bottom);
   --h4-text-wrap: balance;
 
   --h5: clamp(var(--h5-min) / 16 * 1rem, ((var(--h5-min) - ((var(--h5-max) - var(--h5-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--h5-max) - var(--h5-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--h5-max) / 16 * 1rem);
@@ -156,10 +163,10 @@
   --h5-text-transform: none;
   --h5-margin-top: var(--space-5);
   --h5-margin-bottom: var(--space-4);
-  --h5-font-family: var(--primary-family);
+  --h5-font-family: var(--secondary-family);
   --h5-font-weight: var(--primary-medium);
-  --h5-trim-top: var(--primary-trim-top);
-  --h5-trim-bottom: var(--primary-trim-bottom);
+  --h5-trim-top: var(--secondary-trim-top);
+  --h5-trim-bottom: var(--secondary-trim-bottom);
   --h5-text-wrap: balance;
 
   --h6: clamp(var(--h6-min) / 16 * 1rem, ((var(--h6-min) - ((var(--h6-max) - var(--h6-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--h6-max) - var(--h6-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--h6-max) / 16 * 1rem);
@@ -170,10 +177,10 @@
   --h6-text-transform: none;
   --h6-margin-top: var(--space-5);
   --h6-margin-bottom: var(--space-3);
-  --h6-font-family: var(--primary-family);
+  --h6-font-family: var(--secondary-family);
   --h6-font-weight: var(--primary-medium);
-  --h6-trim-top: var(--primary-trim-top);
-  --h6-trim-bottom: var(--primary-trim-bottom);
+  --h6-trim-top: var(--secondary-trim-top);
+  --h6-trim-bottom: var(--secondary-trim-bottom);
   --h6-text-wrap: balance;
 
   --text-large: clamp(var(--text-large-min) / 16 * 1rem, ((var(--text-large-min) - ((var(--text-large-max) - var(--text-large-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--text-large-max) - var(--text-large-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--text-large-max) / 16 * 1rem);

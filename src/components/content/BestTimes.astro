@@ -1,0 +1,183 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import type { CalendarFriend } from "@/data/calendar.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Friends who can be compared. */
+  friends?: CalendarFriend[];
+  /** Where "Plan it" goes. */
+  planHref?: string;
+}
+
+const {
+  render = true,
+  friends = [],
+  planHref = "/app/dashboard",
+} = Astro.props;
+
+const tints = ["green", "orange", "pink"] as const;
+---
+
+{
+  render && friends.length > 0 && (
+    <div class="best-times_wrap" data-best-times data-plan-href={planHref}>
+      <div class="best-times_cards">
+        {tints.map((tint, index) => (
+          <Panel
+            tag="article"
+            variant="tint"
+            tint={tint}
+            hidden
+            data-best={index}
+          >
+            <div class="best-times_card">
+              <div class="best-times_text">
+                <p class="best-times_rank text-style-tiny" data-rank />
+                <p class="best-times_day text-style-h5" data-day />
+                <p class="best-times_time text-style-small" data-time />
+              </div>
+              <ActionButton element="link" href={planHref} color="ink" size="small">
+                Plan it
+              </ActionButton>
+            </div>
+          </Panel>
+        ))}
+      </div>
+
+      <p class="best-times_empty text-style-main" hidden data-empty />
+    </div>
+  )
+}
+
+<script>
+  import {
+    get,
+    subscribe,
+    selectedFriends,
+    bestTimes,
+    totals,
+    weekDates,
+    monthDay,
+    hourLabel,
+  } from "@/lib/calendar-store.ts";
+  import { DAYS } from "@/data/calendar.ts";
+
+  const ranks = ["Best match", "Runner up", "Also works"];
+
+  document.querySelectorAll<HTMLElement>("[data-best-times]").forEach((root) => {
+    const cards = root.querySelectorAll<HTMLElement>("[data-best]");
+    const empty = root.querySelector<HTMLElement>("[data-empty]")!;
+    const text = (card: HTMLElement, selector: string, value: string) => {
+      card.querySelector<HTMLElement>(selector)!.textContent = value;
+    };
+    let lastTick = -1;
+
+    subscribe(() => {
+      const state = get();
+      const friends = selectedFriends();
+      const names = friends.map((friend) => friend.name);
+      const runs = bestTimes();
+      const dates = weekDates();
+
+      cards.forEach((card, index) => {
+        const run = runs[index];
+        card.hidden = !run;
+        if (!run) return;
+        text(card, "[data-rank]", ranks[index]);
+        text(card, "[data-day]", `${DAYS[run.day]}, ${monthDay(dates[run.day])}`);
+        text(card, "[data-time]", `${hourLabel(run.start)} to ${hourLabel(run.end)}`);
+        const slot = `${DAYS[run.day]}, ${monthDay(dates[run.day])} \u00B7 ${hourLabel(run.start)} to ${hourLabel(run.end)}`;
+        const link = card.querySelector<HTMLAnchorElement>("a")!;
+        link.href = `${root.dataset.planHref}?${new URLSearchParams({
+          with: friends.map((friend) => friend.id).join(","),
+          when: slot,
+          from: "calendar",
+        })}#builder`;
+        if (state.tick !== lastTick) {
+          card.style.animation = "none";
+          void card.offsetWidth;
+          card.style.animation = "";
+        }
+      });
+      lastTick = state.tick;
+
+      empty.hidden = runs.length > 0;
+      empty.textContent =
+        friends.length === 0
+          ? "Pick at least one friend above and your best times show up here."
+          : totals().free === 0
+            ? `Paint some free time on your calendar below, then we can match it with ${names.join(", ")}.`
+            : `No shared free time yet with ${names.join(", ")}. Try fewer friends or paint more free time.`;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .best-times_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .best-times_cards {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, var(--card-width-small)), 1fr)
+      );
+      gap: var(--space-3);
+
+      & > * {
+        animation: best-times-swap var(--reveal-duration) var(--ease-out) backwards;
+      }
+    }
+
+    .best-times_card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .best-times_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .best-times_day {
+      font-weight: var(--secondary-bold);
+    }
+
+    .best-times_time {
+      font-weight: var(--primary-bold);
+    }
+
+    .best-times_empty {
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    @keyframes best-times-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

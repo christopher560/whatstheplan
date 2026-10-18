@@ -1,0 +1,52 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"svg"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Stroke path on a 24 x 24 grid. Leave empty to fill it in with script. */
+  d?: string;
+  /** Icon size. */
+  variant?: "small" | "medium" | "large";
+}
+
+const { render = true, d = "", variant = "medium", class: className, ...rest } = Astro.props;
+---
+
+{
+  render && (
+    <svg
+      class:list={["path-icon_wrap", variant, className]}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      {...rest}
+    >
+      <path d={d} data-path />
+    </svg>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .path-icon_wrap {
+      --_size: var(--icon-main);
+      flex: none;
+      display: block;
+      width: var(--_size);
+      height: auto;
+      aspect-ratio: 1 / 1;
+
+      &.small {
+        --_size: var(--icon-small);
+      }
+      &.large {
+        --_size: 2rem;
+      }
+    }
+  }
+</style>

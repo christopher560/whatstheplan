@@ -1,0 +1,984 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Input from "@/components/form/Input.astro";
+import Choice from "@/components/form/Choice.astro";
+import ColorPicker from "@/components/form/ColorPicker.astro";
+import ScaleQuestion from "@/components/form/ScaleQuestion.astro";
+import OptionGroup from "@/components/form/OptionGroup.astro";
+import Icon from "@/components/media/Icon.astro";
+import ProfilePreview from "@/components/content/ProfilePreview.astro";
+import icon_discover from "@/assets/icons/icon_discover.svg";
+import icon_friends from "@/assets/icons/icon_friends.svg";
+import icon_plans from "@/assets/icons/icon_plans.svg";
+import icon_calendar from "@/assets/icons/icon_calendar.svg";
+import {
+  steps,
+  ageGroups,
+  interests,
+  questions,
+  activityTypes,
+  availability,
+  groupSizes,
+  findOptions,
+  contactOptions,
+  maxInterests,
+  minInterests,
+  otherArea,
+  recommendedPages,
+} from "@/data/onboarding.ts";
+import type { Area } from "@/data/onboarding.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Nearby places to choose from, nearest first. */
+  areas?: Area[];
+  /** Where the last step sends the person. */
+  dashboardHref?: string;
+}
+
+const { render = true, areas = [], dashboardHref = "/app/dashboard" } = Astro.props;
+
+const icons = {
+  discover: icon_discover,
+  friends: icon_friends,
+  plans: icon_plans,
+  calendar: icon_calendar,
+};
+---
+
+{
+  render && (
+    <div
+      class="onboarding-flow_wrap"
+      data-onboarding
+      data-steps={JSON.stringify(steps)}
+      data-min-interests={minInterests}
+      data-max-interests={maxInterests}
+    >
+      <div class="onboarding-flow_top">
+        <p class="onboarding-flow_eyebrow text-style-small">
+          Set up your profile
+        </p>
+        <Pill role="status" data-status>Progress saves as you go</Pill>
+      </div>
+
+      <div class="onboarding-flow_progress">
+        <div class="onboarding-flow_meta">
+          <span class="onboarding-flow_count text-style-small">
+            Step <span data-step-num>1</span> of {steps.length}
+          </span>
+          <span class="onboarding-flow_name text-style-small" data-step-name>
+            {steps[0].name}
+          </span>
+        </div>
+        <div
+          class="onboarding-flow_segments"
+          role="progressbar"
+          aria-label="Setup progress"
+          aria-valuemin="1"
+          aria-valuemax={steps.length}
+          aria-valuenow="1"
+          data-progress
+        >
+          {steps.map((_, index) => (
+            <span
+              class:list={["onboarding-flow_segment", index === 0 && "on"]}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div class="onboarding-flow_main">
+        <Panel aria-labelledby="onboarding-title" class="padding-6">
+          <div class="onboarding-flow_card">
+            <div class="onboarding-flow_intro">
+              <h1
+                id="onboarding-title"
+                class="onboarding-flow_title text-style-h3"
+                tabindex="-1"
+                data-title
+              >
+                {steps[0].title}
+              </h1>
+              <p class="onboarding-flow_lead text-style-large" data-lead>
+                {steps[0].lead}
+              </p>
+            </div>
+
+            <div class="onboarding-flow_step" data-step="0">
+              <div class="onboarding-flow_group">
+                <Input
+                  variant="first-name"
+                  label="First name"
+                  placeholder="What should people call you?"
+                  maxlength={20}
+                  data-first-name
+                />
+                <p class="onboarding-flow_hint text-style-small">
+                  Only your first name is ever shown.
+                </p>
+              </div>
+
+              <ColorPicker hint="This is your bubble on plans, calendars and friend lists. Pick one of ours or tap the dashed circle to choose any color you like." />
+
+              <div class="onboarding-flow_group" role="group" aria-labelledby="age-label">
+                <p id="age-label" class="onboarding-flow_label text-style-main">
+                  Age group
+                </p>
+                <div class="onboarding-flow_row">
+                  {ageGroups.map((age) => (
+                    <Pill element="button" size="main" data-age={age.id}>
+                      {age.label}
+                    </Pill>
+                  ))}
+                </div>
+                <p class="onboarding-flow_hint text-style-small">
+                  Used to match you with people your age. It stays private.
+                </p>
+              </div>
+
+              <p class="onboarding-flow_notice text-style-small" role="note" hidden data-age-note></p>
+
+              <div class="onboarding-flow_group" role="group" aria-labelledby="area-label">
+                <p id="area-label" class="onboarding-flow_label text-style-main">
+                  Your area
+                </p>
+                <div class="onboarding-flow_row">
+                  {[...areas, otherArea].map((area) => (
+                    <Pill
+                      element="button"
+                      size="main"
+                      data-area={area.id}
+                      data-area-name={area.name}
+                    >
+                      {area.name}
+                    </Pill>
+                  ))}
+                </div>
+                <p class="onboarding-flow_hint text-style-small">
+                  Towns near you. General area only, we never show where you
+                  live.
+                </p>
+              </div>
+            </div>
+
+            <div class="onboarding-flow_step" data-step="1" hidden>
+              <div class="onboarding-flow_row" role="group" aria-label="Interests">
+                {interests.map((interest) => (
+                  <Pill
+                    element="button"
+                    size="main"
+                    color={interest.color}
+                    data-interest={interest.id}
+                  >
+                    <span
+                      slot="before"
+                      class="onboarding-flow_dot"
+                      style={`--_dot: var(--colors-vivid-${interest.color});`}
+                    />
+                    {interest.name}
+                  </Pill>
+                ))}
+              </div>
+              <p class="onboarding-flow_label text-style-small" data-interest-count>
+                0 picked. Choose at least {minInterests}.
+              </p>
+            </div>
+
+            <div class="onboarding-flow_step" data-step="2" hidden>
+              {questions.map((question) => (
+                <ScaleQuestion
+                  id={question.id}
+                  question={question.q}
+                  lo={question.lo}
+                  hi={question.hi}
+                />
+              ))}
+              <div class="onboarding-flow_result" hidden data-style-card>
+                <p class="onboarding-flow_result_label text-style-tiny">
+                  Your social style
+                </p>
+                <p class="onboarding-flow_result_name text-style-h4" data-style-name />
+                <p class="onboarding-flow_result_line text-style-small" data-style-line />
+              </div>
+            </div>
+
+            <div class="onboarding-flow_step" data-step="3" hidden>
+              <div class="onboarding-flow_group" role="group" aria-labelledby="types-label">
+                <p id="types-label" class="onboarding-flow_label text-style-main">
+                  What sounds fun?
+                </p>
+                <div class="onboarding-flow_row">
+                  {activityTypes.map((type) => (
+                    <Pill element="button" size="main" color="green" data-activity={type.id}>
+                      {type.label}
+                    </Pill>
+                  ))}
+                </div>
+              </div>
+              <div class="onboarding-flow_group" role="group" aria-labelledby="times-label">
+                <p id="times-label" class="onboarding-flow_label text-style-main">
+                  When are you usually free?
+                </p>
+                <div class="onboarding-flow_row">
+                  {availability.map((time) => (
+                    <Pill element="button" size="main" color="blue" data-availability={time.id}>
+                      {time.label}
+                    </Pill>
+                  ))}
+                </div>
+              </div>
+              <OptionGroup
+                id="size-label"
+                label="Group size you're comfortable with"
+                name="group_size"
+                options={groupSizes}
+                value="small"
+                columns
+              />
+              <div class="onboarding-flow_setting">
+                <Choice
+                  variant="toggle"
+                  label="Start me in a group"
+                  name="group_first"
+                  role="switch"
+                  checked
+                />
+                <p class="onboarding-flow_hint text-style-small">
+                  Meet people in groups before one-on-one.
+                </p>
+              </div>
+            </div>
+
+            <div class="onboarding-flow_step" data-step="4" hidden>
+              <OptionGroup
+                id="find-label"
+                label="Who can find me"
+                name="discoverable_by"
+                options={findOptions}
+                value="communities"
+              />
+              <OptionGroup
+                id="hi-label"
+                label="Who can say hi"
+                name="contactable_by"
+                options={contactOptions}
+                value="verified"
+              />
+              <div class="onboarding-flow_setting">
+                <Choice
+                  variant="toggle"
+                  label="Show my general area"
+                  name="show_area"
+                  role="switch"
+                  checked
+                />
+                <p class="onboarding-flow_hint text-style-small">
+                  Never an exact spot.
+                </p>
+              </div>
+              <Choice
+                label="I agree to the community guidelines. I can report or block anyone, anytime."
+                name="guidelines_accepted"
+              />
+            </div>
+
+            <div class="onboarding-flow_step" data-step="5" hidden>
+              <p class="onboarding-flow_label text-style-main">
+                Recommended for you
+              </p>
+              <div class="onboarding-flow_pages">
+                {recommendedPages.map((page) => (
+                  <a class="onboarding-flow_page" href={page.href}>
+                    <span
+                      class="onboarding-flow_badge"
+                      style={`--_badge: var(--colors-vivid-${page.color});`}
+                    >
+                      <Icon src={icons[page.icon]} variant="small" />
+                    </span>
+                    <span class="onboarding-flow_page_text">
+                      <span class="onboarding-flow_page_name text-style-main">
+                        {page.title}
+                      </span>
+                      <span class="onboarding-flow_page_sub text-style-small">
+                        {page.sub}
+                      </span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+              <ActionButton element="link" href={dashboardHref} size="large" raised>
+                Go to my dashboard
+              </ActionButton>
+              <p class="onboarding-flow_hint center text-style-small">
+                You can change any of this later in your account.
+              </p>
+            </div>
+
+            <div class="onboarding-flow_errors" role="alert" hidden data-errors></div>
+          </div>
+        </Panel>
+
+        <ProfilePreview
+          interests={interests.map((interest) => ({
+            id: interest.id,
+            name: interest.name,
+            color: interest.color,
+          }))}
+        />
+      </div>
+
+      <div class="onboarding-flow_actions" data-actions>
+        <span class="onboarding-flow_back" hidden data-back-wrap>
+          <ActionButton color="white" size="large" data-back>Back</ActionButton>
+        </span>
+        <span class="onboarding-flow_next">
+          <ActionButton size="large" raised class="width-full" data-next>
+            Continue
+          </ActionButton>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  import { saveProfile, type Profile } from "@/lib/onboarding-repo.ts";
+
+  type StepCopy = { name: string; title: string; lead: string };
+
+  const luminance = (hex: string) => {
+    const value = parseInt(hex.slice(1), 16);
+    return (
+      (0.299 * ((value >> 16) & 255) +
+        0.587 * ((value >> 8) & 255) +
+        0.114 * (value & 255)) /
+      255
+    );
+  };
+
+  document
+    .querySelectorAll<HTMLElement>("[data-onboarding]")
+    .forEach((root) => {
+      const steps: StepCopy[] = JSON.parse(root.dataset.steps ?? "[]");
+      const minInterests = Number(root.dataset.minInterests);
+      const maxInterests = Number(root.dataset.maxInterests);
+      const last = steps.length - 1;
+
+      const $ = <T extends HTMLElement>(selector: string) =>
+        root.querySelector<T>(selector)!;
+      const $$ = <T extends HTMLElement>(selector: string) =>
+        root.querySelectorAll<T>(selector);
+
+      const panels = $$("[data-step]");
+      const swatches = $$<HTMLButtonElement>("[data-swatch]");
+      const customSwatch = $("[data-swatch-custom]");
+      const colorInput = $<HTMLInputElement>("[data-color-input]");
+      const status = $("[data-status]");
+      const statusText = status.querySelector<HTMLElement>(".pill_text")!;
+      const nextButton = $<HTMLButtonElement>("[data-next]");
+      const nextText = nextButton.querySelector<HTMLElement>(".action-button_text")!;
+      const backWrap = $("[data-back-wrap]");
+      const title = $("[data-title]");
+      const preview = $("[data-preview]");
+
+      const swatchColor = (button: HTMLElement) =>
+        getComputedStyle(button).getPropertyValue("--_swatch").trim();
+
+      const state = {
+        step: 0,
+        tried: false,
+        first_name: "",
+        avatar_color: swatchColor(swatches[0]),
+        age_group: null as string | null,
+        area_id: null as string | null,
+        interests: [] as string[],
+        style: { energy: null, pace: null, planning: null, warmup: null } as Profile["style"],
+        activity_types: [] as string[],
+        availability: [] as string[],
+        group_size: "small",
+        group_first: true,
+        discoverable_by: "communities",
+        contactable_by: "verified",
+        show_area: true,
+        guidelines_accepted: false,
+      };
+
+      const profile = (): Profile => ({
+        first_name: state.first_name.trim(),
+        avatar_color: state.avatar_color,
+        age_group: state.age_group,
+        area_id: state.area_id,
+        interests: state.interests,
+        style: state.style,
+        activity_types: state.activity_types,
+        availability: state.availability,
+        group_size: state.group_size,
+        group_first: state.group_first,
+        discoverable_by: state.discoverable_by,
+        contactable_by: state.contactable_by,
+        show_area: state.show_area,
+        guidelines_accepted: state.guidelines_accepted,
+      });
+
+      const styleReady = () =>
+        Object.values(state.style).every((value) => value !== null);
+
+      const errorsFor = (step: number) => {
+        const errors: string[] = [];
+        if (step === 0) {
+          if (!state.first_name.trim()) errors.push("Add your first name.");
+          if (!state.age_group) errors.push("Pick your age group.");
+          if (state.age_group === "u13") errors.push("You need to be 13 or older to join.");
+          if (!state.area_id) errors.push("Pick your area.");
+        }
+        if (step === 1 && state.interests.length < minInterests)
+          errors.push(`Pick at least ${minInterests} interests.`);
+        if (step === 2 && !styleReady()) errors.push("Answer all four questions.");
+        if (step === 3) {
+          if (!state.activity_types.length) errors.push("Pick at least one activity.");
+          if (!state.availability.length) errors.push("Pick when you are free.");
+        }
+        if (step === 4 && !state.guidelines_accepted)
+          errors.push("Agree to the community guidelines to continue.");
+        return errors;
+      };
+
+      const press = (
+        selector: string,
+        active: (element: HTMLElement) => boolean,
+      ) =>
+        $$(selector).forEach((element) =>
+          element.setAttribute("aria-pressed", String(active(element))),
+        );
+
+      const toggle = (list: string[], value: string) =>
+        list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+
+      const setStatus = (label: string, saved = false) => {
+        statusText.textContent = label;
+        status.classList.toggle("filled", saved);
+        status.classList.toggle("green", saved);
+      };
+
+      const persist = async (step: number) => {
+        setStatus("Saving...");
+        try {
+          await saveProfile({
+            profile: profile(),
+            onboarding_step: step,
+            onboarded: step >= last,
+          });
+          setStatus("Saved", true);
+        } catch {
+          setStatus("Couldn't save. We'll retry.");
+        }
+      };
+
+      const styleResult = () => {
+        const { energy, pace, planning, warmup } = state.style;
+        const sum = energy! + pace!;
+        const name =
+          sum <= 5 ? "Cozy Connector" : sum <= 8 ? "Easygoing Explorer" : "Lively Spark";
+        const plan =
+          planning! <= 2 ? "likes to plan ahead" : planning! >= 4 ? "goes with the flow" : "is flexible about plans";
+        const warm =
+          warmup! <= 2 ? "warms up slowly" : warmup! >= 4 ? "warms up fast" : "warms up steadily";
+        return { name, line: `You ${plan} and ${warm}. We will match you with people who fit that.` };
+      };
+
+      const render = () => {
+        const { step } = state;
+        const first = state.first_name.trim();
+        const under13 = state.age_group === "u13";
+        const minor = state.age_group === "13-15" || state.age_group === "16-17";
+
+        panels.forEach((panel) => {
+          panel.hidden = Number(panel.dataset.step) !== step;
+        });
+        $("[data-step-num]").textContent = String(step + 1);
+        $("[data-step-name]").textContent = steps[step].name;
+        title.textContent =
+          step === last
+            ? `${first ? `${first}, you` : "You"}'re all set.`
+            : steps[step].title;
+        $("[data-lead]").textContent = steps[step].lead;
+        const progress = $("[data-progress]");
+        progress.setAttribute("aria-valuenow", String(step + 1));
+        progress
+          .querySelectorAll(".onboarding-flow_segment")
+          .forEach((segment, index) => segment.classList.toggle("on", index <= step));
+
+        const fg = luminance(state.avatar_color) < 0.5 ? "#ffffff" : "";
+        const matched = [...swatches].find(
+          (swatch) => swatchColor(swatch).toLowerCase() === state.avatar_color.toLowerCase(),
+        );
+        swatches.forEach((swatch) =>
+          swatch.setAttribute("aria-pressed", String(swatch === matched)),
+        );
+        customSwatch.classList.toggle("chosen", !matched);
+        customSwatch.style.setProperty("--_swatch", state.avatar_color);
+        customSwatch.style.setProperty("--_on", fg || "var(--colors-on-vivid)");
+
+        press("[data-age]", (el) => el.dataset.age === state.age_group);
+        press("[data-area]", (el) => el.dataset.area === state.area_id);
+        const note = $("[data-age-note]");
+        note.hidden = !(under13 || minor);
+        note.classList.toggle("warn", under13);
+        note.textContent = under13
+          ? "whatstheplan is for ages 13 and up. A parent or guardian can help you find local clubs and activities in the meantime."
+          : "You'll only see and be seen by people in your age group, and only in moderated groups.";
+
+        press("[data-interest]", (el) => state.interests.includes(el.dataset.interest!));
+        $("[data-interest-count]").textContent =
+          state.interests.length < minInterests
+            ? `${state.interests.length} picked. Choose at least ${minInterests}.`
+            : `${state.interests.length} of ${maxInterests} picked.`;
+
+        const ready = styleReady();
+        const card = $("[data-style-card]");
+        card.hidden = !ready;
+        const result = ready ? styleResult() : null;
+        if (result) {
+          $("[data-style-name]").textContent = result.name;
+          $("[data-style-line]").textContent = result.line;
+        }
+
+        press("[data-activity]", (el) => state.activity_types.includes(el.dataset.activity!));
+        press("[data-availability]", (el) => state.availability.includes(el.dataset.availability!));
+
+        const errors = state.tried || (step === 0 && under13) ? errorsFor(step) : [];
+        const box = $("[data-errors]");
+        box.hidden = errors.length === 0;
+        box.replaceChildren(
+          ...errors.map((text) => {
+            const line = document.createElement("span");
+            line.textContent = text;
+            return line;
+          }),
+        );
+
+        const avatar = $("[data-preview-avatar]");
+        avatar.style.setProperty("--_color", state.avatar_color);
+        avatar.style.setProperty("--_on", fg || "var(--colors-on-vivid)");
+        $("[data-preview-initial]").textContent = first ? first[0].toUpperCase() : "?";
+        $("[data-preview-name]").textContent = first || "Your first name";
+        const areaName = root
+          .querySelector<HTMLElement>(`[data-area="${state.area_id}"]`)
+          ?.dataset.areaName;
+        $("[data-preview-area]").textContent =
+          state.show_area && areaName
+            ? state.area_id === "other"
+              ? areaName
+              : `${areaName} area`
+            : areaName
+              ? "Area hidden"
+              : "Your area";
+        const styleTag = $("[data-preview-style]");
+        styleTag.hidden = !result;
+        if (result) styleTag.querySelector(".pill_text")!.textContent = result.name;
+        const shown = state.interests.slice(0, 5);
+        preview.querySelectorAll<HTMLElement>("[data-preview-tag]").forEach((tag) => {
+          const index = shown.indexOf(tag.dataset.previewTag!);
+          tag.hidden = index < 0;
+          tag.style.order = String(index);
+        });
+        $("[data-preview-empty]").hidden = shown.length > 0;
+        $("[data-preview-note]").textContent = minor
+          ? preview.dataset.minorNote!
+          : preview.dataset.note!;
+
+
+        $("[data-actions]").hidden = step === last;
+        backWrap.hidden = step === 0;
+        nextText.textContent = step === last - 1 ? "Finish" : "Continue";
+        nextButton.disabled = under13 && step === 0;
+      };
+
+      const go = (step: number) => {
+        state.step = step;
+        state.tried = false;
+        render();
+        title.focus({ preventScroll: true });
+        root.scrollIntoView({ block: "start", behavior: "smooth" });
+      };
+
+      root.addEventListener("click", (event) => {
+        const target = (event.target as HTMLElement).closest<HTMLElement>(
+          "[data-swatch], [data-age], [data-area], [data-interest], [data-activity], [data-availability], [data-back], [data-next]",
+        );
+        if (!target) return;
+        const data = target.dataset;
+
+        if (target.matches("[data-swatch]")) state.avatar_color = swatchColor(target);
+        else if (data.age) state.age_group = data.age;
+        else if (data.area) state.area_id = data.area;
+        else if (data.interest) {
+          const has = state.interests.includes(data.interest);
+          if (has || state.interests.length < maxInterests)
+            state.interests = toggle(state.interests, data.interest);
+        } else if (data.activity) state.activity_types = toggle(state.activity_types, data.activity);
+        else if (data.availability) state.availability = toggle(state.availability, data.availability);
+        else if (target.matches("[data-back]")) return go(state.step - 1);
+        else if (target.matches("[data-next]")) {
+          if (errorsFor(state.step).length) {
+            state.tried = true;
+            return render();
+          }
+          void persist(state.step + 1);
+          return go(state.step + 1);
+        }
+        render();
+      });
+
+      root.addEventListener("input", (event) => {
+        const target = event.target as HTMLInputElement;
+        if (target.matches("[data-first-name]")) state.first_name = target.value;
+        else if (target.matches("[data-color-input]")) state.avatar_color = target.value;
+        else return;
+        render();
+      });
+
+      root.addEventListener("change", (event) => {
+        const target = event.target as HTMLInputElement;
+        if (target.dataset.style) {
+          state.style = { ...state.style, [target.dataset.style]: Number(target.value) };
+        } else if (target.name === "group_size") state.group_size = target.value;
+        else if (target.name === "discoverable_by") state.discoverable_by = target.value;
+        else if (target.name === "contactable_by") state.contactable_by = target.value;
+        else if (target.name === "group_first") state.group_first = target.checked;
+        else if (target.name === "show_area") state.show_area = target.checked;
+        else if (target.name === "guidelines_accepted") state.guidelines_accepted = target.checked;
+        else return;
+        render();
+      });
+
+      render();
+    });
+</script>
+
+<style is:global>
+  @layer components {
+    .onboarding-flow_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding-top: var(--space-4);
+    }
+
+    .onboarding-flow_top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .onboarding-flow_eyebrow {
+      flex: 1 1 auto;
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+
+    .onboarding-flow_progress {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .onboarding-flow_meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-1);
+      font-weight: var(--primary-bold);
+    }
+
+    .onboarding-flow_name {
+      color: var(--text-2);
+    }
+
+    .onboarding-flow_segments {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: var(--space-1);
+    }
+
+    .onboarding-flow_segment {
+      height: var(--space-1);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      transform-origin: left;
+      transition: background-color var(--reveal-duration) var(--ease-out);
+
+      &.on {
+        background-color: var(--text);
+      }
+    }
+
+    .onboarding-flow_main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+
+      @media (width >= 64rem) {
+        grid-template-columns: minmax(0, 1.6fr) minmax(var(--card-width-small), 1fr);
+      }
+    }
+
+    .onboarding-flow_card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      animation: onboarding-flow-rise var(--reveal-duration) var(--ease-out) backwards;
+    }
+
+    .onboarding-flow_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .onboarding-flow_title {
+      font-weight: var(--secondary-bold);
+
+      &:focus-visible {
+        outline: 0;
+      }
+    }
+
+    .onboarding-flow_lead,
+    .onboarding-flow_hint {
+      color: var(--text-2);
+    }
+
+    .onboarding-flow_hint.center {
+      text-align: center;
+    }
+
+    .onboarding-flow_step {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      animation: onboarding-flow-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .onboarding-flow_group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .onboarding-flow_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .onboarding-flow_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .onboarding-flow_notice {
+      padding: var(--space-3);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--status-free-background);
+      font-weight: var(--primary-medium);
+
+      &.warn {
+        border-style: dashed;
+        background-color: var(--colors-secondary-red);
+      }
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .onboarding-flow_dot {
+      flex: none;
+      width: var(--icon-small);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_dot);
+    }
+
+    .onboarding-flow_result {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--colors-secondary-yellow);
+      animation: onboarding-flow-pop var(--reveal-duration) var(--ease-spring-soft) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .onboarding-flow_result_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    .onboarding-flow_setting {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+    }
+
+    .onboarding-flow_pages {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .onboarding-flow_page {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      transition: translate var(--move-duration) var(--ease-out);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--card-lift);
+        }
+      }
+    }
+
+    .onboarding-flow_badge {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--_badge);
+      color: var(--colors-on-vivid);
+      font-size: var(--text-large);
+      line-height: 1;
+    }
+
+    .onboarding-flow_page_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .onboarding-flow_page_name {
+      font-weight: var(--primary-bold);
+    }
+
+    .onboarding-flow_page_sub {
+      color: var(--text-2);
+    }
+
+    .onboarding-flow_errors {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--space-3);
+      border: var(--border-width-medium) dashed var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-vivid-yellow);
+      color: var(--colors-on-vivid);
+      font-size: var(--text-small);
+      font-weight: var(--primary-bold);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .onboarding-flow_actions {
+      position: sticky;
+      inset-block-end: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-inline: calc(var(--site-margin) * -1);
+      padding: var(--space-5) var(--site-margin) var(--space-4);
+      background-image: linear-gradient(
+        transparent,
+        var(--background) var(--space-4)
+      );
+
+      &[hidden] {
+        display: none;
+      }
+      @media (width < 56rem) {
+        position: static;
+        padding-top: 0;
+        background-image: none;
+      }
+    }
+
+    .onboarding-flow_back[hidden] {
+      display: none;
+    }
+
+    .onboarding-flow_next {
+      flex: 1;
+      max-width: 22rem;
+      margin-inline-start: auto;
+    }
+
+    @keyframes onboarding-flow-rise {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-3);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+
+    @keyframes onboarding-flow-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+
+    @keyframes onboarding-flow-pop {
+      from {
+        opacity: 0.2;
+        scale: 0.8;
+      }
+      to {
+        opacity: 1;
+        scale: 1;
+      }
+    }
+  }
+</style>

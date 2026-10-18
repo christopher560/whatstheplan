@@ -1,0 +1,33 @@
+---
+import DiscoverFilters from "@/components/content/DiscoverFilters.astro";
+import DiscoverFeed from "@/components/content/DiscoverFeed.astro";
+import type { DiscoverDay } from "@/data/discover.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The next seven days, today first. */
+  days?: DiscoverDay[];
+}
+
+const { render = true, days = [] } = Astro.props;
+---
+
+{
+  render && (
+    <div class="discover-browse_wrap">
+      <DiscoverFilters days={days} />
+      <DiscoverFeed />
+    </div>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .discover-browse_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+  }
+</style>

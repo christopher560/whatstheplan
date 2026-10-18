@@ -1,0 +1,21 @@
+---
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** The plan the replies components start from. */
+  plan?: PlanDetail;
+}
+
+const { plan } = Astro.props;
+---
+
+{
+  plan && (
+    <script
+      is:inline
+      type="application/json"
+      id="plan-data"
+      set:html={JSON.stringify(plan).replace(/</g, "\\u003c")}
+    />
+  )
+}

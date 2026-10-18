@@ -1,0 +1,29 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import PlansState from "@/components/content/PlansState.astro";
+import PlansHeader from "@/components/content/PlansHeader.astro";
+import PlansTabs from "@/components/content/PlansTabs.astro";
+import PlansFilters from "@/components/content/PlansFilters.astro";
+import PlansInvites from "@/components/content/PlansInvites.astro";
+import PlansHosting from "@/components/content/PlansHosting.astro";
+import PlansGoing from "@/components/content/PlansGoing.astro";
+import PlansGroups from "@/components/content/PlansGroups.astro";
+import { plansRepo } from "@/lib/plans-repo.ts";
+
+const hub = await plansRepo.getHub();
+---
+
+<DashboardLayout title="Your plans">
+  <!-- Plans -->
+  <DashboardSection paddingTop="small" paddingBottom="small" gap="5">
+    <PlansState hub={hub} />
+    <PlansHeader />
+    <PlansTabs />
+    <PlansFilters />
+    <PlansInvites invites={hub.invites} />
+    <PlansHosting plans={hub.hosting} />
+    <PlansGoing going={hub.going} invites={hub.invites} />
+    <PlansGroups groups={hub.groups} past={hub.past} />
+  </DashboardSection>
+</DashboardLayout>

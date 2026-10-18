@@ -1,0 +1,383 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { personColor, statusLabels } from "@/data/plans-hub.ts";
+import type { HubGroup, HubPast } from "@/data/plans-hub.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Groups the viewer joined. */
+  groups?: HubGroup[];
+  /** Groups that already met. */
+  past?: HubPast[];
+  /** Group page link; the group id is appended. */
+  groupHref?: string;
+  /** Where "Meet again" goes. */
+  discoverHref?: string;
+}
+
+const {
+  render = true,
+  groups = [],
+  past = [],
+  groupHref = "/app/plans",
+  discoverHref = "/app/discover",
+} = Astro.props;
+---
+
+{
+  render && (
+    <div class="plans-groups_wrap" data-groups hidden>
+      <section class="plans-groups_section" aria-labelledby="plans-groups-title">
+        <div class="plans-groups_head">
+          <h2 id="plans-groups-title" class="plans-groups_title text-style-h4">
+            Your groups
+          </h2>
+          <p class="plans-groups_count text-style-small">{groups.length}</p>
+        </div>
+
+        <div class="plans-groups_grid">
+          {groups.map((group) => (
+            <Panel
+              tag="article"
+              dashed={group.status === "form"}
+              class="plans-groups_card"
+              data-group={group.id}
+            >
+              <div class="plans-groups_body">
+                <div class="plans-groups_top">
+                  <Pill size="tiny" variant="filled" color={group.color}>
+                    {group.category}
+                  </Pill>
+                  <Pill size="tiny" variant="filled" color={statusLabels[group.status].color}>
+                    {statusLabels[group.status].label}
+                  </Pill>
+                </div>
+                <h3 class="plans-groups_name text-style-h4">{group.title}</h3>
+                <div class="plans-groups_when">
+                  <Pill size="tiny" variant="filled">
+                    {group.countdown}
+                  </Pill>
+                  <p class="text-style-small">
+                    <strong>{group.when}</strong> · {group.place}
+                  </p>
+                </div>
+                <div class="plans-groups_crew">
+                  <AvatarStack
+                    size="small"
+                    people={[...group.members, "You"].map((name) => ({
+                      initial: name,
+                      color: personColor(name),
+                    }))}
+                  />
+                  <p class="plans-groups_who text-style-small">
+                    {group.members.length + 1} people · You + {group.members.join(", ")}
+                  </p>
+                </div>
+                <div class="plans-groups_chat">
+                  <PathIcon d="M4 5h16v11H9l-5 4V5z" variant="small" />
+                  <p class="plans-groups_last text-style-small">{group.last}</p>
+                  {group.unread > 0 && (
+                    <span class="plans-groups_unread text-style-small">{group.unread}</span>
+                  )}
+                </div>
+                {group.vote && (
+                  <p class="plans-groups_vote">
+                    <span class="plans-groups_dot" />
+                    <span class="text-style-small">{group.vote}</span>
+                  </p>
+                )}
+                <div class="plans-groups_buttons">
+                  <ActionButton element="link" href={`${groupHref}`} color="ink">
+                    Open group
+                  </ActionButton>
+                  <ActionButton color="white" data-add>
+                    Add to calendar
+                  </ActionButton>
+                </div>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      </section>
+
+      <section class="plans-groups_section" aria-labelledby="plans-past-title">
+        <div class="plans-groups_head wrap">
+          <h2 id="plans-past-title" class="plans-groups_title text-style-h4">Past groups</h2>
+          <p class="plans-groups_hint text-style-small">Add the people you clicked with.</p>
+        </div>
+
+        <div class="plans-groups_grid past">
+          {past.map((group) => (
+            <Panel tag="article" class="plans-groups_card">
+              <div class="plans-groups_body">
+                <div class="plans-groups_past_head">
+                  <Avatar initial={group.initial} color={group.color} size="large" />
+                  <div class="plans-groups_past_text">
+                    <p class="plans-groups_past_title text-style-main">{group.title}</p>
+                    <p class="plans-groups_hint text-style-small">{group.sub}</p>
+                  </div>
+                </div>
+                <ul class="plans-groups_people">
+                  {group.people.map((name) => (
+                    <li class="plans-groups_person">
+                      <Avatar initial={name} color={personColor(name)} size="small" />
+                      <span class="plans-groups_person_name text-style-small">{name}</span>
+                      <ActionButton color="white" size="small" data-friend={name}>
+                        Add friend
+                      </ActionButton>
+                    </li>
+                  ))}
+                </ul>
+                <ActionButton element="link" href={discoverHref} color="white" size="small" class="plans-groups_again">
+                  Meet again
+                </ActionButton>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+<script>
+  import { get, subscribe, toggleAdded, toggleRequest } from "@/lib/plans-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-groups]").forEach((root) => {
+    const cards = [...root.querySelectorAll<HTMLElement>("[data-group]")];
+    const friends = [...root.querySelectorAll<HTMLElement>("[data-friend]")];
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const add = target.closest<HTMLElement>("[data-add]");
+      if (add) return toggleAdded(add.closest<HTMLElement>("[data-group]")!.dataset.group!);
+      const friend = target.closest<HTMLElement>("[data-friend]");
+      if (friend) toggleRequest(friend.dataset.friend!);
+    });
+
+    subscribe(() => {
+      const s = get();
+      root.hidden = s.tab !== "groups";
+      cards.forEach((card) => {
+        const added = !!s.added[card.dataset.group!];
+        const button = card.querySelector<HTMLElement>("[data-add]")!;
+        button.classList.toggle("white", !added);
+        button.classList.toggle("green", added);
+        button.setAttribute("aria-pressed", String(added));
+        button.querySelector<HTMLElement>(".action-button_text")!.textContent = added
+          ? "On calendar"
+          : "Add to calendar";
+      });
+      friends.forEach((button) => {
+        const sent = !!s.requested[button.dataset.friend!];
+        button.classList.toggle("white", !sent);
+        button.classList.toggle("green", sent);
+        button.setAttribute("aria-pressed", String(sent));
+        button.querySelector<HTMLElement>(".action-button_text")!.textContent = sent
+          ? "Request sent"
+          : "Add friend";
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-groups_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plans-groups_section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plans-groups_head {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-3);
+
+      &.wrap {
+        flex-wrap: wrap;
+        gap: var(--space-1) var(--space-3);
+      }
+    }
+
+    .plans-groups_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-groups_count,
+    .plans-groups_hint {
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-groups_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-width-main)), 1fr));
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+
+    .plans-groups_card {
+      height: 100%;
+    }
+
+    .plans-groups_body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-3);
+      height: 100%;
+    }
+
+    .plans-groups_top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plans-groups_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-groups_when {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plans-groups_crew {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plans-groups_who {
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-groups_chat {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--background);
+
+      & .path-icon_wrap {
+        margin-block-start: var(--space-0);
+      }
+    }
+
+    .plans-groups_last {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .plans-groups_unread {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--space-6);
+      height: var(--space-6);
+      padding-inline: var(--space-1);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-red);
+      color: var(--colors-on-vivid);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+    }
+
+    .plans-groups_vote {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-groups_dot {
+      flex: none;
+      width: var(--space-3);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-orange);
+    }
+
+    .plans-groups_buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-block-start: auto;
+
+      & > * {
+        flex: 1 1 8rem;
+      }
+    }
+
+    .plans-groups_past_head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .plans-groups_past_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .plans-groups_past_title {
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-groups_people {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .plans-groups_person {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      min-height: var(--control-height-main);
+    }
+
+    .plans-groups_person_name {
+      flex: 1;
+      min-width: 0;
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-groups_again {
+      align-self: flex-start;
+    }
+  }
+</style>

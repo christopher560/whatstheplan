@@ -1,0 +1,955 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Pill from "@/components/item/Pill.astro";
+import Choice from "@/components/form/Choice.astro";
+import Icon from "@/components/media/Icon.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import icon_check from "@/assets/icons/icon_check.svg";
+import { findingSteps } from "@/data/discover.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Where "Open my group" goes once the viewer joins. */
+  groupHref?: string;
+}
+
+const { render = true, groupHref = "/app/plans" } = Astro.props;
+---
+
+{
+  render && (
+    <Panel
+      variant="tint"
+      tint="yellow"
+      aria-label="Find my people"
+      class="discover-finder_wrap"
+      data-finder
+    >
+      <!-- Start -->
+      <div class="discover-finder_actions" data-stage="idle">
+        <ActionButton size="large" raised class="discover-finder_start" data-start>
+          Find my people
+        </ActionButton>
+        <ActionButton size="large" color="white" class="discover-finder_start" data-mix>
+          Mix me in
+        </ActionButton>
+      </div>
+
+      <!-- Questions -->
+      <div class="discover-finder_quiz" data-stage="quiz" hidden>
+        <div class="discover-finder_nav">
+          <ActionButton size="small" color="white" data-back>
+            Back
+          </ActionButton>
+          <div
+            class="discover-finder_progress"
+            role="progressbar"
+            aria-label="Question progress"
+            aria-valuemin="1"
+            aria-valuemax="3"
+            aria-valuenow="1"
+            data-progress
+          >
+            <span class="discover-finder_segment" />
+            <span class="discover-finder_segment" />
+            <span class="discover-finder_segment" />
+          </div>
+          <p class="discover-finder_count text-style-small">
+            <span data-number>1</span> of 3
+          </p>
+        </div>
+        <h2 class="discover-finder_heading text-style-h3" tabindex="-1" data-heading data-question />
+        <div class="discover-finder_tiles" data-tiles></div>
+        <div class="discover-finder_host" hidden data-host-row>
+          <Choice
+            variant="toggle"
+            label="Only groups with a host who greets you"
+            name="host"
+            checked
+            class="discover-finder_switch"
+            data-host
+          />
+          <p class="discover-finder_hint text-style-small">
+            Someone meets you at the door and introduces you.
+          </p>
+        </div>
+        <div class="discover-finder_next" data-next-row>
+          <ActionButton size="large" disabled data-next>
+            Next
+          </ActionButton>
+          <p class="discover-finder_pick text-style-small">Pick up to two.</p>
+        </div>
+      </div>
+
+      <!-- Finding -->
+      <div class="discover-finder_finding" role="status" data-stage="finding" hidden>
+        <h2 class="discover-finder_heading text-style-h3" tabindex="-1" data-heading data-finding-title />
+        <ol class="discover-finder_steps">
+          {findingSteps.map((step) => (
+            <li class="discover-finder_step" data-step>
+              <span class="discover-finder_dot">
+                <Icon src={icon_check} variant="small" />
+              </span>
+              <span class="discover-finder_step_text text-style-main">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <!-- Result -->
+      <div class="discover-finder_result" data-stage="result" hidden>
+        <div class="discover-finder_head">
+          <h2 class="discover-finder_heading text-style-h3" tabindex="-1" data-heading data-result-title />
+          <ActionButton size="small" color="white" data-restart>
+            Change my answers
+          </ActionButton>
+        </div>
+        <p class="discover-finder_note text-style-small" hidden data-note />
+
+        <Panel tag="article" class="discover-finder_group" data-group>
+          <div class="discover-finder_card">
+            <div class="discover-finder_main">
+              <div class="discover-finder_chips">
+                <Pill size="tiny" variant="filled" color="blue" data-category>Category</Pill>
+                <Pill size="tiny" variant="filled" data-when-chip>When</Pill>
+              </div>
+              <h3 class="discover-finder_name text-style-h3" data-name />
+              <p class="discover-finder_purpose text-style-main" data-purpose />
+              <p class="text-style-main">
+                <strong data-when />
+                <br />
+                <span data-where />
+              </p>
+              <p class="discover-finder_label text-style-main">Who's in so far</p>
+              <div class="discover-finder_members" data-members></div>
+              <p class="discover-finder_spots text-style-small" data-spots />
+
+              <div class="discover-finder_joined" role="status" hidden data-joined>
+                <p class="discover-finder_joined_title text-style-main">
+                  You're in. Your group is created.
+                </p>
+                <p class="text-style-small">
+                  It's saved to Your groups with the members, chat and plans. A host will say hi.
+                </p>
+                <ActionButton element="link" href={groupHref} color="ink" size="small">
+                  Open my group
+                </ActionButton>
+              </div>
+
+              <div class="discover-finder_buttons">
+                <ActionButton size="large" color="ink" data-join>
+                  Join this group
+                </ActionButton>
+                <ActionButton size="large" color="white" data-another>
+                  Show me another
+                </ActionButton>
+              </div>
+            </div>
+
+            <div class="discover-finder_why">
+              <p class="discover-finder_label text-style-main">Why this group</p>
+              <div class="discover-finder_bars">
+                <div class="discover-finder_bar">
+                  <div class="discover-finder_bar_row">
+                    <span class="text-style-small">Fits you</span>
+                    <span class="text-style-small" data-you-label />
+                  </div>
+                  <div class="discover-finder_track" aria-hidden="true">
+                    <div class="discover-finder_fill you" data-you-bar />
+                  </div>
+                </div>
+                <div class="discover-finder_bar">
+                  <div class="discover-finder_bar_row">
+                    <span class="text-style-small">You fit them</span>
+                    <span class="text-style-small" data-them-label />
+                  </div>
+                  <div class="discover-finder_track" aria-hidden="true">
+                    <div class="discover-finder_fill them" data-them-bar />
+                  </div>
+                </div>
+              </div>
+              <ul class="discover-finder_reasons" data-reasons></ul>
+            </div>
+          </div>
+        </Panel>
+
+        <p class="discover-finder_empty text-style-main" hidden data-empty>
+          No open group fits right now. Try another time, or browse the feed below.
+        </p>
+      </div>
+
+      <template data-tile-template>
+        <button type="button" class="discover-finder_tile" aria-pressed="false" data-tile>
+          <span class="discover-finder_tile_icon">
+            <PathIcon />
+          </span>
+          <span class="discover-finder_tile_text">
+            <span class="discover-finder_tile_label text-style-h5" data-label></span>
+            <span class="discover-finder_tile_hint text-style-small" data-hint></span>
+          </span>
+        </button>
+      </template>
+
+      <template data-member-template>
+        <div class="discover-finder_member">
+          <span class="avatar_wrap" data-avatar></span>
+          <span class="discover-finder_member_text">
+            <span class="discover-finder_member_name text-style-main" data-name></span>
+            <span class="discover-finder_member_line text-style-small" data-line></span>
+          </span>
+        </div>
+      </template>
+
+      <template data-reason-template>
+        <li class="discover-finder_reason">
+          <span class="discover-finder_dot">
+            <Icon src={icon_check} variant="small" />
+          </span>
+          <span class="discover-finder_reason_text text-style-small" data-text></span>
+        </li>
+      </template>
+    </Panel>
+  )
+}
+
+<script>
+  import {
+    groupCategories,
+    quizQuestions,
+    sizeOptions,
+    whenOptions,
+  } from "@/data/discover.ts";
+  import type { GroupCategoryId, OpenGroup, SizeId, WhenId } from "@/data/discover.ts";
+  import { fitOf, spotsOpen, memberOf } from "@/lib/discover-fit.ts";
+  import {
+    get,
+    getData,
+    subscribe,
+    startQuiz,
+    startOver,
+    back,
+    toggleWant,
+    nextFromActivity,
+    pickWhen,
+    pickSize,
+    mixMe,
+    toggleHost,
+    another,
+    toggleJoin,
+    result,
+    whenFull,
+    whenLabel,
+  } from "@/lib/discover-store.ts";
+  import type { DiscoverState } from "@/lib/discover-store.ts";
+  import { cloneFirst, setAccent, setIconPath, setText } from "@/lib/ui.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-finder]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) =>
+      root.querySelector<T>(selector)!;
+    const data = getData();
+
+    const stages = root.querySelectorAll<HTMLElement>("[data-stage]");
+    const progress = $("[data-progress]");
+    const segments = progress.querySelectorAll<HTMLElement>(".discover-finder_segment");
+    const number = $("[data-number]");
+    const question = $("[data-question]");
+    const tiles = $("[data-tiles]");
+    const hostRow = $("[data-host-row]");
+    const hostInput = $<HTMLInputElement>("[data-host]");
+    const nextRow = $("[data-next-row]");
+    const nextButton = $<HTMLButtonElement>("[data-next]");
+    const steps = root.querySelectorAll<HTMLElement>("[data-step]");
+    const findingTitle = $("[data-finding-title]");
+    const resultTitle = $("[data-result-title]");
+    const note = $("[data-note]");
+    const group = $("[data-group]");
+    const empty = $("[data-empty]");
+    const members = $("[data-members]");
+    const reasons = $("[data-reasons]");
+    const joined = $("[data-joined]");
+    const joinButton = $<HTMLButtonElement>("[data-join]");
+    const anotherButton = $("[data-another]");
+    const tileTemplate = $<HTMLTemplateElement>("[data-tile-template]");
+    const memberTemplate = $<HTMLTemplateElement>("[data-member-template]");
+    const reasonTemplate = $<HTMLTemplateElement>("[data-reason-template]");
+
+    const colorOf = Object.fromEntries(groupCategories.map((c) => [c.id, c.color]));
+    const labelOf = Object.fromEntries(groupCategories.map((c) => [c.id, c.label]));
+
+    root.addEventListener("click", (event) => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>(
+        "[data-start], [data-mix], [data-back], [data-next], [data-tile], [data-restart], [data-join], [data-another]",
+      );
+      if (!target || (target as HTMLButtonElement).disabled) return;
+      const d = target.dataset;
+
+      if ("start" in d) return startQuiz();
+      if ("mix" in d) return mixMe();
+      if ("back" in d) return back();
+      if ("next" in d) return nextFromActivity();
+      if ("restart" in d) return startOver();
+      if ("another" in d) return another();
+      if ("join" in d) {
+        const picked = result().group;
+        if (picked) toggleJoin(picked.id);
+        return;
+      }
+      if ("tile" in d) {
+        const { question: step } = get();
+        if (step === 0) toggleWant(d.id as GroupCategoryId);
+        else if (step === 1) pickWhen(d.id as WhenId);
+        else pickSize(d.id as SizeId);
+      }
+    });
+    hostInput.addEventListener("change", () => toggleHost());
+
+    /* ---------- questions ---------- */
+    let tilesKey = "";
+    const renderQuiz = (s: DiscoverState) => {
+      question.textContent = quizQuestions[s.question].title;
+      number.textContent = String(s.question + 1);
+      progress.setAttribute("aria-valuenow", String(s.question + 1));
+      segments.forEach((segment, index) => segment.classList.toggle("on", index <= s.question));
+
+      if (tilesKey !== String(s.question)) {
+        tilesKey = String(s.question);
+        const options =
+          s.question === 0
+            ? groupCategories
+            : (s.question === 1 ? whenOptions : sizeOptions).map((o) => ({ ...o, color: undefined }));
+        tiles.replaceChildren(
+          ...options.map((option, index) => {
+            const tile = cloneFirst(tileTemplate);
+            tile.dataset.id = option.id;
+            tile.style.setProperty("--i", String(index));
+            if (option.color) tile.style.setProperty("--_tile", `var(--colors-vivid-${option.color})`);
+            setText(tile, "[data-label]", option.label);
+            setText(tile, "[data-hint]", option.hint);
+            setIconPath(tile, option.icon);
+            return tile;
+          }),
+        );
+      }
+      const chosen = (id: string) =>
+        s.question === 0 ? s.want.includes(id as GroupCategoryId) : s.question === 1 ? s.when === id : s.size === id;
+      tiles
+        .querySelectorAll<HTMLElement>("[data-tile]")
+        .forEach((tile) => tile.setAttribute("aria-pressed", String(chosen(tile.dataset.id!))));
+
+      hostRow.hidden = s.question !== 2;
+      hostInput.checked = s.host;
+      nextRow.hidden = s.question !== 0;
+      nextButton.disabled = !s.want.length;
+    };
+
+    /* ---------- finding ---------- */
+    const renderFinding = (s: DiscoverState) => {
+      findingTitle.textContent = s.mixed ? "Mixing you in..." : "Finding your people...";
+      steps.forEach((step, index) => {
+        step.classList.toggle("done", s.step > index);
+        step.classList.toggle("active", s.step === index);
+      });
+    };
+
+    /* ---------- result ---------- */
+    const reasonsFor = (g: OpenGroup) => {
+      const fit = fitOf(data, g);
+      const open = spotsOpen(g);
+      return [
+        {
+          ok: fit.sharedTags.length > 0,
+          text: fit.sharedTags.length
+            ? `You both like ${fit.sharedTags.join(" and ")}`
+            : "Something new to try",
+        },
+        {
+          ok: fit.overlap > 0,
+          text: `${fit.overlap} of ${g.memberIds.length} members share an interest with you`,
+        },
+        { ok: true, text: `${whenFull(g)}, free on your calendar` },
+        {
+          ok: true,
+          text: `Group of ${g.capacity} max, ${open} spot${open === 1 ? "" : "s"} open`,
+        },
+        {
+          ok: g.newcomerFriendly,
+          text: g.newcomerFriendly
+            ? `${memberOf(data, g.hostId).name} greets newcomers`
+            : "Mostly regulars",
+        },
+        { ok: fit.them >= 70, text: `They would likely click with you too (${fit.them}%)` },
+      ];
+    };
+
+    const memberRows = (g: OpenGroup, isIn: boolean) => {
+      const interests = data.viewer.interests;
+      const rows = g.memberIds.slice(0, 4).map((id) => {
+        const person = memberOf(data, id);
+        const shared = person.likes.filter((like) => interests.includes(like));
+        return {
+          initial: person.name,
+          color: person.color,
+          name: person.name,
+          line: shared.length
+            ? `Also likes ${shared.join(", ")}`
+            : `Likes ${person.likes.slice(0, 2).join(", ")}`,
+          you: false,
+        };
+      });
+      if (g.memberIds.length > 4) {
+        rows.push({
+          initial: "+",
+          color: "blue",
+          name: `+${g.memberIds.length - 4} more`,
+          line: "Also in this group",
+          you: false,
+        });
+      }
+      rows.push({
+        initial: data.viewer.initial,
+        color: data.viewer.color,
+        name: "You",
+        line: isIn ? "You're in" : "Your spot is open",
+        you: true,
+      });
+      return rows.map((row) => {
+        const element = cloneFirst(memberTemplate);
+        const avatar = element.querySelector<HTMLElement>("[data-avatar]")!;
+        avatar.textContent = row.initial.charAt(0).toUpperCase();
+        setAccent(avatar, row.color as never);
+        setText(element, "[data-name]", row.name);
+        setText(element, "[data-line]", row.line);
+        element.classList.toggle("you", row.you);
+        return element;
+      });
+    };
+
+    let groupKey = "";
+    const renderResult = (s: DiscoverState) => {
+      resultTitle.textContent = s.mixed
+        ? "You're mixed in. Take a look."
+        : "Found your group. Take a look.";
+      const r = result();
+      note.hidden = !r.note;
+      note.textContent = r.note;
+      group.hidden = !r.group;
+      empty.hidden = !!r.group;
+      if (!r.group) return;
+
+      const g = r.group;
+      const fit = fitOf(data, g);
+      const isIn = !!s.joined[g.id];
+
+      const category = $("[data-category]");
+      setAccent(category, colorOf[g.category]);
+      setText(category, ".pill_text", labelOf[g.category]);
+      setText($("[data-when-chip]"), ".pill_text", whenLabel(g));
+      setText(root, "[data-name]", g.title);
+      setText(root, "[data-purpose]", g.purpose);
+      setText(root, "[data-when]", whenFull(g));
+      setText(root, "[data-where]", `${g.place} · ${g.distance.toFixed(1)} mi away`);
+      const open = spotsOpen(g);
+      setText(
+        root,
+        "[data-spots]",
+        `${open} spot${open === 1 ? "" : "s"} open of ${g.capacity}. Your spot is held when you join.`,
+      );
+
+      const key = `${g.id}:${isIn}`;
+      if (groupKey !== key) {
+        groupKey = key;
+        members.replaceChildren(...memberRows(g, isIn));
+        reasons.replaceChildren(
+          ...reasonsFor(g).map((reason) => {
+            const item = cloneFirst(reasonTemplate);
+            item.classList.toggle("ok", reason.ok);
+            setText(item, "[data-text]", reason.text);
+            return item;
+          }),
+        );
+      }
+
+      setText(root, "[data-you-label]", `${fit.you}%`);
+      setText(root, "[data-them-label]", `${fit.them}%`);
+      $("[data-you-bar]").style.setProperty("--_fill", `${fit.you}%`);
+      $("[data-them-bar]").style.setProperty("--_fill", `${fit.them}%`);
+
+      joined.hidden = !isIn;
+      joinButton.classList.toggle("ink", !isIn);
+      joinButton.classList.toggle("white", isIn);
+      joinButton.setAttribute("aria-pressed", String(isIn));
+      joinButton.querySelector<HTMLElement>(".action-button_text")!.textContent = isIn
+        ? "Leave group"
+        : "Join this group";
+      anotherButton.hidden = isIn || r.count <= 1;
+    };
+
+    /* ---------- stage switch ---------- */
+    let lastStage: DiscoverState["stage"] | null = null;
+    subscribe(() => {
+      const s = get();
+      stages.forEach((stage) => (stage.hidden = stage.dataset.stage !== s.stage));
+      if (s.stage !== "quiz") tilesKey = "";
+      if (s.stage !== "result") groupKey = "";
+      if (s.stage === "quiz") renderQuiz(s);
+      if (s.stage === "finding") renderFinding(s);
+      if (s.stage === "result") renderResult(s);
+
+      if (lastStage !== null && lastStage !== s.stage) {
+        root
+          .querySelector<HTMLElement>(`[data-stage="${s.stage}"] [data-heading]`)
+          ?.focus({ preventScroll: true });
+      }
+      lastStage = s.stage;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .discover-finder_wrap {
+      gap: var(--space-4);
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    .discover-finder_heading {
+      font-weight: var(--secondary-bold);
+
+      &:focus-visible {
+        outline: none;
+      }
+    }
+
+    .discover-finder_label {
+      font-weight: var(--primary-bold);
+    }
+
+    /* Start */
+    .discover-finder_actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+
+    .discover-finder_start {
+      flex: 1 1 var(--card-width-small);
+    }
+
+    /* Questions */
+    .discover-finder_quiz,
+    .discover-finder_finding,
+    .discover-finder_result {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .discover-finder_nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .discover-finder_progress {
+      display: grid;
+      flex: 1;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-1);
+    }
+
+    .discover-finder_segment {
+      height: var(--space-2);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      transform-origin: left;
+
+      &.on {
+        background-color: var(--text);
+        animation: discover-finder-grow var(--enter-duration) var(--ease-out) backwards;
+      }
+    }
+
+    .discover-finder_count {
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-finder_tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+      gap: var(--space-3);
+    }
+
+    .discover-finder_tile {
+      --_tile: var(--background-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-height: 4.5rem;
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--_tile);
+      color: var(--text);
+      text-align: start;
+      cursor: pointer;
+      animation: discover-finder-swap var(--reveal-duration) var(--ease-out) backwards;
+      animation-delay: calc(var(--i, 0) * 60ms);
+      transition:
+        border-color var(--hover-duration) var(--hover-ease),
+        box-shadow var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--hover-lift);
+        }
+      }
+      &:active {
+        scale: 0.97;
+      }
+      &[aria-pressed="true"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        box-shadow: var(--shadow-offset-main);
+      }
+    }
+
+    .discover-finder_tile_icon {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--control-height-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: color-mix(in srgb, var(--background-3) 80%, transparent);
+    }
+
+    .discover-finder_tile_text {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .discover-finder_tile_label,
+    .discover-finder_tile_hint {
+      display: block;
+    }
+
+    .discover-finder_tile_label {
+      font-weight: var(--secondary-bold);
+    }
+
+    .discover-finder_host {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--space-3) var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: color-mix(in srgb, var(--background-3) 75%, transparent);
+    }
+
+    .discover-finder_switch {
+      flex-direction: row-reverse;
+      justify-content: space-between;
+      width: 100%;
+
+      & .form-choice_text {
+        font-weight: var(--primary-bold);
+      }
+    }
+
+    .discover-finder_hint {
+      color: var(--text-2);
+    }
+
+    .discover-finder_next {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .discover-finder_pick {
+      font-weight: var(--primary-bold);
+    }
+
+    /* Finding */
+    .discover-finder_steps {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .discover-finder_step {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      opacity: 0.4;
+      transition: opacity var(--move-duration) var(--ease-out);
+
+      &.done,
+      &.active {
+        opacity: 1;
+      }
+    }
+
+    .discover-finder_step_text {
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-finder_dot {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--space-5);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      color: var(--colors-on-vivid);
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      & .icon {
+        width: 60%;
+        opacity: 0;
+      }
+
+      .discover-finder_step.active & {
+        background-color: var(--colors-vivid-yellow);
+      }
+      .discover-finder_step.done &,
+      .discover-finder_reason.ok & {
+        background-color: var(--colors-vivid-green);
+      }
+      .discover-finder_step.done & .icon,
+      .discover-finder_reason.ok & .icon {
+        opacity: 1;
+      }
+    }
+
+    /* Result */
+    .discover-finder_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .discover-finder_note {
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-finder_group {
+      animation: discover-finder-swap var(--reveal-duration) var(--ease-out) backwards;
+    }
+
+    .discover-finder_card {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-5);
+    }
+
+    .discover-finder_main {
+      display: flex;
+      flex: 1 1 var(--card-width-large);
+      flex-direction: column;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .discover-finder_chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .discover-finder_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    .discover-finder_members {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, var(--card-width-small)), 1fr)
+      );
+      gap: var(--space-2);
+    }
+
+    .discover-finder_member {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background);
+      animation: discover-finder-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &.you {
+        border: var(--border-width-medium) dashed var(--border-strong);
+        background-color: var(--colors-secondary-green);
+
+        & .avatar_wrap {
+          border-style: dashed;
+        }
+      }
+    }
+
+    .discover-finder_member_text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .discover-finder_member_name {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-finder_member_line {
+      display: block;
+      color: var(--text-2);
+    }
+
+    .discover-finder_spots {
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-finder_joined {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-secondary-green);
+      animation: discover-finder-swap var(--reveal-duration) var(--ease-out) backwards;
+    }
+
+    .discover-finder_joined_title {
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-finder_buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .discover-finder_why {
+      display: flex;
+      flex: 1 1 var(--card-width-main);
+      flex-direction: column;
+      gap: var(--space-3);
+      align-self: flex-start;
+      min-width: 0;
+      padding: var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background);
+    }
+
+    .discover-finder_bars {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .discover-finder_bar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .discover-finder_bar_row {
+      display: flex;
+      justify-content: space-between;
+      font-weight: var(--primary-bold);
+    }
+
+    .discover-finder_track {
+      height: var(--space-2);
+      border-radius: var(--radius-round);
+      background-color: var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .discover-finder_fill {
+      width: var(--_fill, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background-color: var(--colors-vivid-blue);
+      transform-origin: left;
+      animation: discover-finder-grow var(--enter-duration) var(--ease-out) backwards;
+      transition: width var(--move-duration) var(--ease-out);
+
+      &.you {
+        background-color: var(--status-free);
+      }
+    }
+
+    .discover-finder_reasons {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .discover-finder_reason {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+
+      & .discover-finder_dot {
+        width: var(--space-4);
+      }
+    }
+
+    .discover-finder_empty {
+      padding: var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-large);
+    }
+
+    @keyframes discover-finder-grow {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    @keyframes discover-finder-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 var(--space-2);
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

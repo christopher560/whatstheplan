@@ -1,0 +1,21 @@
+---
+import type { FriendsData } from "@/data/friends.ts";
+
+interface Props {
+  /** Everything the friends components start from. */
+  data?: FriendsData;
+}
+
+const { data } = Astro.props;
+---
+
+{
+  data && (
+    <script
+      is:inline
+      type="application/json"
+      id="friends-data"
+      set:html={JSON.stringify(data).replace(/</g, "\\u003c")}
+    />
+  )
+}

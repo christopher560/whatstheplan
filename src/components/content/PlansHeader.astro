@@ -1,0 +1,92 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_plus from "@/assets/icons/icon_plus.svg";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Where "Start a plan" goes. */
+  buildHref?: string;
+  /** Where "Find a group" goes. */
+  discoverHref?: string;
+}
+
+const {
+  render = true,
+  buildHref = "/app/dashboard#builder",
+  discoverHref = "/app/discover",
+} = Astro.props;
+---
+
+{
+  render && (
+    <header
+      class="plans-header_wrap"
+      data-plans-header
+      data-build-href={buildHref}
+      data-discover-href={discoverHref}
+    >
+      <div class="plans-header_intro">
+        <h1 class="plans-header_title text-style-title">Your plans</h1>
+        <p class="plans-header_lead text-style-large" data-subline />
+      </div>
+      <ActionButton element="link" href={buildHref} size="large" raised data-top>
+        <Icon slot="before" src={icon_plus} variant="small" />
+        Start a plan
+      </ActionButton>
+    </header>
+  )
+}
+
+<script>
+  import { get, getHub, pendingCount, subscribe } from "@/lib/plans-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-plans-header]").forEach((root) => {
+    const subline = root.querySelector<HTMLElement>("[data-subline]")!;
+    const top = root.querySelector<HTMLAnchorElement>("[data-top]")!;
+    const topText = top.querySelector<HTMLElement>(".action-button_text")!;
+
+    subscribe(() => {
+      const friends = get().tab === "friends";
+      const hub = getHub();
+      const open = pendingCount();
+      subline.textContent = friends
+        ? `${open ? `${open} invite${open === 1 ? "" : "s"} need your answer. ` : "All caught up. "}${hub.hosting.length} plans you host.`
+        : hub.groups[0]
+          ? `Next up: ${hub.groups[0].title}, ${hub.groups[0].when.replace(/^Today, /, "today at ")}.`
+          : "No groups yet. Find one on Discover.";
+      top.href = friends ? root.dataset.buildHref! : root.dataset.discoverHref!;
+      topText.textContent = friends ? "Start a plan" : "Find a group";
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-header_wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .plans-header_intro {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+
+    .plans-header_lead {
+      color: var(--text-2);
+    }
+
+    @media (width < 30rem) {
+      .plans-header_wrap > .action-button_wrap {
+        flex: 1 1 100%;
+      }
+    }
+  }
+</style>

@@ -1,0 +1,142 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import type { PlanDetail } from "@/data/plan-detail.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  plan?: PlanDetail;
+}
+
+const { render = true, plan } = Astro.props;
+---
+
+{
+  render && plan && (
+    <Panel aria-labelledby="plan-description-title">
+      <div class="plan-description_wrap" data-description>
+        <div class="plan-description_head">
+          <h2 id="plan-description-title" class="plan-description_title text-style-h5">
+            What friends read
+          </h2>
+          <Pill element="button" data-edit>Edit</Pill>
+        </div>
+
+        <div class="plan-description_view" data-view>
+          <p class="plan-description_text text-style-main" data-text>
+            {plan.description}
+          </p>
+          <p class="plan-description_hint text-style-small">
+            Shown at the top of the invite link. Edits reach everyone who already
+            replied.
+          </p>
+        </div>
+
+        <div class="plan-description_form" hidden data-form>
+          <label class="plan-description_label text-style-small" for="plan-description-input">
+            Description
+          </label>
+          <textarea
+            id="plan-description-input"
+            class="field-control text-style-main"
+            rows="4"
+            maxlength="200"
+            data-input
+          />
+          <div class="plan-description_actions">
+            <p class="plan-description_hint text-style-small" data-counter>0 of 200</p>
+            <ActionButton color="white" size="small" data-cancel>Cancel</ActionButton>
+            <ActionButton size="small" data-save>Save</ActionButton>
+          </div>
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { get, update, subscribe, saveDescription } from "@/lib/plan-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-description]").forEach((root) => {
+    const $ = <T extends HTMLElement>(selector: string) =>
+      root.querySelector<T>(selector)!;
+    const view = $("[data-view]");
+    const form = $("[data-form]");
+    const edit = $("[data-edit]");
+    const text = $("[data-text]");
+    const input = $<HTMLTextAreaElement>("[data-input]");
+    const counter = $("[data-counter]");
+
+    edit.addEventListener("click", () => {
+      input.value = get().description;
+      update({ editing: true });
+      input.focus();
+    });
+    $("[data-cancel]").addEventListener("click", () => update({ editing: false }));
+    $("[data-save]").addEventListener("click", () => saveDescription(input.value));
+    input.addEventListener("input", () => {
+      counter.textContent = `${input.value.length} of 200`;
+    });
+
+    subscribe(() => {
+      const { editing, description } = get();
+      view.hidden = editing;
+      form.hidden = !editing;
+      edit.hidden = editing;
+      text.textContent = description;
+      counter.textContent = `${input.value.length} of 200`;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plan-description_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plan-description_head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .plan-description_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plan-description_view,
+    .plan-description_form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .plan-description_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-description_hint {
+      color: var(--text-2);
+    }
+
+    .plan-description_actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+
+      & > .plan-description_hint {
+        flex: 1;
+      }
+    }
+  }
+</style>

@@ -1,0 +1,144 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import icon_check from "@/assets/icons/icon_check.svg";
+import type { FriendRequest } from "@/data/friends.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** People who asked to be friends. */
+  requests?: FriendRequest[];
+}
+
+const { render = true, requests = [] } = Astro.props;
+---
+
+{
+  render && (
+    <Panel aria-labelledby="friend-requests-title">
+      <div class="friend-requests_wrap" data-requests>
+        <h2 id="friend-requests-title" class="friend-requests_title text-style-h4">
+          Friend requests
+        </h2>
+        <ul class="friend-requests_list">
+          {requests.map((request) => (
+            <li class="friend-requests_item" data-request={request.id}>
+              <Avatar initial={request.name} color={request.color} />
+              <div class="friend-requests_text">
+                <p class="friend-requests_name text-style-main">{request.name}</p>
+                <p class="friend-requests_note text-style-small">{request.note}</p>
+              </div>
+              <div class="friend-requests_buttons">
+                <ActionButton color="green" size="small" data-accept>
+                  Accept
+                </ActionButton>
+                <ActionButton color="white" size="small" data-decline>
+                  Decline
+                </ActionButton>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div class="friend-requests_clear" hidden data-clear>
+          <Icon src={icon_check} variant="small" />
+          <span class="text-style-main">No requests waiting.</span>
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { accept, decline, openRequests, subscribe } from "@/lib/friends-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-requests]").forEach((root) => {
+    const items = [...root.querySelectorAll<HTMLElement>("[data-request]")];
+    const clear = root.querySelector<HTMLElement>("[data-clear]")!;
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const id = target.closest<HTMLElement>("[data-request]")?.dataset.request;
+      if (!id) return;
+      if (target.closest("[data-accept]")) accept(id);
+      else if (target.closest("[data-decline]")) decline(id);
+    });
+
+    subscribe(() => {
+      const open = new Set(openRequests().map((request) => request.id));
+      items.forEach((item) => (item.hidden = !open.has(item.dataset.request!)));
+      clear.hidden = open.size > 0;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-requests_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .friend-requests_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-requests_list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .friend-requests_item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .friend-requests_text {
+      display: flex;
+      flex: 1 1 7.5rem;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .friend-requests_name {
+      font-weight: var(--primary-bold);
+    }
+
+    .friend-requests_note {
+      color: var(--text-2);
+    }
+
+    .friend-requests_buttons {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .friend-requests_clear {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-main);
+      background-color: var(--status-free-background);
+      font-weight: var(--primary-bold);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>

@@ -1,0 +1,264 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { ShellData } from "@/lib/dashboard-repo.ts";
+import Icon from "@/components/media/Icon.astro";
+import NavIcon from "@/components/media/NavIcon.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
+
+interface Props extends HTMLAttributes<"aside"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Navigation, the signed-in person and badge counts. */
+  shell?: ShellData;
+  /** Path of the current page, used to mark the active link. */
+  pathname?: string;
+}
+
+const {
+  render = true,
+  shell,
+  pathname = "",
+  class: className,
+  ...rest
+} = Astro.props;
+
+const isActive = (href: string) =>
+  pathname === href || pathname.startsWith(`${href}/`);
+---
+
+{
+  render && shell && (
+    <aside
+      class:list={["dashboard-sidebar_wrap", className]}
+      aria-label="Dashboard sidebar"
+      {...rest}
+    >
+      <div class="dashboard-sidebar_top">
+        <a class="dashboard-sidebar_brand" href="/app/dashboard" aria-label="whatstheplan home">
+          <Icon src={brand_full_logo_cropped} variant="full-width" />
+        </a>
+
+        <nav class="dashboard-sidebar_nav" aria-label="Dashboard navigation">
+          {shell.nav.map((item, index) => (
+            <a
+              class="dashboard-sidebar_link"
+              href={item.href}
+              aria-current={isActive(item.href) ? "page" : undefined}
+              style={`--_i: ${index};`}
+            >
+              <NavIcon name={item.id} />
+              <span class="dashboard-sidebar_label text-style-main">
+                {item.label}
+              </span>
+              {item.badge && (
+                <span
+                  class="dashboard-sidebar_badge"
+                  hidden={shell.badges[item.badge] === 0}
+                  data-badge={item.badge}
+                  aria-label={`${shell.badges[item.badge]} new`}
+                >
+                  {shell.badges[item.badge]}
+                </span>
+              )}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      <a
+        class="dashboard-sidebar_profile"
+        href="/app/account"
+        aria-label="Your profile"
+        aria-current={isActive("/app/account") ? "page" : undefined}
+      >
+        <Avatar initial={shell.viewer.name} color={shell.viewer.color} size="large" />
+        <div class="dashboard-sidebar_who">
+          <p class="dashboard-sidebar_name text-style-main">{shell.viewer.name}</p>
+          <p class="dashboard-sidebar_meta text-style-small">
+            {shell.viewer.friendCount} {shell.viewer.friendCount === 1 ? "friend" : "friends"}
+          </p>
+        </div>
+      </a>
+    </aside>
+  )
+}
+
+<script>
+  /** Pages tell the shell when a count changes, e.g. `plans:pending` from Plans. */
+  window.addEventListener("plans:pending", (event) => {
+    const count = (event as CustomEvent<number>).detail;
+    document.querySelectorAll<HTMLElement>('[data-badge="plans"]').forEach((badge) => {
+      badge.hidden = count === 0;
+      badge.textContent = String(count);
+      badge.setAttribute("aria-label", `${count} new`);
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .dashboard-sidebar_wrap {
+      position: fixed;
+      inset-block: 0;
+      inset-inline-start: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: var(--space-5);
+      width: var(--_sidebar_width, 16rem);
+      min-width: 0;
+      padding: var(--space-4);
+      overflow-y: auto;
+      border-inline-end: var(--border-width) solid var(--border);
+      background-color: var(--background-2);
+
+      @media (width < 48rem) {
+        display: none;
+      }
+    }
+
+    .dashboard-sidebar_top {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .dashboard-sidebar_brand {
+      display: block;
+      transition: rotate var(--reveal-duration) var(--ease-spring),
+        scale var(--reveal-duration) var(--ease-spring);
+
+      @media (hover: hover) {
+        &:hover {
+          rotate: -2deg;
+          scale: 1.04;
+        }
+      }
+      &:active {
+        scale: 0.95;
+      }
+    }
+
+    .dashboard-sidebar_nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .dashboard-sidebar_link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-height: var(--control-height-main);
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-main);
+      color: var(--colors-on-vivid);
+      animation: dashboard-sidebar-rise var(--enter-duration) var(--ease-out) backwards;
+      animation-delay: calc(var(--_i) * var(--stagger-step));
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        translate var(--move-duration) var(--ease-out),
+        scale var(--hover-duration) var(--ease-spring);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: var(--space-0) 0;
+          background-color: color-mix(in srgb, var(--colors-on-vivid) 6%, transparent);
+        }
+      }
+      &:active {
+        scale: 0.95;
+      }
+      &:focus-visible {
+        outline: var(--focus-width) solid currentColor;
+        outline-offset: var(--focus-offset);
+      }
+      &[aria-current="page"] {
+        background-color: var(--colors-secondary-yellow-strong);
+      }
+    }
+
+    .dashboard-sidebar_label {
+      flex: 1;
+      font-weight: var(--primary-bold);
+    }
+
+    .dashboard-sidebar_badge {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--space-4);
+      height: var(--space-4);
+      padding-inline: var(--space-1);
+      border: var(--border-width-thick) solid var(--background-3);
+      border-radius: var(--radius-round);
+      background-color: var(--badge-background, #e5484d);
+      color: var(--light-100);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .dashboard-sidebar_profile {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-height: var(--control-height-main);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-main);
+      color: var(--colors-on-vivid);
+      transition:
+        background-color var(--hover-duration) var(--hover-ease),
+        scale var(--hover-duration) var(--ease-spring);
+
+      @media (hover: hover) {
+        &:hover {
+          background-color: color-mix(in srgb, var(--colors-on-vivid) 6%, transparent);
+        }
+      }
+      &:active {
+        scale: 0.95;
+      }
+      &:focus-visible {
+        outline: var(--focus-width) solid currentColor;
+        outline-offset: var(--focus-offset);
+      }
+      &[aria-current="page"] {
+        background-color: var(--colors-secondary-yellow-strong);
+      }
+    }
+
+    .dashboard-sidebar_who {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .dashboard-sidebar_name {
+      font-weight: var(--primary-bold);
+    }
+
+    .dashboard-sidebar_meta {
+      color: var(--text-2);
+    }
+
+    @keyframes dashboard-sidebar-rise {
+      from {
+        opacity: 0.2;
+        translate: calc(var(--space-2) * -1) 0;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

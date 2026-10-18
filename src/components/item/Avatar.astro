@@ -1,0 +1,90 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { AccentColor } from "@/types.ts";
+
+interface Props extends HTMLAttributes<"span"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Initial shown inside the avatar. */
+  initial?: string;
+  /** Fill color. */
+  color?: AccentColor;
+  /** Avatar size. */
+  size?: "small" | "main" | "large" | "xlarge";
+}
+
+const {
+  render = true,
+  initial,
+  color = "blue",
+  size = "main",
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+{
+  render && initial && (
+    <span
+      class:list={[
+        "avatar_wrap",
+        color,
+        size !== "main" && size,
+        className,
+      ]}
+      {...rest}
+    >
+      {initial.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .avatar_wrap {
+      --_size: var(--avatar-main);
+      --_color: var(--colors-vivid-blue);
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--_size);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+      font-size: calc(var(--_size) * 0.4);
+      font-weight: var(--primary-bold);
+      line-height: 1;
+
+      &.small {
+        --_size: var(--avatar-small);
+      }
+      &.large {
+        --_size: var(--avatar-large);
+      }
+      &.xlarge {
+        --_size: var(--avatar-xlarge);
+      }
+      &.red {
+        --_color: var(--colors-vivid-red);
+      }
+      &.orange {
+        --_color: var(--colors-vivid-orange);
+      }
+      &.yellow {
+        --_color: var(--colors-vivid-yellow);
+      }
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+    }
+  }
+</style>

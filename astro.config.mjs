@@ -19,7 +19,7 @@ export default defineConfig({
       options: {
         variants: [
           {
-            weight: 400,
+            weight: "200 800",
             style: "normal",
             src: ["./src/assets/fonts/plus-jakarta-sans.ttf"],
           },
@@ -36,6 +36,20 @@ export default defineConfig({
             weight: 400,
             style: "normal",
             src: ["./src/assets/fonts/milkyway-demo.ttf"],
+          },
+        ],
+      },
+    },
+    {
+      name: "Bricolage Grotesque",
+      cssVariable: "--font-bricolage-grotesque",
+      provider: fontProviders.local(),
+      options: {
+        variants: [
+          {
+            weight: "200 800",
+            style: "normal",
+            src: ["./src/assets/fonts/bricolage-grotesque.ttf"],
           },
         ],
       },

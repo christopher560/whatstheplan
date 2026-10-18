@@ -1,0 +1,101 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <Panel aria-labelledby="week-summary-title">
+      <div class="week-summary_wrap" data-week-summary>
+        <h2 id="week-summary-title" class="week-summary_title text-style-h5">
+          Your week
+        </h2>
+        <div class="week-summary_stats">
+          <div class="week-summary_stat free">
+            <p class="week-summary_number text-style-h3" data-free>0</p>
+            <p class="week-summary_unit text-style-small">hours free</p>
+          </div>
+          <div class="week-summary_stat busy">
+            <p class="week-summary_number text-style-h3" data-busy>0</p>
+            <p class="week-summary_unit text-style-small">hours busy</p>
+          </div>
+        </div>
+        <p class="week-summary_text text-style-small">
+          Mark class, work and plans as busy so friends never have to guess.
+        </p>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { subscribe, totals } from "@/lib/calendar-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-week-summary]").forEach((root) => {
+    const free = root.querySelector<HTMLElement>("[data-free]")!;
+    const busy = root.querySelector<HTMLElement>("[data-busy]")!;
+    subscribe(() => {
+      const hours = totals();
+      free.textContent = String(hours.free);
+      busy.textContent = String(hours.busy);
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .week-summary_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .week-summary_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .week-summary_stats {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    .week-summary_stat {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      text-align: center;
+
+      &.free {
+        background-color: var(--status-free);
+        color: var(--colors-on-vivid);
+      }
+      &.busy {
+        background-color: var(--text);
+        color: var(--background);
+      }
+    }
+
+    .week-summary_number {
+      font-weight: var(--secondary-bold);
+    }
+
+    .week-summary_unit {
+      font-weight: var(--primary-bold);
+    }
+
+    .week-summary_text {
+      color: var(--text-2);
+    }
+  }
+</style>

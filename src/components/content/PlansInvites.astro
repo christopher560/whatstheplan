@@ -1,0 +1,406 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { categoryColor, categoryLabel } from "@/data/plans.ts";
+import { personColor } from "@/data/plans-hub.ts";
+import type { HubInvite } from "@/data/plans-hub.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Every invite; the script shows the ones for the open status tab. */
+  invites?: HubInvite[];
+  /** Where "See details" goes. */
+  inviteHref?: string;
+}
+
+const { render = true, invites = [], inviteHref = "/app/plans" } = Astro.props;
+
+const tabs = [
+  { id: "pending", label: "To answer" },
+  { id: "in", label: "Confirmed" },
+  { id: "out", label: "Declined" },
+];
+---
+
+{
+  render && invites.length > 0 && (
+    <Panel
+      variant="tint"
+      tint="yellow"
+      aria-labelledby="plans-invites-title"
+      class="plans-invites_panel"
+    >
+      <div class="plans-invites_wrap" data-invites>
+        <div class="plans-invites_head">
+          <h2 id="plans-invites-title" class="plans-invites_title text-style-h4">
+            Invites for you
+          </h2>
+          <div class="plans-invites_tabs" role="group" aria-label="Invite status">
+            {tabs.map((tab) => (
+              <Pill element="button" size="small" data-invite-tab={tab.id}>
+                {tab.label}
+                <span slot="after" class="plans-invites_count" data-count>
+                  0
+                </span>
+              </Pill>
+            ))}
+          </div>
+        </div>
+
+        <div class="plans-invites_grid">
+          {invites.map((invite) => (
+            <Panel
+              tag="article"
+              class="plans-invites_card"
+              data-invite={invite.id}
+              data-category={invite.category}
+            >
+              <div class="plans-invites_body">
+                <div class="plans-invites_top">
+                  <Avatar initial={invite.from} color={personColor(invite.from)} size="small" />
+                  <p class="plans-invites_from text-style-small">{invite.from} invited you</p>
+                  <Pill size="tiny" variant="filled" color={categoryColor[invite.category]}>
+                    {categoryLabel[invite.category]}
+                  </Pill>
+                </div>
+                <h3 class="plans-invites_name text-style-h4">{invite.title}</h3>
+                <p class="text-style-small">
+                  {invite.when}
+                  <br />
+                  {invite.place} · {invite.cost}
+                </p>
+
+                <div class="plans-invites_block" data-block="pending">
+                  <p class="plans-invites_who text-style-small">
+                    {invite.who}.{invite.due && ` ${invite.due}`}
+                  </p>
+                  <div class="plans-invites_buttons">
+                    <ActionButton color="ink" data-answer="in">
+                      I'm in
+                    </ActionButton>
+                    <ActionButton color="white" data-answer="out">
+                      Can't make it
+                    </ActionButton>
+                  </div>
+                </div>
+
+                <div class="plans-invites_block" data-block="in" hidden>
+                  <div class="plans-invites_status">
+                    <span class="plans-invites_dot in">
+                      <PathIcon d="M5 12l5 5 9-10" variant="small" />
+                    </span>
+                    <span class="text-style-small">You're in. On your calendar.</span>
+                  </div>
+                  <ActionButton color="white" size="small" data-answer="out">
+                    Change to can't make it
+                  </ActionButton>
+                </div>
+
+                <div class="plans-invites_block" data-block="out" hidden>
+                  <div class="plans-invites_status">
+                    <span class="plans-invites_dot out">
+                      <PathIcon d="M6 6l12 12M18 6L6 18" variant="small" />
+                    </span>
+                    <span class="text-style-small">You said no. {invite.from} knows.</span>
+                  </div>
+                  <ActionButton color="white" size="small" data-answer="in">
+                    Change to I'm in
+                  </ActionButton>
+                </div>
+
+                <a class="plans-invites_link text-style-small" href={inviteHref}>
+                  See details
+                </a>
+              </div>
+            </Panel>
+          ))}
+        </div>
+
+        <p class="plans-invites_empty text-style-main" hidden data-empty />
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import type { HubInvite, InviteReply } from "@/data/plans-hub.ts";
+  import {
+    answer,
+    get,
+    getHub,
+    matchesCategory,
+    replyOf,
+    subscribe,
+    update,
+  } from "@/lib/plans-store.ts";
+  import type { InviteTab } from "@/lib/plans-store.ts";
+
+  const messages: Record<InviteTab, string> = {
+    pending: "No invites waiting on you.",
+    in: "No confirmed invites for this filter.",
+    out: "No declined invites for this filter.",
+  };
+
+  /** The card folds into an envelope that flies to its new tab. */
+  const mail = (root: HTMLElement, card: HTMLElement, to: InviteReply, done: () => void) => {
+    const chip = root.querySelector<HTMLElement>(`[data-invite-tab="${to}"]`);
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!chip || !card.animate || calm) return done();
+
+    const a = card.getBoundingClientRect();
+    const b = chip.getBoundingClientRect();
+    const size = 48;
+    const x0 = a.left + a.width / 2 - size / 2;
+    const y0 = a.top + a.height / 2 - size / 2;
+    const dx = b.left + b.width / 2 - size / 2 - x0;
+    const dy = b.top + b.height / 2 - size / 2 - y0;
+
+    const envelope = document.createElement("div");
+    envelope.setAttribute("aria-hidden", "true");
+    envelope.style.cssText = `position:fixed;z-index:9999;pointer-events:none;width:${size}px;height:${size}px;left:${x0}px;top:${y0}px;`;
+    const fill = to === "in" ? "var(--status-free)" : "var(--background-muted)";
+    envelope.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 48 48"><rect x="4" y="10" width="40" height="28" rx="6" style="fill:${fill};stroke:var(--text)" stroke-width="2.5"/><path d="M6 14l18 13 18-13" fill="none" style="stroke:var(--text)" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+    document.body.appendChild(envelope);
+
+    const fold = card.animate(
+      [
+        { opacity: 1, transform: "scale(1)" },
+        { opacity: 0, transform: "scale(.5)" },
+      ],
+      { duration: 280, easing: "ease-in", fill: "forwards" },
+    );
+    const fly = envelope.animate(
+      [
+        { transform: "translate(0,0) scale(.2) rotate(0deg)", opacity: 0 },
+        { transform: "translate(0,-18px) scale(1.15) rotate(-8deg)", opacity: 1, offset: 0.25 },
+        {
+          transform: `translate(${dx * 0.6}px,${dy * 0.6 - 60}px) scale(.9) rotate(10deg)`,
+          opacity: 1,
+          offset: 0.65,
+        },
+        { transform: `translate(${dx}px,${dy}px) scale(.35) rotate(0deg)`, opacity: 0.9 },
+      ],
+      { duration: 820, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" },
+    );
+    fly.onfinish = () => {
+      envelope.remove();
+      done();
+      setTimeout(() => fold.cancel(), 60);
+      chip.animate([{ scale: 1 }, { scale: 1.2 }, { scale: 0.96 }, { scale: 1 }], {
+        duration: 420,
+        easing: "ease-out",
+      });
+    };
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-invites]").forEach((root) => {
+    const panel = root.closest<HTMLElement>(".plans-invites_panel")!;
+    const pills = root.querySelectorAll<HTMLElement>("[data-invite-tab]");
+    const cards = [...root.querySelectorAll<HTMLElement>("[data-invite]")];
+    const empty = root.querySelector<HTMLElement>("[data-empty]")!;
+    const invites = new Map<string, HubInvite>(getHub().invites.map((i) => [i.id, i]));
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const pill = target.closest<HTMLElement>("[data-invite-tab]");
+      if (pill) return update({ inviteTab: pill.dataset.inviteTab as InviteTab });
+
+      const button = target.closest<HTMLElement>("[data-answer]");
+      const card = button?.closest<HTMLElement>("[data-invite]");
+      if (!button || !card) return;
+      mail(root, card, button.dataset.answer as InviteReply, () =>
+        answer(card.dataset.invite!, button.dataset.answer as InviteReply),
+      );
+    });
+
+    subscribe(() => {
+      const s = get();
+      panel.hidden = s.tab !== "friends";
+
+      const counts: Record<InviteTab, number> = { pending: 0, in: 0, out: 0 };
+      let shown = 0;
+      cards.forEach((card) => {
+        const invite = invites.get(card.dataset.invite!)!;
+        const state = replyOf(invite);
+        const inFilter = matchesCategory(invite.category);
+        if (inFilter) counts[state] += 1;
+
+        const visible = inFilter && state === s.inviteTab;
+        card.hidden = !visible;
+        card.dataset.state = state;
+        card.classList.toggle("green", state === "in");
+        card.classList.toggle("dashed", state === "out");
+        card
+          .querySelectorAll<HTMLElement>("[data-block]")
+          .forEach((block) => (block.hidden = block.dataset.block !== state));
+        if (visible) shown += 1;
+      });
+
+      pills.forEach((pill) => {
+        const id = pill.dataset.inviteTab as InviteTab;
+        pill.setAttribute("aria-pressed", String(id === s.inviteTab));
+        pill.querySelector<HTMLElement>("[data-count]")!.textContent = String(counts[id]);
+      });
+      empty.hidden = shown > 0;
+      empty.textContent = messages[s.inviteTab];
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .plans-invites_panel[hidden] {
+      display: none;
+    }
+
+    .plans-invites_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    .plans-invites_head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .plans-invites_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-invites_tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .plans-invites_count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--space-5);
+      height: var(--space-5);
+      padding-inline: var(--space-1);
+      border-radius: var(--radius-round);
+      background-color: var(--background);
+      color: var(--text);
+      font-size: var(--text-tiny);
+      line-height: 1;
+
+      .pill_wrap[aria-pressed="true"] & {
+        background-color: var(--colors-vivid-yellow);
+        color: var(--colors-on-vivid);
+      }
+    }
+
+    .plans-invites_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-width-main)), 1fr));
+      gap: var(--space-3);
+    }
+
+    .plans-invites_card {
+      &[data-state="out"] {
+        --_surface: var(--background);
+      }
+    }
+
+    .plans-invites_body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plans-invites_top {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .plans-invites_from {
+      flex: 1;
+      min-width: 0;
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-invites_name {
+      font-weight: var(--secondary-bold);
+    }
+
+    .plans-invites_block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+
+    .plans-invites_who {
+      color: var(--text-2);
+    }
+
+    .plans-invites_buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      width: 100%;
+
+      & > * {
+        flex: 1 1 6.5rem;
+      }
+    }
+
+    .plans-invites_status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .plans-invites_dot {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--space-5);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      color: var(--colors-on-vivid);
+
+      &.in {
+        background-color: var(--status-free);
+      }
+      &.out {
+        background-color: var(--background-muted);
+      }
+    }
+
+    .plans-invites_link {
+      display: inline-flex;
+      align-items: center;
+      align-self: flex-start;
+      min-height: var(--control-height-tiny);
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
+    .plans-invites_empty {
+      padding: var(--space-4);
+      border: var(--border-width-medium) dashed var(--border);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+  }
+</style>
