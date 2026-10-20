@@ -11,6 +11,9 @@ import FreeTonightCard from "@/components/content/FreeTonightCard.astro";
 import OverlapCard from "@/components/content/OverlapCard.astro";
 import { dashboardRepo } from "@/lib/dashboard-repo.ts";
 
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 const { user, freeNow, plans, invites, budget, tonight, overlap } =
   await dashboardRepo.getHome();
 ---

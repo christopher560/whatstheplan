@@ -11,6 +11,9 @@ import PlansGoing from "@/components/content/PlansGoing.astro";
 import PlansGroups from "@/components/content/PlansGroups.astro";
 import { plansRepo } from "@/lib/plans-repo.ts";
 
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 const hub = await plansRepo.getHub();
 ---
 

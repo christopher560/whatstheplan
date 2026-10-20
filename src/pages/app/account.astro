@@ -4,8 +4,12 @@ import DashboardSection from "@/components/wrapper/DashboardSection.astro";
 import AccountProfile from "@/components/content/AccountProfile.astro";
 import PasswordCard from "@/components/content/PasswordCard.astro";
 import DeleteAccountCard from "@/components/content/DeleteAccountCard.astro";
+import LogOutButton from "@/components/item/LogOutButton.astro";
 import { accountRepo } from "@/lib/account-repo.ts";
 import { onboardingRepo } from "@/lib/onboarding-repo.ts";
+
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
 
 const [profile, areas] = await Promise.all([
   accountRepo.getProfile(),
@@ -24,5 +28,6 @@ const [profile, areas] = await Promise.all([
     <AccountProfile profile={profile} areas={areas} />
     <PasswordCard />
     <DeleteAccountCard name={profile.first_name} />
+    <LogOutButton size="main" class="account_logout" />
   </DashboardSection>
 </DashboardLayout>

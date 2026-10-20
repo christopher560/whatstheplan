@@ -1,3 +1,4 @@
+import { actions } from "astro:actions";
 import * as mock from "@/data/onboarding.ts";
 import type { Area } from "@/data/onboarding.ts";
 
@@ -60,6 +61,15 @@ const mockRepo: OnboardingRepo = {
 
 export const onboardingRepo: OnboardingRepo = mockRepo;
 
-/** The browser calls this; swap its body for the action call later. */
-export const saveProfile = (save: ProfileSave) =>
-  onboardingRepo.saveProfile(save);
+/**
+ * The browser calls this after every step. Only how far setup got is stored for
+ * now (`profiles.onboarding_step` and `onboarded`), through an Astro Action. The
+ * answers themselves are stored in the next round.
+ */
+export const saveProfile = async (save: ProfileSave) => {
+  const { error } = await actions.onboarding.saveProgress({
+    onboarding_step: save.onboarding_step,
+    onboarded: save.onboarded,
+  });
+  if (error) throw error;
+};

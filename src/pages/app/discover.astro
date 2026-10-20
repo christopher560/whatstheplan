@@ -9,6 +9,9 @@ import DiscoverKnow from "@/components/content/DiscoverKnow.astro";
 import DiscoverSafety from "@/components/content/DiscoverSafety.astro";
 import { discoverRepo } from "@/lib/discover-repo.ts";
 
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 const data = await discoverRepo.getDiscover();
 ---
 

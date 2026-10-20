@@ -15,10 +15,9 @@ import GroupToast from "@/components/content/GroupToast.astro";
 import { groupRepo } from "@/lib/group-repo.ts";
 import { viewer } from "@/data/dashboard.ts";
 
-export async function getStaticPaths() {
-  const ids = await groupRepo.listGroupIds();
-  return ids.map((id) => ({ params: { id } }));
-}
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 
 const { id } = Astro.params;
 const group = await groupRepo.getGroup(id!);

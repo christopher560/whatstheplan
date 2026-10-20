@@ -9,6 +9,9 @@ import FriendRequests from "@/components/content/FriendRequests.astro";
 import FriendList from "@/components/content/FriendList.astro";
 import { friendsRepo } from "@/lib/friends-repo.ts";
 
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 const data = await friendsRepo.getFriends();
 ---
 

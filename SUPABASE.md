@@ -395,25 +395,58 @@ Notes:
 - Groups without a hand-written sample are derived from the Discover data, so
   every Discover group links to a working page.
 
-## Sign up and log in (`/signup`, `/login`)
+## Sign up and log in (`/signup`, `/login`, `/reset-password`) - built
 
-Two pages sharing one `AuthForm` and one side panel, matching the artifact's Auth
-design. The Sign up and Log in tabs are links between the two pages.
-`src/lib/auth-repo.ts` is the seam:
+Auth is live against the Supabase project `whatstheplan`
+(`pdipxygigtownmishvwl`, us-east-2). The pages match the artifact's Auth design
+and the Sign up and Log in tabs are links between two separate pages.
 
-| Method | Supabase |
+| Piece | Where |
 | --- | --- |
-| `signUp({ email, password, next })` | `auth.signUp`; new people go to `/app/onboarding`. If email confirmation is on, return `{ ok: true, checkEmail: true }` and the page shows "Check your email" |
-| `logIn({ email, password, next })` | `auth.signInWithPassword`; go to `next` or `/app/dashboard`, or `/app/onboarding` when `profiles.onboarded` is false |
-| `requestPasswordReset({ email })` | `auth.resetPasswordForEmail`; always answer ok so the page never reveals whether an email has an account |
-| `signInWithGoogle({ mode, next })` | `auth.signInWithOAuth({ provider: "google" })`; needs a Google OAuth client and a `/auth/callback` route that exchanges the code for a session |
+| Env | `.env` (not committed) holds `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY`; `.env.example` shows the shape. Declared in `astro.config.mjs` (`env.schema`) and read with `astro:env/client`. Set the same two on Vercel. |
+| Hosting | `@astrojs/vercel`. Pages are static unless they say `export const prerender = false`; every `/app/*` page, `/login`, `/signup` and `/reset-password` do. `/p/[slug]` and the marketing pages stay static. |
+| Request client | `src/lib/supabase.ts` builds a `@supabase/ssr` client from the request's cookies. |
+| Middleware | `src/middleware.ts` checks the session with `auth.getUser()` on every non-prerendered request and puts `supabase`, `user` and `onboarded` on `Astro.locals`. Signed out on `/app/*` goes to `/login?next=...`; signed in on `/login` or `/signup` goes to the app; signed in but not onboarded goes to `/app/onboarding`. Session pages send `Cache-Control: private, no-store`. |
+| Actions | `src/actions/index.ts`: `auth.signUp`, `auth.logIn`, `auth.requestPasswordReset`, `auth.updatePassword`, `auth.logOut`, `onboarding.saveProgress`. Expected problems come back as `{ ok: false, error }` with friendly text. |
+| Client wrappers | `src/lib/auth-repo.ts` and `saveProfile` in `src/lib/onboarding-repo.ts` call the actions. No password or token is handled by page scripts. |
+| Email links | `src/pages/auth/callback.ts` swaps the one-time `code` for a session cookie and opens `next` (only same-site paths, see `src/utils/safe-next.ts`). A bad link goes to `/login?error=link`. |
+| Table | `public.profiles` (`id` = `auth.users.id`, `onboarded`, `onboarding_step`, timestamps). A trigger creates the row on sign up. RLS: owners read and update their own row; `authenticated` may update only `onboarded` and `onboarding_step`. Migrations: `create_profiles`, `grant_profiles_to_authenticated`. |
+
+Behaviour:
+- Email confirmation is on. Sign up shows "Check your email"; the link goes to
+  `/auth/callback?next=/app/onboarding`. An address that already has an account
+  looks the same, so nobody can probe for emails.
+- Log in sends people who have not finished onboarding to `/app/onboarding`,
+  everyone else to `?next=` or the dashboard.
+- Forgot password: `auth.requestPasswordReset` always answers ok. The emailed link
+  signs the person in through the callback and opens `/reset-password`, where
+  `auth.updatePassword` sets the new password.
+- Log out is a button in the sidebar and on the account page.
+- Google sign-in is designed but not connected (the button says it is coming soon).
+
+Still to do in the dashboard (the MCP cannot change these):
+1. Authentication > URL Configuration: Site URL `https://www.whatstheplan.social`
+   (Vercel redirects the bare domain to www, and email links use the address the
+   person is on); add redirect URLs `http://localhost:4321/**`,
+   `https://www.whatstheplan.social/**` and `https://whatstheplan.social/**`.
+   If you would rather have the bare domain as the main address, flip the
+   redirect in Vercel > Domains and change the URLs to match.
+2. Authentication > SMTP: the built-in mailer only sends to your own team's
+   addresses and is heavily rate limited, so sign up fails for other people until
+   a custom SMTP server (Resend) is connected. Customize the email templates there too.
+3. Authentication > Sign In / Providers > Google, once you create a Google OAuth
+   client (redirect URI is shown on that page). Then replace the stub
+   `signInWithGoogle` with `auth.signInWithOAuth({ provider: "google", options: { redirectTo: .../auth/callback } })`.
+4. Authentication > Attack Protection: turn on leaked password protection, and a
+   CAPTCHA before launch.
+5. Done: the two `PUBLIC_SUPABASE_*` variables are set on the Vercel project
+   `whatstheplan` for production, preview and development. They are needed at build
+   time, so set them before pushing the auth code.
 
 Notes:
-- Forgot password is a view inside `/login` (as in the artifact). Choosing a new
-  password after clicking the emailed link needs a `/reset-password` page that
-  is not designed yet.
-- `?next=` is only honored for same-site paths (`safeNext`), so a crafted link
-  cannot send people to another site.
-- The terms and privacy links are placeholders until those pages exist.
-- Magic-link sign-in (discussed earlier) is not in the artifact, so it is left
-  out. It would be `auth.signInWithOtp` behind the same form.
+- The security advisor flags `public.rls_auto_enable()`, a Supabase-provided
+  helper that already existed in the project; it is not part of this app.
+- The terms and privacy links on the sign-up form are placeholders until those
+  pages exist.
+- Magic-link sign-in is not in the artifact, so it is left out (it would be
+  `auth.signInWithOtp` behind the same form).

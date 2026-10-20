@@ -1,11 +1,21 @@
 // @ts-check
-import { defineConfig, fontProviders } from "astro/config";
+import { defineConfig, envField, fontProviders } from "astro/config";
+import vercel from "@astrojs/vercel";
 import sitemap from "@astrojs/sitemap";
 import { SITE_URL } from "./src/consts.ts";
 import { isNoindexRoute } from "./src/utils/seo.ts";
 
 export default defineConfig({
   site: SITE_URL,
+  // Pages are static unless they say `export const prerender = false`. The app
+  // pages do, because they depend on who is signed in.
+  adapter: vercel(),
+  env: {
+    schema: {
+      PUBLIC_SUPABASE_URL: envField.string({ context: "client", access: "public" }),
+      PUBLIC_SUPABASE_PUBLISHABLE_KEY: envField.string({ context: "client", access: "public" }),
+    },
+  },
   integrations: [
     sitemap({
       filter: (page) => !isNoindexRoute(new URL(page).pathname),

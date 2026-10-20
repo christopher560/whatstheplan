@@ -8,12 +8,15 @@ import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
 interface Props {
   /** Set to `false` to omit the component. */
   render?: boolean;
-  /** Which form this is. Each has its own page. */
-  mode?: "login" | "signup";
+  /** Which form this is. Sign up and log in each have their own page; reset is for the emailed link. */
+  mode?: "login" | "signup" | "reset";
 }
 
 const { render = true, mode = "login" } = Astro.props;
 const signup = mode === "signup";
+const reset = mode === "reset";
+/** Sign up and reset both choose a new password, so both show the strength meter. */
+const choosing = signup || reset;
 
 const tabs = [
   { id: "signup", label: "Sign up", href: "/signup" },
@@ -28,44 +31,52 @@ const tabs = [
         <Icon src={brand_full_logo_cropped} variant="full-width" />
       </a>
 
-      <nav class="auth-form_tabs" aria-label="Sign up or log in">
-        {tabs.map((tab) => (
-          <a
-            class="auth-form_tab text-style-small"
-            href={tab.href}
-            aria-current={tab.id === mode ? "page" : undefined}
-          >
-            {tab.label}
-          </a>
-        ))}
-      </nav>
+      {!reset && (
+        <nav class="auth-form_tabs" aria-label="Sign up or log in">
+          {tabs.map((tab) => (
+            <a
+              class="auth-form_tab text-style-small"
+              href={tab.href}
+              aria-current={tab.id === mode ? "page" : undefined}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </nav>
+      )}
+
+      <p class="auth-form_error text-style-small" role="alert" hidden data-banner />
 
       <!-- Form -->
       <div class="auth-form_view" data-view="form">
         <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>
-          {signup ? "Create account" : "Welcome back"}
+          {reset ? "Choose a new password" : signup ? "Create account" : "Welcome back"}
         </h1>
 
         <form class="auth-form_fields" method="post" novalidate data-form>
-          <div class="field auth-form_field">
-            <label class="field-label text-style-small" for="auth-email">Email</label>
-            <input
-              id="auth-email"
-              class="field-control text-style-main"
-              type="email"
-              name="email"
-              inputmode="email"
-              autocomplete="email"
-              placeholder="you@school.edu"
-              data-email
-            />
-            <p class="auth-form_error text-style-small" hidden data-error="email" />
-          </div>
+          {!reset && (
+            <div class="field auth-form_field">
+              <label class="field-label text-style-small" for="auth-email">Email</label>
+              <input
+                id="auth-email"
+                class="field-control text-style-main"
+                type="email"
+                name="email"
+                inputmode="email"
+                autocomplete="email"
+                placeholder="you@school.edu"
+                data-email
+              />
+              <p class="auth-form_error text-style-small" hidden data-error="email" />
+            </div>
+          )}
 
           <div class="field auth-form_field">
             <div class="auth-form_label_row">
-              <label class="field-label text-style-small" for="auth-password">Password</label>
-              {!signup && (
+              <label class="field-label text-style-small" for="auth-password">
+                {reset ? "New password" : "Password"}
+              </label>
+              {mode === "login" && (
                 <button class="auth-form_text_button text-style-small" type="button" data-forgot>
                   Forgot it?
                 </button>
@@ -77,8 +88,8 @@ const tabs = [
                 class="field-control text-style-main"
                 type="password"
                 name="password"
-                autocomplete={signup ? "new-password" : "current-password"}
-                placeholder={signup ? "8+ characters" : "Your password"}
+                autocomplete={choosing ? "new-password" : "current-password"}
+                placeholder={choosing ? "8+ characters" : "Your password"}
                 data-password
               />
               <button
@@ -92,7 +103,7 @@ const tabs = [
               </button>
             </div>
             <p class="auth-form_error text-style-small" hidden data-error="password" />
-            {signup && (
+            {choosing && (
               <div class="auth-form_strength">
                 <div class="auth-form_meter" aria-hidden="true" data-meter data-level="0">
                   <span />
@@ -124,12 +135,15 @@ const tabs = [
           )}
 
           <ActionButton type="submit" size="large" raised data-submit>
-            {signup ? "Create account" : "Log in"}
+            {reset ? "Update password" : signup ? "Create account" : "Log in"}
           </ActionButton>
         </form>
 
-        <p class="auth-form_divider text-style-small" aria-hidden="true">or</p>
+        {!reset && (
+          <p class="auth-form_divider text-style-small" aria-hidden="true">or</p>
+        )}
 
+        {!reset && (
         <ActionButton color="white" size="large" data-google>
           <svg slot="before" class="auth-form_google" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
@@ -139,6 +153,7 @@ const tabs = [
           </svg>
           Continue with Google
         </ActionButton>
+        )}
       </div>
 
       <!-- Reset password -->
@@ -181,8 +196,8 @@ const tabs = [
         </span>
         <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>Check your email</h1>
         <p class="auth-form_lead text-style-main" data-sent-text />
-        <ActionButton size="large" raised data-back>
-          Back to log in
+        <ActionButton size="large" raised data-back data-sent-back>
+          {signup ? "Use a different email" : "Back to log in"}
         </ActionButton>
       </div>
 
@@ -202,7 +217,14 @@ const tabs = [
 }
 
 <script>
-  import { logIn, requestPasswordReset, safeNext, signInWithGoogle, signUp } from "@/lib/auth-repo.ts";
+  import {
+    logIn,
+    requestPasswordReset,
+    safeNext,
+    signInWithGoogle,
+    signUp,
+    updatePassword,
+  } from "@/lib/auth-repo.ts";
   import type { AuthResult } from "@/lib/auth-repo.ts";
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -220,26 +242,37 @@ const tabs = [
   };
 
   document.querySelectorAll<HTMLElement>("[data-auth]").forEach((root) => {
-    const mode = root.dataset.auth as "login" | "signup";
+    const mode = root.dataset.auth as "login" | "signup" | "reset";
     const signup = mode === "signup";
+    const reset = mode === "reset";
+    const choosing = signup || reset;
     const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
     const views = root.querySelectorAll<HTMLElement>("[data-view]");
     const form = $<HTMLFormElement>("[data-form]");
-    const email = $<HTMLInputElement>("[data-email]");
+    const email = root.querySelector<HTMLInputElement>("[data-email]");
     const password = $<HTMLInputElement>("[data-password]");
     const terms = root.querySelector<HTMLInputElement>("[data-terms]");
     const show = $<HTMLButtonElement>("[data-show]");
     const submit = $<HTMLButtonElement>("[data-submit]");
-    const google = $<HTMLButtonElement>("[data-google]");
+    const google = root.querySelector<HTMLButtonElement>("[data-google]");
+    const banner = $("[data-banner]");
     const meter = root.querySelector<HTMLElement>("[data-meter]");
     const strengthText = root.querySelector<HTMLElement>("[data-strength]");
-    const resetForm = root.querySelector<HTMLFormElement>("[data-forgot-form]")!;
+    const resetForm = $<HTMLFormElement>("[data-forgot-form]");
     const resetEmail = $<HTMLInputElement>("[data-reset-email]");
     const resetSubmit = $<HTMLButtonElement>("[data-reset-submit]");
     const submitLabel = submit.querySelector<HTMLElement>(".action-button_text")!;
     const resetLabel = resetSubmit.querySelector<HTMLElement>(".action-button_text")!;
     const idle = { submit: submitLabel.textContent ?? "", reset: resetLabel.textContent ?? "" };
-    const next = safeNext(new URLSearchParams(location.search).get("next"), "");
+    const params = new URLSearchParams(location.search);
+    const next = safeNext(params.get("next"), "");
+
+    /* A link from an email that could not be used lands here with ?error=link. */
+    if (params.get("error") === "link") {
+      banner.textContent =
+        "That link didn't finish signing you in. If you already confirmed your email, log in below.";
+      banner.hidden = false;
+    }
 
     const touched = new Set<string>();
     let tried = false;
@@ -260,14 +293,14 @@ const tabs = [
     const emailMessage = (value: string) =>
       emailPattern.test(value.trim()) ? null : value.trim() === "" ? "Add your email." : "That email looks off.";
     const passwordMessage = () =>
-      signup
+      choosing
         ? password.value.length >= 8 ? null : "Use at least 8 characters."
         : password.value.length >= 1 ? null : "Enter your password.";
 
     /** Messages appear after a field is left or a submit was tried, never while typing the first time. */
     const check = () => {
       const visible = (key: string) => tried || touched.has(key);
-      flag("email", visible("email") ? emailMessage(email.value) : null, email);
+      if (email) flag("email", visible("email") ? emailMessage(email.value) : null, email);
       flag("password", visible("password") ? passwordMessage() : null, password);
       if (terms) {
         flag("terms", tried && !terms.checked ? "Please agree to continue." : null);
@@ -276,7 +309,7 @@ const tabs = [
     };
 
     const valid = () =>
-      !emailMessage(email.value) && !passwordMessage() && (!terms || terms.checked);
+      (!email || !emailMessage(email.value)) && !passwordMessage() && (!terms || terms.checked);
 
     const shake = () => {
       form.classList.remove("shake");
@@ -286,8 +319,10 @@ const tabs = [
 
     const busy = (on: boolean) => {
       submit.disabled = on;
-      google.disabled = on;
-      submitLabel.textContent = on ? (signup ? "Creating…" : "Logging in…") : idle.submit;
+      if (google) google.disabled = on;
+      submitLabel.textContent = on
+        ? reset ? "Updating…" : signup ? "Creating…" : "Logging in…"
+        : idle.submit;
     };
 
     const finish = (result: AuthResult) => {
@@ -298,24 +333,28 @@ const tabs = [
       }
       if ("checkEmail" in result) {
         $("[data-sent-text]").textContent =
-          `We sent a confirmation link to ${email.value.trim()}. Open it to finish creating your account.`;
+          `We sent a confirmation link to ${email?.value.trim()}. Open it to finish creating your account.`;
         return open("sent");
       }
-      $("[data-done-title]").textContent = signup ? "You are in!" : "Welcome back!";
-      $("[data-done-text]").textContent = signup
-        ? "Two quick questions and you are set."
-        : "Your plans and friends are right where you left them.";
+      $("[data-done-title]").textContent = reset
+        ? "Password updated"
+        : signup ? "You are in!" : "Welcome back!";
+      $("[data-done-text]").textContent = reset
+        ? "You are signed in with your new password."
+        : signup
+          ? "Two quick questions and you are set."
+          : "Your plans and friends are right where you left them.";
       const link = $<HTMLAnchorElement>("[data-done-link]");
       link.href = result.next;
-      link.querySelector<HTMLElement>(".action-button_text")!.textContent = signup
+      link.querySelector<HTMLElement>(".action-button_text")!.textContent = signup && !reset
         ? "Let's set you up"
         : "Go to my plans";
       open("done");
     };
 
-    email.addEventListener("blur", () => (touched.add("email"), check()));
+    email?.addEventListener("blur", () => (touched.add("email"), check()));
     password.addEventListener("blur", () => (touched.add("password"), check()));
-    email.addEventListener("input", check);
+    email?.addEventListener("input", check);
     terms?.addEventListener("change", check);
     password.addEventListener("input", () => {
       check();
@@ -339,20 +378,21 @@ const tabs = [
       check();
       if (!valid()) {
         shake();
-        return (emailMessage(email.value) ? email : password).focus();
+        return (email && emailMessage(email.value) ? email : password).focus();
       }
       busy(true);
-      const input = { email: email.value.trim(), password: password.value, next: next || undefined };
+      if (reset) return finish(await updatePassword({ password: password.value }));
+      const input = { email: email!.value.trim(), password: password.value, next: next || undefined };
       finish(signup ? await signUp(input) : await logIn(input));
     });
 
-    google.addEventListener("click", async () => {
+    google?.addEventListener("click", async () => {
       busy(true);
       finish(await signInWithGoogle({ mode, next: next || undefined }));
     });
 
     root.querySelector("[data-forgot]")?.addEventListener("click", () => {
-      resetEmail.value = email.value;
+      resetEmail.value = email?.value ?? "";
       open("forgot");
       resetEmail.focus();
     });

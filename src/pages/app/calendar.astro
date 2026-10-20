@@ -12,6 +12,9 @@ import ShareCard from "@/components/content/ShareCard.astro";
 import ImportCard from "@/components/content/ImportCard.astro";
 import { calendarRepo } from "@/lib/calendar-repo.ts";
 
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 const calendar = await calendarRepo.getCalendar();
 ---
 

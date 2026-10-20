@@ -4,6 +4,7 @@ import type { ShellData } from "@/lib/dashboard-repo.ts";
 import Icon from "@/components/media/Icon.astro";
 import NavIcon from "@/components/media/NavIcon.astro";
 import Avatar from "@/components/item/Avatar.astro";
+import LogOutButton from "@/components/item/LogOutButton.astro";
 import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
 
 interface Props extends HTMLAttributes<"aside"> {
@@ -66,20 +67,23 @@ const isActive = (href: string) =>
         </nav>
       </div>
 
-      <a
-        class="dashboard-sidebar_profile"
-        href="/app/account"
-        aria-label="Your profile"
-        aria-current={isActive("/app/account") ? "page" : undefined}
-      >
-        <Avatar initial={shell.viewer.name} color={shell.viewer.color} size="large" />
-        <div class="dashboard-sidebar_who">
-          <p class="dashboard-sidebar_name text-style-main">{shell.viewer.name}</p>
-          <p class="dashboard-sidebar_meta text-style-small">
-            {shell.viewer.friendCount} {shell.viewer.friendCount === 1 ? "friend" : "friends"}
-          </p>
-        </div>
-      </a>
+      <div class="dashboard-sidebar_bottom">
+        <a
+          class="dashboard-sidebar_profile"
+          href="/app/account"
+          aria-label="Your profile"
+          aria-current={isActive("/app/account") ? "page" : undefined}
+        >
+          <Avatar initial={shell.viewer.name} color={shell.viewer.color} size="large" />
+          <div class="dashboard-sidebar_who">
+            <p class="dashboard-sidebar_name text-style-main">{shell.viewer.name}</p>
+            <p class="dashboard-sidebar_meta text-style-small">
+              {shell.viewer.friendCount} {shell.viewer.friendCount === 1 ? "friend" : "friends"}
+            </p>
+          </div>
+        </a>
+        <LogOutButton class="dashboard-sidebar_logout" />
+      </div>
     </aside>
   )
 }
@@ -117,6 +121,17 @@ const isActive = (href: string) =>
       @media (width < 48rem) {
         display: none;
       }
+    }
+
+    .dashboard-sidebar_bottom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .dashboard-sidebar_logout {
+      align-self: flex-start;
+      margin-inline-start: var(--space-2);
     }
 
     .dashboard-sidebar_top {

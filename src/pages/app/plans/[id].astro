@@ -13,10 +13,9 @@ import PlanBudget from "@/components/content/PlanBudget.astro";
 import PlanActivity from "@/components/content/PlanActivity.astro";
 import { planRepo } from "@/lib/plan-repo.ts";
 
-export async function getStaticPaths() {
-  const ids = await planRepo.listPlanIds();
-  return ids.map((id) => ({ params: { id } }));
-}
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 
 const { id } = Astro.params;
 const plan = await planRepo.getPlan(id!);

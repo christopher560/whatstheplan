@@ -1,9 +1,11 @@
+import { actions } from "astro:actions";
+
+export { safeNext } from "@/utils/safe-next.ts";
+
 /**
- * What the sign-up and log-in pages send and get back. Backed by a stand-in
- * today, so any email and password gets through. The Supabase version calls
- * `auth.signUp`, `auth.signInWithPassword`, `auth.resetPasswordForEmail` and
- * `auth.signInWithOAuth` from Astro Actions, sets the session cookie on the
- * server, and returns where to go next (see SUPABASE.md).
+ * What the auth pages send and get back. The calls go to Astro Actions
+ * (`src/actions/index.ts`), which talk to Supabase on the server and set the
+ * session cookie, so no password or token is ever handled by page scripts.
  */
 export type AuthResult =
   /** Signed in. `next` is the page to open. */
@@ -12,58 +14,41 @@ export type AuthResult =
   | { ok: true; checkEmail: true }
   | { ok: false; error: string };
 
-export type AuthMode = "login" | "signup";
+export type AuthMode = "login" | "signup" | "reset";
 
 export interface Credentials {
   email: string;
   password: string;
 }
 
-export interface AuthRepo {
-  /** Creates the account. New people go to onboarding next. */
-  signUp(input: Credentials & { next?: string }): Promise<AuthResult>;
-  /** Signs in with a password. People who finished onboarding go to the app. */
-  logIn(input: Credentials & { next?: string }): Promise<AuthResult>;
-  /** Emails a reset link. The answer never says whether the email has an account. */
-  requestPasswordReset(input: { email: string }): Promise<{ ok: true } | { ok: false; error: string }>;
-  /** Continues with Google, for both sign up and log in. */
-  signInWithGoogle(input: { mode: AuthMode; next?: string }): Promise<AuthResult>;
-}
+const failed: AuthResult = { ok: false, error: "Something went wrong. Please try again." };
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** An action call returns `{ data, error }`; an error here means the request itself failed. */
+const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | AuthResult =>
+  error || data === undefined ? failed : data;
 
-/** Only same-site paths are allowed, so a crafted `?next=` cannot send people away. */
-export const safeNext = (next: string | null | undefined, fallback: string) =>
-  next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+/** Creates the account. With email confirmation on, the result asks them to check their email. */
+export const signUp = async (input: Credentials & { next?: string }) =>
+  unwrap(await actions.auth.signUp(input)) as AuthResult;
 
-const landing = (mode: AuthMode, next?: string) =>
-  safeNext(next, mode === "signup" ? "/app/onboarding" : "/app/dashboard");
+/** Signs in with a password. People who have not finished onboarding go there first. */
+export const logIn = async (input: Credentials & { next?: string }) =>
+  unwrap(await actions.auth.logIn(input)) as AuthResult;
 
-const mockRepo: AuthRepo = {
-  async signUp({ next }) {
-    await wait(900);
-    return { ok: true, next: landing("signup", next) };
-  },
-  async logIn({ next }) {
-    await wait(900);
-    return { ok: true, next: landing("login", next) };
-  },
-  async requestPasswordReset() {
-    await wait(600);
-    return { ok: true };
-  },
-  async signInWithGoogle({ mode, next }) {
-    await wait(700);
-    return { ok: true, next: landing(mode, next) };
-  },
-};
+/** Emails a reset link. The answer never says whether the email has an account. */
+export const requestPasswordReset = async (input: { email: string }) =>
+  unwrap(await actions.auth.requestPasswordReset(input)) as { ok: true } | { ok: false; error: string };
 
-export const authRepo: AuthRepo = mockRepo;
+/** Sets a new password for the person the reset link signed in. */
+export const updatePassword = async (input: { password: string }) =>
+  unwrap(await actions.auth.updatePassword(input)) as AuthResult;
 
-/** The browser calls these; swap their bodies for Astro Action calls later. */
-export const signUp = (input: Credentials & { next?: string }) => authRepo.signUp(input);
-export const logIn = (input: Credentials & { next?: string }) => authRepo.logIn(input);
-export const requestPasswordReset = (input: { email: string }) =>
-  authRepo.requestPasswordReset(input);
-export const signInWithGoogle = (input: { mode: AuthMode; next?: string }) =>
-  authRepo.signInWithGoogle(input);
+/** Ends the session and returns where to go. */
+export const logOut = async () =>
+  unwrap(await actions.auth.logOut()) as { ok: true; next: string } | { ok: false; error: string };
+
+/** Google sign-in is designed but not connected yet; it needs a Google OAuth client. */
+export const signInWithGoogle = async (_input: { mode: AuthMode; next?: string }): Promise<AuthResult> => ({
+  ok: false,
+  error: "Google sign-in is coming soon. Use your email for now.",
+});

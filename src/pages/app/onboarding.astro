@@ -3,6 +3,9 @@ import OnboardingLayout from "@/layouts/OnboardingLayout.astro";
 import OnboardingFlow from "@/components/content/OnboardingFlow.astro";
 import { onboardingRepo } from "@/lib/onboarding-repo.ts";
 
+/* Depends on who is signed in, so it renders on each request. */
+export const prerender = false;
+
 const areas = await onboardingRepo.getAreas();
 ---
 
