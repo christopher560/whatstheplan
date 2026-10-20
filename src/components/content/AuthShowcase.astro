@@ -1,0 +1,579 @@
+---
+import { showcaseTitle, showcases } from "@/data/auth.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+---
+
+{
+  render && (
+    <aside class="auth-showcase_wrap" aria-label="What you can do" data-showcase>
+      <h2 class="auth-showcase_title text-style-h3">{showcaseTitle}</h2>
+      <div class="auth-showcase_stage" aria-hidden="true" data-stage data-phase="in">
+        <div class="auth-showcase_head">
+          <span class="auth-showcase_label text-style-small" data-label />
+          <span class="auth-showcase_dots" data-dots />
+        </div>
+        <ol class="auth-showcase_steps" data-steps />
+      </div>
+      <script is:inline type="application/json" id="auth-showcase-data" set:html={JSON.stringify(showcases)} />
+    </aside>
+  )
+}
+
+<script>
+  import { gridLevels, showcasePeople, weekdayLetters } from "@/data/auth.ts";
+  import type { Showcase, ShowcaseCard } from "@/data/auth.ts";
+
+  const el = (tag: string, className = "", text = "") => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  };
+
+  /** A small overlapping row of initials on accent colors. */
+  const people = (initials: string) => {
+    const row = el("span", "auth-showcase_people");
+    [...initials].forEach((letter) => {
+      const person = el("span", `auth-showcase_person ${showcasePeople[letter] ?? "yellow"}`, letter);
+      row.append(person);
+    });
+    return row;
+  };
+
+  const note = (text: string) => el("p", "auth-showcase_note text-style-small", text);
+
+  const card = (data: ShowcaseCard): HTMLElement => {
+    const root = el("div", "auth-showcase_inner");
+    switch (data.kind) {
+      case "grid": {
+        const days = el("div", "auth-showcase_grid days");
+        weekdayLetters.forEach((letter) => days.append(el("span", "auth-showcase_day text-style-tiny", letter)));
+        const grid = el("div", "auth-showcase_grid");
+        gridLevels.forEach((level, index) => {
+          const best = index % 7 === data.best[0] && Math.floor(index / 7) === data.best[1];
+          const cell = el("span", "auth-showcase_cell", best ? "✓" : "");
+          cell.dataset.level = String(best ? 4 : level);
+          cell.classList.toggle("best", best);
+          grid.append(cell);
+        });
+        root.append(days, grid, note(data.note));
+        break;
+      }
+      case "link": {
+        const row = el("div", "auth-showcase_row");
+        row.append(people(data.people), note(data.note));
+        root.append(el("p", "auth-showcase_url text-style-small", data.url), row);
+        break;
+      }
+      case "cost": {
+        const amount = el("p", "auth-showcase_big text-style-h4", data.amount);
+        amount.append(el("span", "auth-showcase_unit text-style-small", " each"));
+        const bars = el("div", "auth-showcase_bars");
+        [...data.people].forEach(() => bars.append(el("span")));
+        const side = el("div", "auth-showcase_side");
+        side.append(bars, note(data.note));
+        const row = el("div", "auth-showcase_row");
+        row.append(amount, side);
+        root.append(row);
+        break;
+      }
+      case "plan": {
+        const top = el("div", "auth-showcase_row between");
+        top.append(el("span", "auth-showcase_chip text-style-tiny", data.chip), people(data.people));
+        root.append(top, el("p", "auth-showcase_plan text-style-h4", data.title), el("p", "text-style-small auth-showcase_line", data.line));
+        break;
+      }
+      case "days": {
+        const pills = el("div", "auth-showcase_grid days");
+        weekdayLetters.forEach((letter, index) => {
+          const pill = el("span", "auth-showcase_pill text-style-small", letter);
+          pill.classList.toggle("on", data.on.includes(index));
+          pills.append(pill);
+        });
+        root.append(pills, note(data.note));
+        break;
+      }
+      case "match": {
+        const top = el("div", "auth-showcase_row between");
+        const percent = el("p", "auth-showcase_big text-style-h4", `${data.percent}%`);
+        percent.append(el("span", "auth-showcase_unit text-style-small", " fit"));
+        top.append(percent, people(data.people));
+        const chips = el("div", "auth-showcase_chips");
+        data.chips.forEach((chip) => chips.append(el("span", "auth-showcase_tag text-style-small", chip)));
+        root.append(top, chips);
+        break;
+      }
+      case "group": {
+        const top = el("div", "auth-showcase_row between");
+        top.append(el("p", "auth-showcase_group text-style-main", data.title), people(data.people));
+        const track = el("div", "auth-showcase_track");
+        const fill = el("span", "auth-showcase_fill");
+        fill.style.setProperty("--_value", `${data.percent}%`);
+        track.append(fill);
+        root.append(top, track, note(data.note));
+        break;
+      }
+      case "update": {
+        root.append(el("p", "auth-showcase_eyebrow text-style-tiny", data.heading), el("p", "auth-showcase_update text-style-main", data.line));
+        break;
+      }
+    }
+    return root;
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-showcase]").forEach((root) => {
+    const scenarios = JSON.parse(
+      document.getElementById("auth-showcase-data")?.textContent ?? "[]",
+    ) as Showcase[];
+    const stage = root.querySelector<HTMLElement>("[data-stage]")!;
+    const label = root.querySelector<HTMLElement>("[data-label]")!;
+    const dots = root.querySelector<HTMLElement>("[data-dots]")!;
+    const steps = root.querySelector<HTMLElement>("[data-steps]")!;
+    let index = 0;
+
+    const render = () => {
+      const scenario = scenarios[index];
+      label.textContent = scenario.label;
+      dots.replaceChildren(
+        ...scenarios.map((_, position) => {
+          const dot = el("span", "auth-showcase_dot");
+          dot.classList.toggle("on", position === index);
+          return dot;
+        }),
+      );
+      steps.replaceChildren(
+        ...scenario.steps.map((step, position) => {
+          const last = position === scenario.steps.length - 1;
+          const item = el("li", "auth-showcase_step");
+          item.style.setProperty("--_i", String(position));
+          const number = el("span", "auth-showcase_number text-style-main", last ? "✓" : String(position + 1));
+          number.classList.toggle("last", last);
+          const body = el("div", "auth-showcase_body");
+          const holder = el("div", `auth-showcase_card ${step.tint}`);
+          holder.classList.toggle("last", last);
+          holder.append(card(step.card));
+          body.append(el("p", "auth-showcase_step_label text-style-h5", step.label), holder);
+          item.append(number, body);
+          return item;
+        }),
+      );
+    };
+
+    render();
+
+    /* Fade out, swap the story, fade in. Motion-sensitive visitors keep the first story. */
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setInterval(() => {
+      stage.dataset.phase = "out";
+      setTimeout(() => {
+        index = (index + 1) % scenarios.length;
+        render();
+        stage.dataset.phase = "in";
+      }, 520);
+    }, 7000);
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .auth-showcase_wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+      min-width: 0;
+      padding: var(--space-6) var(--space-5) var(--space-5);
+      border-inline-start: var(--border-width) solid var(--border-subtle);
+      /* The swatch yellow is loud across half a page, so it is softened toward white. */
+      background-color: color-mix(in srgb, var(--colors-secondary-yellow) 55%, var(--background-3));
+      overflow: hidden;
+    }
+
+    .auth-showcase_title {
+      max-width: 30rem;
+      font-weight: var(--secondary-bold);
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .auth-showcase_stage {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      width: 100%;
+      max-width: 27.5rem;
+      transition: opacity 0.5s ease;
+
+      &[data-phase="out"] {
+        opacity: 0;
+      }
+    }
+
+    .auth-showcase_head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .auth-showcase_label {
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+    }
+
+    .auth-showcase_dots {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .auth-showcase_dot {
+      width: var(--space-2);
+      height: var(--space-2);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      transition:
+        width var(--move-duration) var(--ease-out),
+        background-color var(--move-duration) var(--ease-out);
+
+      &.on {
+        width: var(--space-5);
+        background-color: var(--border-strong);
+      }
+    }
+
+    .auth-showcase_steps {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset-inline-start: calc(var(--avatar-main) / 2);
+        inset-block: var(--space-4) var(--space-7);
+        border-inline-start: var(--border-width-thick) dashed var(--border);
+      }
+    }
+
+    .auth-showcase_step {
+      position: relative;
+      display: flex;
+      gap: var(--space-4);
+      animation: auth-showcase-in var(--reveal-duration) var(--ease-out) backwards;
+      animation-delay: calc(var(--_i, 0) * 80ms);
+    }
+
+    .auth-showcase_number {
+      position: relative;
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      align-self: flex-start;
+      justify-content: center;
+      width: var(--avatar-main);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-yellow);
+      color: var(--colors-on-vivid);
+      font-family: var(--secondary-family);
+      font-weight: var(--secondary-bold);
+
+      &.last {
+        background-color: var(--colors-vivid-green);
+      }
+    }
+
+    .auth-showcase_body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .auth-showcase_step_label {
+      display: block;
+      font-weight: var(--secondary-bold);
+    }
+
+    .auth-showcase_card {
+      padding: var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+
+      &.blue {
+        background-color: var(--colors-secondary-blue);
+      }
+      &.orange {
+        background-color: var(--colors-secondary-orange);
+      }
+      &.purple {
+        background-color: var(--colors-secondary-purple);
+      }
+      &.green {
+        background-color: var(--colors-secondary-green);
+      }
+      &.yellow {
+        background-color: color-mix(in srgb, var(--colors-secondary-yellow) 55%, var(--background-3));
+      }
+      &.last {
+        box-shadow: var(--shadow-offset-main);
+      }
+    }
+
+    .auth-showcase_inner {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .auth-showcase_note {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .auth-showcase_grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: var(--space-0);
+
+      &.days {
+        margin-block-end: calc(var(--space-0) * -1);
+      }
+    }
+
+    .auth-showcase_day {
+      display: block;
+      color: var(--text-2);
+      text-align: center;
+    }
+
+    .auth-showcase_cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: var(--space-5);
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: var(--radius-small);
+      background-color: color-mix(in srgb, var(--status-free) calc(var(--_level, 0) * 25%), var(--background));
+      font-weight: var(--primary-bold);
+
+      &[data-level="1"] {
+        --_level: 1;
+      }
+      &[data-level="2"] {
+        --_level: 2;
+      }
+      &[data-level="3"] {
+        --_level: 3;
+      }
+      &[data-level="4"] {
+        --_level: 4;
+      }
+      &.best {
+        border: var(--border-width-thick) solid var(--border-strong);
+      }
+    }
+
+    .auth-showcase_row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+
+      &.between {
+        justify-content: space-between;
+      }
+    }
+
+    .auth-showcase_people {
+      display: inline-flex;
+      flex: none;
+    }
+
+    .auth-showcase_person {
+      --_color: var(--colors-vivid-yellow);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-small);
+      aspect-ratio: 1 / 1;
+      margin-inline-start: calc(var(--space-1) * -1);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+
+      &:first-child {
+        margin-inline-start: 0;
+      }
+      &.red {
+        --_color: var(--colors-vivid-red);
+      }
+      &.blue {
+        --_color: var(--colors-vivid-blue);
+      }
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      &.pink {
+        --_color: var(--colors-vivid-pink);
+      }
+      &.purple {
+        --_color: var(--colors-vivid-purple);
+      }
+    }
+
+    .auth-showcase_url {
+      display: block;
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .auth-showcase_big {
+      display: block;
+      font-weight: var(--secondary-bold);
+      white-space: nowrap;
+    }
+
+    .auth-showcase_unit {
+      display: inline;
+      font-family: var(--primary-family);
+    }
+
+    .auth-showcase_side {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .auth-showcase_bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-0);
+
+      & span {
+        height: var(--space-2);
+        border: var(--border-width-medium) solid var(--border-strong);
+        border-radius: var(--radius-round);
+        background-color: var(--background-3);
+      }
+    }
+
+    .auth-showcase_chip {
+      padding: var(--space-0) var(--space-2);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-green);
+      color: var(--colors-on-vivid);
+      font-weight: var(--primary-bold);
+    }
+
+    .auth-showcase_plan {
+      display: block;
+      font-weight: var(--secondary-bold);
+    }
+
+    .auth-showcase_line {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .auth-showcase_pill {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: var(--control-height-tiny);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+
+      &.on {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--colors-vivid-yellow);
+      }
+    }
+
+    .auth-showcase_chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .auth-showcase_tag {
+      padding: var(--space-0) var(--space-2);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+    }
+
+    .auth-showcase_group {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .auth-showcase_track {
+      height: var(--space-3);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      overflow: hidden;
+    }
+
+    .auth-showcase_fill {
+      display: block;
+      width: var(--_value, 0%);
+      height: 100%;
+      background-color: var(--colors-vivid-green);
+      border-inline-end: var(--border-width-medium) solid var(--border-strong);
+    }
+
+    .auth-showcase_eyebrow {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    .auth-showcase_update {
+      display: block;
+      font-weight: var(--primary-bold);
+    }
+
+    @keyframes auth-showcase-in {
+      from {
+        opacity: 0;
+        translate: 0 0.5rem;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+  }
+</style>

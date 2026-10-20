@@ -1,0 +1,735 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import { SITE_NAME } from "@/consts.ts";
+import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Which form this is. Each has its own page. */
+  mode?: "login" | "signup";
+}
+
+const { render = true, mode = "login" } = Astro.props;
+const signup = mode === "signup";
+
+const tabs = [
+  { id: "signup", label: "Sign up", href: "/signup" },
+  { id: "login", label: "Log in", href: "/login" },
+];
+---
+
+{
+  render && (
+    <div class="auth-form_wrap" data-auth={mode}>
+      <a class="auth-form_brand" href="/" aria-label={SITE_NAME}>
+        <Icon src={brand_full_logo_cropped} variant="full-width" />
+      </a>
+
+      <nav class="auth-form_tabs" aria-label="Sign up or log in">
+        {tabs.map((tab) => (
+          <a
+            class="auth-form_tab text-style-small"
+            href={tab.href}
+            aria-current={tab.id === mode ? "page" : undefined}
+          >
+            {tab.label}
+          </a>
+        ))}
+      </nav>
+
+      <!-- Form -->
+      <div class="auth-form_view" data-view="form">
+        <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>
+          {signup ? "Create account" : "Welcome back"}
+        </h1>
+
+        <form class="auth-form_fields" method="post" novalidate data-form>
+          <div class="field auth-form_field">
+            <label class="field-label text-style-small" for="auth-email">Email</label>
+            <input
+              id="auth-email"
+              class="field-control text-style-main"
+              type="email"
+              name="email"
+              inputmode="email"
+              autocomplete="email"
+              placeholder="you@school.edu"
+              data-email
+            />
+            <p class="auth-form_error text-style-small" hidden data-error="email" />
+          </div>
+
+          <div class="field auth-form_field">
+            <div class="auth-form_label_row">
+              <label class="field-label text-style-small" for="auth-password">Password</label>
+              {!signup && (
+                <button class="auth-form_text_button text-style-small" type="button" data-forgot>
+                  Forgot it?
+                </button>
+              )}
+            </div>
+            <div class="auth-form_password">
+              <input
+                id="auth-password"
+                class="field-control text-style-main"
+                type="password"
+                name="password"
+                autocomplete={signup ? "new-password" : "current-password"}
+                placeholder={signup ? "8+ characters" : "Your password"}
+                data-password
+              />
+              <button
+                class="auth-form_show text-style-small"
+                type="button"
+                aria-label="Show password"
+                aria-pressed="false"
+                data-show
+              >
+                Show
+              </button>
+            </div>
+            <p class="auth-form_error text-style-small" hidden data-error="password" />
+            {signup && (
+              <div class="auth-form_strength">
+                <div class="auth-form_meter" aria-hidden="true" data-meter data-level="0">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <span class="auth-form_strength_text text-style-small" data-strength />
+              </div>
+            )}
+          </div>
+
+          {signup && (
+            <div class="auth-form_field">
+              <label class="auth-form_check">
+                <input class="auth-form_check_input" type="checkbox" name="terms" data-terms />
+                <span class="auth-form_check_box" aria-hidden="true">
+                  <PathIcon d="M5 12l5 5 9-10" variant="small" />
+                </span>
+                <span class="text-style-small">
+                  I agree to the <a class="auth-form_link" href="#">terms</a> and{" "}
+                  <a class="auth-form_link" href="#">privacy policy</a>
+                </span>
+              </label>
+              <p class="auth-form_error text-style-small" hidden data-error="terms">
+                Please agree to continue.
+              </p>
+            </div>
+          )}
+
+          <ActionButton type="submit" size="large" raised data-submit>
+            {signup ? "Create account" : "Log in"}
+          </ActionButton>
+        </form>
+
+        <p class="auth-form_divider text-style-small" aria-hidden="true">or</p>
+
+        <ActionButton color="white" size="large" data-google>
+          <svg slot="before" class="auth-form_google" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+            <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
+            <path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z" />
+            <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+          </svg>
+          Continue with Google
+        </ActionButton>
+      </div>
+
+      <!-- Reset password -->
+      <div class="auth-form_view" hidden data-view="forgot">
+        <button class="auth-form_back text-style-main" type="button" data-back>
+          <span class="auth-form_back_arrow">
+            <PathIcon d="M9 5l7 7-7 7" variant="small" />
+          </span>
+          Log in
+        </button>
+        <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>Reset password</h1>
+        <form class="auth-form_fields" method="post" novalidate data-forgot-form>
+          <div class="field auth-form_field">
+            <label class="field-label text-style-small" for="auth-reset-email">Email</label>
+            <input
+              id="auth-reset-email"
+              class="field-control text-style-main"
+              type="email"
+              name="email"
+              inputmode="email"
+              autocomplete="email"
+              placeholder="you@school.edu"
+              data-reset-email
+            />
+            <p class="auth-form_error text-style-small" hidden data-error="reset" />
+          </div>
+          <ActionButton type="submit" size="large" raised data-reset-submit>
+            Send reset link
+          </ActionButton>
+        </form>
+      </div>
+
+      <!-- Check your email -->
+      <div class="auth-form_view center" hidden data-view="sent" role="status">
+        <span class="auth-form_blob blue">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5" y="10" width="38" height="28" rx="6" />
+            <path d="M7 14l17 12 17-12" />
+          </svg>
+        </span>
+        <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>Check your email</h1>
+        <p class="auth-form_lead text-style-main" data-sent-text />
+        <ActionButton size="large" raised data-back>
+          Back to log in
+        </ActionButton>
+      </div>
+
+      <!-- Done -->
+      <div class="auth-form_view center" hidden data-view="done">
+        <span class="auth-form_blob green">
+          <PathIcon d="M5 12l5 5 9-10" variant="large" />
+        </span>
+        <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading data-done-title />
+        <p class="auth-form_lead text-style-main" data-done-text />
+        <ActionButton element="link" size="large" raised data-done-link>
+          Continue
+        </ActionButton>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  import { logIn, requestPasswordReset, safeNext, signInWithGoogle, signUp } from "@/lib/auth-repo.ts";
+  import type { AuthResult } from "@/lib/auth-repo.ts";
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const strengthWords = ["", "Weak", "Okay", "Good", "Strong"];
+
+  /** 0 for empty, then 1 to 4: length, more length, mixed case, a digit or symbol. */
+  const strength = (password: string) => {
+    if (!password) return 0;
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) score += 1;
+    return Math.max(1, score);
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-auth]").forEach((root) => {
+    const mode = root.dataset.auth as "login" | "signup";
+    const signup = mode === "signup";
+    const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const views = root.querySelectorAll<HTMLElement>("[data-view]");
+    const form = $<HTMLFormElement>("[data-form]");
+    const email = $<HTMLInputElement>("[data-email]");
+    const password = $<HTMLInputElement>("[data-password]");
+    const terms = root.querySelector<HTMLInputElement>("[data-terms]");
+    const show = $<HTMLButtonElement>("[data-show]");
+    const submit = $<HTMLButtonElement>("[data-submit]");
+    const google = $<HTMLButtonElement>("[data-google]");
+    const meter = root.querySelector<HTMLElement>("[data-meter]");
+    const strengthText = root.querySelector<HTMLElement>("[data-strength]");
+    const resetForm = root.querySelector<HTMLFormElement>("[data-forgot-form]")!;
+    const resetEmail = $<HTMLInputElement>("[data-reset-email]");
+    const resetSubmit = $<HTMLButtonElement>("[data-reset-submit]");
+    const submitLabel = submit.querySelector<HTMLElement>(".action-button_text")!;
+    const resetLabel = resetSubmit.querySelector<HTMLElement>(".action-button_text")!;
+    const idle = { submit: submitLabel.textContent ?? "", reset: resetLabel.textContent ?? "" };
+    const next = safeNext(new URLSearchParams(location.search).get("next"), "");
+
+    const touched = new Set<string>();
+    let tried = false;
+
+    const open = (name: string) => {
+      views.forEach((view) => (view.hidden = view.dataset.view !== name));
+      root.querySelector<HTMLElement>(`[data-view="${name}"] [data-heading]`)?.focus();
+    };
+
+    /** Shows or clears one field's message and its red border. */
+    const flag = (key: string, message: string | null, field?: HTMLElement) => {
+      const note = root.querySelector<HTMLElement>(`[data-error="${key}"]`)!;
+      if (message) note.textContent = message;
+      note.hidden = !message;
+      field?.setAttribute("aria-invalid", String(!!message));
+    };
+
+    const emailMessage = (value: string) =>
+      emailPattern.test(value.trim()) ? null : value.trim() === "" ? "Add your email." : "That email looks off.";
+    const passwordMessage = () =>
+      signup
+        ? password.value.length >= 8 ? null : "Use at least 8 characters."
+        : password.value.length >= 1 ? null : "Enter your password.";
+
+    /** Messages appear after a field is left or a submit was tried, never while typing the first time. */
+    const check = () => {
+      const visible = (key: string) => tried || touched.has(key);
+      flag("email", visible("email") ? emailMessage(email.value) : null, email);
+      flag("password", visible("password") ? passwordMessage() : null, password);
+      if (terms) {
+        flag("terms", tried && !terms.checked ? "Please agree to continue." : null);
+        terms.closest("label")?.classList.toggle("invalid", tried && !terms.checked);
+      }
+    };
+
+    const valid = () =>
+      !emailMessage(email.value) && !passwordMessage() && (!terms || terms.checked);
+
+    const shake = () => {
+      form.classList.remove("shake");
+      void form.offsetWidth;
+      form.classList.add("shake");
+    };
+
+    const busy = (on: boolean) => {
+      submit.disabled = on;
+      google.disabled = on;
+      submitLabel.textContent = on ? (signup ? "Creating…" : "Logging in…") : idle.submit;
+    };
+
+    const finish = (result: AuthResult) => {
+      busy(false);
+      if (!result.ok) {
+        flag("password", result.error, password);
+        return password.focus();
+      }
+      if ("checkEmail" in result) {
+        $("[data-sent-text]").textContent =
+          `We sent a confirmation link to ${email.value.trim()}. Open it to finish creating your account.`;
+        return open("sent");
+      }
+      $("[data-done-title]").textContent = signup ? "You are in!" : "Welcome back!";
+      $("[data-done-text]").textContent = signup
+        ? "Two quick questions and you are set."
+        : "Your plans and friends are right where you left them.";
+      const link = $<HTMLAnchorElement>("[data-done-link]");
+      link.href = result.next;
+      link.querySelector<HTMLElement>(".action-button_text")!.textContent = signup
+        ? "Let's set you up"
+        : "Go to my plans";
+      open("done");
+    };
+
+    email.addEventListener("blur", () => (touched.add("email"), check()));
+    password.addEventListener("blur", () => (touched.add("password"), check()));
+    email.addEventListener("input", check);
+    terms?.addEventListener("change", check);
+    password.addEventListener("input", () => {
+      check();
+      if (!meter || !strengthText) return;
+      const level = strength(password.value);
+      meter.dataset.level = String(level);
+      strengthText.textContent = strengthWords[level];
+    });
+
+    show.addEventListener("click", () => {
+      const showing = password.type === "password";
+      password.type = showing ? "text" : "password";
+      show.textContent = showing ? "Hide" : "Show";
+      show.setAttribute("aria-label", showing ? "Hide password" : "Show password");
+      show.setAttribute("aria-pressed", String(showing));
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      tried = true;
+      check();
+      if (!valid()) {
+        shake();
+        return (emailMessage(email.value) ? email : password).focus();
+      }
+      busy(true);
+      const input = { email: email.value.trim(), password: password.value, next: next || undefined };
+      finish(signup ? await signUp(input) : await logIn(input));
+    });
+
+    google.addEventListener("click", async () => {
+      busy(true);
+      finish(await signInWithGoogle({ mode, next: next || undefined }));
+    });
+
+    root.querySelector("[data-forgot]")?.addEventListener("click", () => {
+      resetEmail.value = email.value;
+      open("forgot");
+      resetEmail.focus();
+    });
+    root.querySelectorAll("[data-back]").forEach((button) =>
+      button.addEventListener("click", () => open("form")),
+    );
+
+    resetForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = emailMessage(resetEmail.value);
+      flag("reset", message, resetEmail);
+      if (message) return resetEmail.focus();
+      resetSubmit.disabled = true;
+      resetLabel.textContent = "Sending…";
+      await requestPasswordReset({ email: resetEmail.value.trim() });
+      resetSubmit.disabled = false;
+      resetLabel.textContent = idle.reset;
+      $("[data-sent-text]").textContent =
+        `If ${resetEmail.value.trim()} has an account, a reset link is on its way.`;
+      open("sent");
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .auth-form_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      width: 100%;
+      max-width: 27.5rem;
+      padding: var(--space-5);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-xlarge);
+      background-color: var(--background-3);
+      animation: auth-form-rise var(--enter-duration) var(--ease-out) backwards;
+    }
+
+    .auth-form_brand {
+      display: block;
+      width: clamp(8rem, 40%, 10rem);
+    }
+
+    .auth-form_tabs {
+      display: flex;
+      align-self: flex-start;
+      gap: var(--space-0);
+      padding: var(--space-0);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-round);
+      background-color: var(--background);
+    }
+
+    .auth-form_tab {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--control-height-small);
+      padding-inline: var(--space-4);
+      border: var(--border-width-medium) solid transparent;
+      border-radius: var(--radius-round);
+      font-weight: var(--primary-bold);
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      &[aria-current="page"] {
+        border-color: var(--border-strong);
+        background-color: var(--background-3);
+      }
+    }
+
+    .auth-form_view {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      animation: auth-form-swap var(--reveal-duration) var(--ease-out) backwards;
+
+      &[hidden] {
+        display: none;
+      }
+      &.center {
+        align-items: center;
+        text-align: center;
+      }
+    }
+
+    .auth-form_title {
+      font-weight: var(--secondary-bold);
+      outline: none;
+    }
+
+    .auth-form_lead {
+      color: var(--text-2);
+    }
+
+    .auth-form_fields {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+
+      &.shake {
+        animation: auth-form-shake 0.35s ease-in-out;
+      }
+    }
+
+    .auth-form_field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+
+      & .field-label {
+        font-weight: var(--primary-bold);
+      }
+      & .field-control {
+        min-height: var(--control-height-large);
+        border: var(--border-width-medium) solid var(--border);
+        border-radius: var(--radius-main);
+        background-color: var(--background-3);
+
+        &:focus {
+          border-color: var(--border-strong);
+          box-shadow: 0 0 0 0.1875rem var(--colors-vivid-yellow);
+          outline: none;
+        }
+        &[aria-invalid="true"] {
+          border: var(--border-width-thick) solid var(--colors-vivid-red);
+        }
+      }
+    }
+
+    .auth-form_label_row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .auth-form_text_button {
+      min-height: var(--control-height-small);
+      padding-inline: var(--space-1);
+      background: none;
+      border: 0;
+      color: inherit;
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+      cursor: pointer;
+    }
+
+    .auth-form_password {
+      position: relative;
+
+      & .field-control {
+        padding-inline-end: 5.5rem;
+      }
+    }
+
+    .auth-form_show {
+      position: absolute;
+      inset-block: var(--space-0);
+      inset-inline-end: var(--space-0);
+      min-width: var(--control-height-small);
+      padding-inline: var(--space-3);
+      border: 0;
+      border-radius: var(--radius-round);
+      background: none;
+      color: inherit;
+      font-weight: var(--primary-bold);
+      cursor: pointer;
+    }
+
+    .auth-form_error {
+      color: var(--colors-vivid-red);
+      font-weight: var(--primary-bold);
+      filter: brightness(0.75);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .auth-form_strength {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .auth-form_meter {
+      --_on: var(--border-subtle);
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-0);
+
+      & span {
+        height: var(--space-1);
+        border-radius: var(--radius-round);
+        background-color: var(--border-subtle);
+        transition: background-color var(--hover-duration) var(--hover-ease);
+      }
+      &[data-level="1"] {
+        --_on: var(--colors-vivid-red);
+      }
+      &[data-level="2"] {
+        --_on: var(--colors-vivid-yellow);
+      }
+      &[data-level="3"] {
+        --_on: var(--colors-vivid-blue);
+      }
+      &[data-level="4"] {
+        --_on: var(--colors-vivid-green);
+      }
+      &[data-level="1"] span:nth-child(-n + 1),
+      &[data-level="2"] span:nth-child(-n + 2),
+      &[data-level="3"] span:nth-child(-n + 3),
+      &[data-level="4"] span {
+        background-color: var(--_on);
+      }
+    }
+
+    .auth-form_strength_text {
+      min-width: 4rem;
+      font-weight: var(--primary-bold);
+      text-align: end;
+    }
+
+    .auth-form_check {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-height: var(--control-height-main);
+      cursor: pointer;
+    }
+
+    .auth-form_check_input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .auth-form_check_box {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: var(--space-6);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-small);
+      background-color: var(--background-3);
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      & .path-icon_wrap {
+        opacity: 0;
+      }
+
+      .auth-form_check_input:checked + & {
+        background-color: var(--colors-vivid-yellow);
+
+        & .path-icon_wrap {
+          opacity: 1;
+        }
+      }
+      .auth-form_check_input:focus-visible + & {
+        outline: var(--focus-width) solid var(--text);
+        outline-offset: var(--focus-offset);
+      }
+      .auth-form_check.invalid & {
+        border-color: var(--colors-vivid-red);
+      }
+    }
+
+    .auth-form_link {
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
+    .auth-form_divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+
+      &::before,
+      &::after {
+        content: "";
+        flex: 1;
+        height: var(--border-width-medium);
+        background-color: var(--border-subtle);
+      }
+    }
+
+    .auth-form_google {
+      flex: none;
+      width: var(--icon-main);
+      height: var(--icon-main);
+    }
+
+    .auth-form_back {
+      display: inline-flex;
+      align-items: center;
+      align-self: flex-start;
+      gap: var(--space-1);
+      min-height: var(--control-height-small);
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font-weight: var(--primary-bold);
+      cursor: pointer;
+    }
+
+    .auth-form_back_arrow {
+      display: inline-flex;
+      rotate: 180deg;
+    }
+
+    .auth-form_blob {
+      --_color: var(--colors-vivid-blue);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--avatar-xlarge) * 1.4);
+      aspect-ratio: 1 / 1;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
+      background-color: var(--_color);
+      color: var(--colors-on-vivid);
+
+      &.green {
+        --_color: var(--colors-vivid-green);
+      }
+      & svg {
+        width: 50%;
+        height: auto;
+      }
+    }
+
+    .auth-form_view.center > .action-button_wrap {
+      align-self: stretch;
+    }
+
+    @keyframes auth-form-rise {
+      from {
+        opacity: 0.2;
+        translate: 0 1rem;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+
+    @keyframes auth-form-swap {
+      from {
+        opacity: 0.2;
+        translate: 0 0.75rem;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+
+    @keyframes auth-form-shake {
+      0%,
+      100% {
+        translate: 0 0;
+      }
+      25% {
+        translate: -0.3rem 0;
+      }
+      75% {
+        translate: 0.3rem 0;
+      }
+    }
+  }
+</style>

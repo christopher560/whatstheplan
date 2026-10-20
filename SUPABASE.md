@@ -394,3 +394,26 @@ Notes:
 - Leaving writes a system line ("X left") and removes the calendar pin.
 - Groups without a hand-written sample are derived from the Discover data, so
   every Discover group links to a working page.
+
+## Sign up and log in (`/signup`, `/login`)
+
+Two pages sharing one `AuthForm` and one side panel, matching the artifact's Auth
+design. The Sign up and Log in tabs are links between the two pages.
+`src/lib/auth-repo.ts` is the seam:
+
+| Method | Supabase |
+| --- | --- |
+| `signUp({ email, password, next })` | `auth.signUp`; new people go to `/app/onboarding`. If email confirmation is on, return `{ ok: true, checkEmail: true }` and the page shows "Check your email" |
+| `logIn({ email, password, next })` | `auth.signInWithPassword`; go to `next` or `/app/dashboard`, or `/app/onboarding` when `profiles.onboarded` is false |
+| `requestPasswordReset({ email })` | `auth.resetPasswordForEmail`; always answer ok so the page never reveals whether an email has an account |
+| `signInWithGoogle({ mode, next })` | `auth.signInWithOAuth({ provider: "google" })`; needs a Google OAuth client and a `/auth/callback` route that exchanges the code for a session |
+
+Notes:
+- Forgot password is a view inside `/login` (as in the artifact). Choosing a new
+  password after clicking the emailed link needs a `/reset-password` page that
+  is not designed yet.
+- `?next=` is only honored for same-site paths (`safeNext`), so a crafted link
+  cannot send people to another site.
+- The terms and privacy links are placeholders until those pages exist.
+- Magic-link sign-in (discussed earlier) is not in the artifact, so it is left
+  out. It would be `auth.signInWithOtp` behind the same form.

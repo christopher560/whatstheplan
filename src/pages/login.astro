@@ -1,0 +1,11 @@
+---
+import AuthLayout from "@/layouts/AuthLayout.astro";
+import AuthForm from "@/components/content/AuthForm.astro";
+import AuthShowcase from "@/components/content/AuthShowcase.astro";
+---
+
+<AuthLayout title="Log in">
+  <!-- Log in -->
+  <AuthForm mode="login" />
+  <AuthShowcase slot="aside" />
+</AuthLayout>
