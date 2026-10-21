@@ -5,6 +5,7 @@ import { safeNext } from "@/utils/safe-next.ts";
 /** What the auth pages get back. Expected problems are returned, not thrown. */
 type Result =
   | { ok: true; next: string }
+  /** A 6-digit code was emailed. The person finishes by typing it in. */
   | { ok: true; checkEmail: true }
   | { ok: false; error: string };
 
@@ -12,6 +13,9 @@ const email = z.string().trim().toLowerCase().max(254).pipe(z.email());
 /** Supabase caps passwords at 72 characters. */
 const password = z.string().min(8).max(72);
 const next = z.string().max(500).optional();
+const code = z.string().regex(/^\d{6}$/, "Enter the 6-digit code.");
+/** Why a code was sent: confirming a new account, or resetting a password. */
+const purpose = z.enum(["signup", "recovery"]);
 
 const generic = "Something went wrong. Please try again.";
 
@@ -19,8 +23,10 @@ const friendly = (error: { code?: string; message: string }): string => {
   switch (error.code) {
     case "invalid_credentials":
       return "That email and password don't match.";
-    case "email_not_confirmed":
-      return "Confirm your email first. We sent you a link when you signed up.";
+    case "otp_expired":
+      return "That code is wrong or has expired. Check it or send a new one.";
+    case "user_already_exists":
+      return "That email already has an account. Try logging in.";
     case "weak_password":
       return "Choose a stronger password.";
     case "same_password":
@@ -37,11 +43,9 @@ const friendly = (error: { code?: string; message: string }): string => {
   }
 };
 
-const callback = (origin: string, to: string) =>
-  `${origin}/auth/callback?next=${encodeURIComponent(to)}`;
-
 export const server = {
   auth: {
+    /** Creates the account and emails a 6-digit code (the template shows `{{ .Token }}`). */
     signUp: defineAction({
       accept: "json",
       input: z.object({ email, password, next }),
@@ -49,9 +53,6 @@ export const server = {
         const { data, error } = await context.locals.supabase.auth.signUp({
           email: input.email,
           password: input.password,
-          options: {
-            emailRedirectTo: callback(context.url.origin, safeNext(input.next, "/app/onboarding")),
-          },
         });
         if (error) return { ok: false, error: friendly(error) };
         /* With email confirmation on there is no session yet. An address that
@@ -70,6 +71,15 @@ export const server = {
           email: input.email,
           password: input.password,
         });
+
+        /* Signed up but never typed the code: send a fresh one and let them finish. */
+        if (error?.code === "email_not_confirmed") {
+          const { error: resendError } = await supabase.auth.resend({
+            type: "signup",
+            email: input.email,
+          });
+          return resendError ? { ok: false, error: friendly(resendError) } : { ok: true, checkEmail: true };
+        }
         if (error || !data.user) return { ok: false, error: friendly(error ?? { message: "" }) };
 
         const { data: profile } = await supabase
@@ -84,14 +94,41 @@ export const server = {
       },
     }),
 
-    /** Always answers ok, so the page never reveals whether an email has an account. */
+    /** Checks the 6-digit code. On success the session cookie is set, so the person is signed in. */
+    verifyCode: defineAction({
+      accept: "json",
+      input: z.object({ email, token: code, purpose }),
+      handler: async (input, context): Promise<Result> => {
+        const { error } = await context.locals.supabase.auth.verifyOtp({
+          email: input.email,
+          token: input.token,
+          type: input.purpose,
+        });
+        if (error) return { ok: false, error: friendly(error) };
+        return { ok: true, next: input.purpose === "signup" ? "/app/onboarding" : "/app/dashboard" };
+      },
+    }),
+
+    /** Sends a new code. Supabase allows one per minute per address. */
+    resendCode: defineAction({
+      accept: "json",
+      input: z.object({ email, purpose }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { supabase } = context.locals;
+        const { error } =
+          input.purpose === "signup"
+            ? await supabase.auth.resend({ type: "signup", email: input.email })
+            : await supabase.auth.resetPasswordForEmail(input.email);
+        return error ? { ok: false, error: friendly(error) } : { ok: true };
+      },
+    }),
+
+    /** Emails a reset code. Always answers ok, so the page never reveals whether an email has an account. */
     requestPasswordReset: defineAction({
       accept: "json",
       input: z.object({ email }),
       handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
-        const { error } = await context.locals.supabase.auth.resetPasswordForEmail(input.email, {
-          redirectTo: callback(context.url.origin, "/reset-password"),
-        });
+        const { error } = await context.locals.supabase.auth.resetPasswordForEmail(input.email);
         if (error?.code === "over_email_send_rate_limit" || error?.code === "over_request_rate_limit") {
           return { ok: false, error: friendly(error) };
         }
@@ -99,12 +136,12 @@ export const server = {
       },
     }),
 
-    /** Sets a new password for the signed-in person (the reset link signs them in first). */
+    /** Sets a new password for the signed-in person (the reset code signs them in first). */
     updatePassword: defineAction({
       accept: "json",
       input: z.object({ password }),
       handler: async (input, context): Promise<Result> => {
-        if (!context.locals.user) return { ok: false, error: "That link has expired. Request a new one." };
+        if (!context.locals.user) return { ok: false, error: "That code has expired. Request a new one." };
         const { error } = await context.locals.supabase.auth.updateUser({ password: input.password });
         if (error) return { ok: false, error: friendly(error) };
         return { ok: true, next: "/app/dashboard" };

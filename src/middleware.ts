@@ -29,7 +29,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   locals.onboarded = null;
 
   const inApp = path === "/app" || path.startsWith("/app/");
-  const needsSession = inApp || path === "/reset-password";
+  const needsSession = inApp;
 
   if (needsSession && !user) {
     const target = encodeURIComponent(`${path}${url.search}`);

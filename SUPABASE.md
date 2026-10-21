@@ -395,58 +395,82 @@ Notes:
 - Groups without a hand-written sample are derived from the Discover data, so
   every Discover group links to a working page.
 
-## Sign up and log in (`/signup`, `/login`, `/reset-password`) - built
+## Sign up and log in (`/signup`, `/login`) - built
 
 Auth is live against the Supabase project `whatstheplan`
 (`pdipxygigtownmishvwl`, us-east-2). The pages match the artifact's Auth design
-and the Sign up and Log in tabs are links between two separate pages.
+and the Sign up and Log in tabs are links between two separate pages. Emails carry
+a **6-digit code**, not a link: people type it into the page, so there is no
+callback route and nothing to open on another device.
 
 | Piece | Where |
 | --- | --- |
-| Env | `.env` (not committed) holds `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY`; `.env.example` shows the shape. Declared in `astro.config.mjs` (`env.schema`) and read with `astro:env/client`. Set the same two on Vercel. |
-| Hosting | `@astrojs/vercel`. Pages are static unless they say `export const prerender = false`; every `/app/*` page, `/login`, `/signup` and `/reset-password` do. `/p/[slug]` and the marketing pages stay static. |
+| Env | `.env` (not committed) holds `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY`; `.env.example` shows the shape. Declared in `astro.config.mjs` (`env.schema`) and read with `astro:env/client`. Also set on the Vercel project. |
+| Hosting | `@astrojs/vercel`. Pages are static unless they say `export const prerender = false`; every `/app/*` page, `/login` and `/signup` do. `/p/[slug]` and the marketing pages stay static. |
 | Request client | `src/lib/supabase.ts` builds a `@supabase/ssr` client from the request's cookies. |
 | Middleware | `src/middleware.ts` checks the session with `auth.getUser()` on every non-prerendered request and puts `supabase`, `user` and `onboarded` on `Astro.locals`. Signed out on `/app/*` goes to `/login?next=...`; signed in on `/login` or `/signup` goes to the app; signed in but not onboarded goes to `/app/onboarding`. Session pages send `Cache-Control: private, no-store`. |
-| Actions | `src/actions/index.ts`: `auth.signUp`, `auth.logIn`, `auth.requestPasswordReset`, `auth.updatePassword`, `auth.logOut`, `onboarding.saveProgress`. Expected problems come back as `{ ok: false, error }` with friendly text. |
-| Client wrappers | `src/lib/auth-repo.ts` and `saveProfile` in `src/lib/onboarding-repo.ts` call the actions. No password or token is handled by page scripts. |
-| Email links | `src/pages/auth/callback.ts` swaps the one-time `code` for a session cookie and opens `next` (only same-site paths, see `src/utils/safe-next.ts`). A bad link goes to `/login?error=link`. |
+| Actions | `src/actions/index.ts`: `auth.signUp`, `auth.logIn`, `auth.verifyCode`, `auth.resendCode`, `auth.requestPasswordReset`, `auth.updatePassword`, `auth.logOut`, `onboarding.saveProgress`. Expected problems come back as `{ ok: false, error }` with friendly text. |
+| Client wrappers | `src/lib/auth-repo.ts` and `saveProfile` in `src/lib/onboarding-repo.ts` call the actions. No password or code is stored by page scripts. |
 | Table | `public.profiles` (`id` = `auth.users.id`, `onboarded`, `onboarding_step`, timestamps). A trigger creates the row on sign up. RLS: owners read and update their own row; `authenticated` may update only `onboarded` and `onboarding_step`. Migrations: `create_profiles`, `grant_profiles_to_authenticated`. |
 
-Behaviour:
-- Email confirmation is on. Sign up shows "Check your email"; the link goes to
-  `/auth/callback?next=/app/onboarding`. An address that already has an account
-  looks the same, so nobody can probe for emails.
-- Log in sends people who have not finished onboarding to `/app/onboarding`,
-  everyone else to `?next=` or the dashboard.
-- Forgot password: `auth.requestPasswordReset` always answers ok. The emailed link
-  signs the person in through the callback and opens `/reset-password`, where
-  `auth.updatePassword` sets the new password.
+Flows:
+- **Sign up:** `signUp` creates the account and Supabase emails a code. The page
+  shows six boxes (pasting or iOS autofill fills them all). `verifyCode` with
+  purpose `signup` signs the person in, then the page offers "Let's set you up"
+  (onboarding). An address that already has an account looks identical, so nobody
+  can probe for emails.
+- **Log in:** password sign in. Someone who signed up but never typed their code
+  gets a fresh code and the same six boxes. People who have not finished
+  onboarding go to `/app/onboarding`, everyone else to `?next=` or the dashboard.
+- **Forgot password:** `requestPasswordReset` (always answers ok) emails a code,
+  `verifyCode` with purpose `recovery` signs the person in, then the page asks
+  for a new password and `updatePassword` saves it.
+- **Resend:** one new code per 60 seconds (the page counts down; Supabase enforces
+  it too). Codes last 1 hour.
 - Log out is a button in the sidebar and on the account page.
 - Google sign-in is designed but not connected (the button says it is coming soon).
 
-Still to do in the dashboard (the MCP cannot change these):
-1. Authentication > URL Configuration: Site URL `https://www.whatstheplan.social`
-   (Vercel redirects the bare domain to www, and email links use the address the
-   person is on); add redirect URLs `http://localhost:4321/**`,
-   `https://www.whatstheplan.social/**` and `https://whatstheplan.social/**`.
-   If you would rather have the bare domain as the main address, flip the
-   redirect in Vercel > Domains and change the URLs to match.
-2. Authentication > SMTP: the built-in mailer only sends to your own team's
-   addresses and is heavily rate limited, so sign up fails for other people until
-   a custom SMTP server (Resend) is connected. Customize the email templates there too.
-3. Authentication > Sign In / Providers > Google, once you create a Google OAuth
-   client (redirect URI is shown on that page). Then replace the stub
-   `signInWithGoogle` with `auth.signInWithOAuth({ provider: "google", options: { redirectTo: .../auth/callback } })`.
-4. Authentication > Attack Protection: turn on leaked password protection, and a
+Email setup (all in dashboards; the Supabase MCP cannot change auth settings):
+1. **Resend domain.** `whatstheplan.social` is added in Resend (region us-east-1).
+   Add its DNS records at Porkbun (the domain's nameservers), then verify:
+   - TXT `resend._domainkey` = the DKIM value shown in Resend
+   - MX `send` = `feedback-smtp.us-east-1.amazonses.com`, priority 10
+   - TXT `send` = `v=spf1 include:amazonses.com ~all`
+   - CNAME `rsend` = `send.forge.rmta.net`
+2. **Supabase SMTP** (Authentication > Emails > SMTP Settings, turn on custom SMTP):
+   host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API
+   key with Sending access limited to the domain, sender email
+   `no-reply@whatstheplan.social`, sender name `whatstheplan`. Never put the API
+   key in the repo.
+3. **Supabase templates** (Authentication > Emails > Templates): in "Confirm sign up"
+   and "Reset password" show `{{ .Token }}` instead of the link. Suggested body:
+
+   ```html
+   <div style="font-family:Arial,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#1D1740">
+     <h2 style="margin:0 0 8px">Your code</h2>
+     <p style="margin:0 0 16px">Enter this code to finish creating your whatstheplan account:</p>
+     <p style="font-size:36px;font-weight:700;letter-spacing:8px;margin:0 0 16px">{{ .Token }}</p>
+     <p style="color:#5F5C66;font-size:14px">It expires in 1 hour. If you did not ask for it, ignore this email.</p>
+   </div>
+   ```
+   Subject: `Your whatstheplan code: {{ .Token }}`. For "Reset password" say "reset your
+   password" instead of "finish creating your account".
+4. **Rate limits** (Authentication > Rate Limits): with custom SMTP the default is
+   30 emails an hour; raise it before launch.
+5. Authentication > Sign In / Providers > Email: keep "Confirm email" on, and check
+   "Email OTP Length" is 6 and expiry is 3600 seconds.
+6. Authentication > URL Configuration: Site URL `https://www.whatstheplan.social`
+   (Vercel sends the bare domain to www). Codes need no redirect URLs, but keep
+   `http://localhost:4321/**` and the production domains for Google sign-in later.
+7. Authentication > Attack Protection: turn on leaked password protection, and a
    CAPTCHA before launch.
-5. Done: the two `PUBLIC_SUPABASE_*` variables are set on the Vercel project
-   `whatstheplan` for production, preview and development. They are needed at build
-   time, so set them before pushing the auth code.
+8. Google sign-in (later): create a Google OAuth client, enable the provider, then
+   replace the stub `signInWithGoogle` with `auth.signInWithOAuth`.
 
 Notes:
 - The security advisor flags `public.rls_auto_enable()`, a Supabase-provided
   helper that already existed in the project; it is not part of this app.
 - The terms and privacy links on the sign-up form are placeholders until those
   pages exist.
-- Magic-link sign-in is not in the artifact, so it is left out (it would be
-  `auth.signInWithOtp` behind the same form).
+- Until the templates show `{{ .Token }}`, Supabase still emails a link and the
+  six boxes cannot be filled, so do step 3 before testing sign up.

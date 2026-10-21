@@ -8,20 +8,20 @@ import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
 interface Props {
   /** Set to `false` to omit the component. */
   render?: boolean;
-  /** Which form this is. Sign up and log in each have their own page; reset is for the emailed link. */
-  mode?: "login" | "signup" | "reset";
+  /** Which form this is. Each has its own page. */
+  mode?: "login" | "signup";
 }
 
 const { render = true, mode = "login" } = Astro.props;
 const signup = mode === "signup";
-const reset = mode === "reset";
-/** Sign up and reset both choose a new password, so both show the strength meter. */
-const choosing = signup || reset;
 
 const tabs = [
   { id: "signup", label: "Sign up", href: "/signup" },
   { id: "login", label: "Log in", href: "/login" },
 ];
+
+/** The six boxes for the emailed code. */
+const digits = [1, 2, 3, 4, 5, 6];
 ---
 
 {
@@ -31,52 +31,44 @@ const tabs = [
         <Icon src={brand_full_logo_cropped} variant="full-width" />
       </a>
 
-      {!reset && (
-        <nav class="auth-form_tabs" aria-label="Sign up or log in">
-          {tabs.map((tab) => (
-            <a
-              class="auth-form_tab text-style-small"
-              href={tab.href}
-              aria-current={tab.id === mode ? "page" : undefined}
-            >
-              {tab.label}
-            </a>
-          ))}
-        </nav>
-      )}
-
-      <p class="auth-form_error text-style-small" role="alert" hidden data-banner />
+      <nav class="auth-form_tabs" aria-label="Sign up or log in">
+        {tabs.map((tab) => (
+          <a
+            class="auth-form_tab text-style-small"
+            href={tab.href}
+            aria-current={tab.id === mode ? "page" : undefined}
+          >
+            {tab.label}
+          </a>
+        ))}
+      </nav>
 
       <!-- Form -->
       <div class="auth-form_view" data-view="form">
         <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>
-          {reset ? "Choose a new password" : signup ? "Create account" : "Welcome back"}
+          {signup ? "Create account" : "Welcome back"}
         </h1>
 
         <form class="auth-form_fields" method="post" novalidate data-form>
-          {!reset && (
-            <div class="field auth-form_field">
-              <label class="field-label text-style-small" for="auth-email">Email</label>
-              <input
-                id="auth-email"
-                class="field-control text-style-main"
-                type="email"
-                name="email"
-                inputmode="email"
-                autocomplete="email"
-                placeholder="you@school.edu"
-                data-email
-              />
-              <p class="auth-form_error text-style-small" hidden data-error="email" />
-            </div>
-          )}
+          <div class="field auth-form_field">
+            <label class="field-label text-style-small" for="auth-email">Email</label>
+            <input
+              id="auth-email"
+              class="field-control text-style-main"
+              type="email"
+              name="email"
+              inputmode="email"
+              autocomplete="email"
+              placeholder="you@school.edu"
+              data-email
+            />
+            <p class="auth-form_error text-style-small" hidden data-error="email" />
+          </div>
 
           <div class="field auth-form_field">
             <div class="auth-form_label_row">
-              <label class="field-label text-style-small" for="auth-password">
-                {reset ? "New password" : "Password"}
-              </label>
-              {mode === "login" && (
+              <label class="field-label text-style-small" for="auth-password">Password</label>
+              {!signup && (
                 <button class="auth-form_text_button text-style-small" type="button" data-forgot>
                   Forgot it?
                 </button>
@@ -88,8 +80,8 @@ const tabs = [
                 class="field-control text-style-main"
                 type="password"
                 name="password"
-                autocomplete={choosing ? "new-password" : "current-password"}
-                placeholder={choosing ? "8+ characters" : "Your password"}
+                autocomplete={signup ? "new-password" : "current-password"}
+                placeholder={signup ? "8+ characters" : "Your password"}
                 data-password
               />
               <button
@@ -103,7 +95,7 @@ const tabs = [
               </button>
             </div>
             <p class="auth-form_error text-style-small" hidden data-error="password" />
-            {choosing && (
+            {signup && (
               <div class="auth-form_strength">
                 <div class="auth-form_meter" aria-hidden="true" data-meter data-level="0">
                   <span />
@@ -135,15 +127,12 @@ const tabs = [
           )}
 
           <ActionButton type="submit" size="large" raised data-submit>
-            {reset ? "Update password" : signup ? "Create account" : "Log in"}
+            {signup ? "Create account" : "Log in"}
           </ActionButton>
         </form>
 
-        {!reset && (
-          <p class="auth-form_divider text-style-small" aria-hidden="true">or</p>
-        )}
+        <p class="auth-form_divider text-style-small" aria-hidden="true">or</p>
 
-        {!reset && (
         <ActionButton color="white" size="large" data-google>
           <svg slot="before" class="auth-form_google" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
@@ -153,10 +142,9 @@ const tabs = [
           </svg>
           Continue with Google
         </ActionButton>
-        )}
       </div>
 
-      <!-- Reset password -->
+      <!-- Ask for a reset code -->
       <div class="auth-form_view" hidden data-view="forgot">
         <button class="auth-form_back text-style-main" type="button" data-back>
           <span class="auth-form_back_arrow">
@@ -165,6 +153,9 @@ const tabs = [
           Log in
         </button>
         <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>Reset password</h1>
+        <p class="auth-form_lead text-style-main">
+          Enter your email and we will send you a 6-digit code.
+        </p>
         <form class="auth-form_fields" method="post" novalidate data-forgot-form>
           <div class="field auth-form_field">
             <label class="field-label text-style-small" for="auth-reset-email">Email</label>
@@ -181,24 +172,94 @@ const tabs = [
             <p class="auth-form_error text-style-small" hidden data-error="reset" />
           </div>
           <ActionButton type="submit" size="large" raised data-reset-submit>
-            Send reset link
+            Send code
           </ActionButton>
         </form>
       </div>
 
-      <!-- Check your email -->
-      <div class="auth-form_view center" hidden data-view="sent" role="status">
+      <!-- Type the 6-digit code -->
+      <div class="auth-form_view" hidden data-view="code">
+        <button class="auth-form_back text-style-main" type="button" data-back>
+          <span class="auth-form_back_arrow">
+            <PathIcon d="M9 5l7 7-7 7" variant="small" />
+          </span>
+          Back
+        </button>
         <span class="auth-form_blob blue">
           <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="5" y="10" width="38" height="28" rx="6" />
             <path d="M7 14l17 12 17-12" />
           </svg>
         </span>
-        <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>Check your email</h1>
-        <p class="auth-form_lead text-style-main" data-sent-text />
-        <ActionButton size="large" raised data-back data-sent-back>
-          {signup ? "Use a different email" : "Back to log in"}
-        </ActionButton>
+        <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>Enter your code</h1>
+        <p class="auth-form_lead text-style-main" role="status" data-code-text />
+        <form class="auth-form_fields" method="post" novalidate data-code-form>
+          <div class="field auth-form_field">
+            <div class="auth-form_code" role="group" aria-label="6-digit code" data-code>
+              {digits.map((n) => (
+                <input
+                  class="auth-form_digit field-control text-style-h4"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  autocomplete={n === 1 ? "one-time-code" : "off"}
+                  aria-label={`Digit ${n} of 6`}
+                  data-digit
+                />
+              ))}
+            </div>
+            <p class="auth-form_error text-style-small" hidden data-error="code" />
+          </div>
+          <ActionButton type="submit" size="large" raised data-code-submit>
+            Verify
+          </ActionButton>
+        </form>
+        <button class="auth-form_text_button center text-style-small" type="button" data-resend>
+          Send a new code
+        </button>
+      </div>
+
+      <!-- Choose a new password (after a reset code) -->
+      <div class="auth-form_view" hidden data-view="newpass">
+        <h1 class="auth-form_title text-style-h4" tabindex="-1" data-heading>Choose a new password</h1>
+        <form class="auth-form_fields" method="post" novalidate data-newpass-form>
+          <div class="field auth-form_field">
+            <label class="field-label text-style-small" for="auth-new-password">New password</label>
+            <div class="auth-form_password">
+              <input
+                id="auth-new-password"
+                class="field-control text-style-main"
+                type="password"
+                name="new-password"
+                autocomplete="new-password"
+                placeholder="8+ characters"
+                data-new-password
+              />
+              <button
+                class="auth-form_show text-style-small"
+                type="button"
+                aria-label="Show password"
+                aria-pressed="false"
+                data-new-show
+              >
+                Show
+              </button>
+            </div>
+            <p class="auth-form_error text-style-small" hidden data-error="newpass" />
+            <div class="auth-form_strength">
+              <div class="auth-form_meter" aria-hidden="true" data-new-meter data-level="0">
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <span class="auth-form_strength_text text-style-small" data-new-strength />
+            </div>
+          </div>
+          <ActionButton type="submit" size="large" raised data-newpass-submit>
+            Update password
+          </ActionButton>
+        </form>
       </div>
 
       <!-- Done -->
@@ -220,15 +281,18 @@ const tabs = [
   import {
     logIn,
     requestPasswordReset,
+    resendCode,
     safeNext,
     signInWithGoogle,
     signUp,
     updatePassword,
+    verifyCode,
   } from "@/lib/auth-repo.ts";
-  import type { AuthResult } from "@/lib/auth-repo.ts";
+  import type { AuthResult, CodePurpose } from "@/lib/auth-repo.ts";
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   const strengthWords = ["", "Weak", "Okay", "Good", "Strong"];
+  const resendSeconds = 60;
 
   /** 0 for empty, then 1 to 4: length, more length, mixed case, a digit or symbol. */
   const strength = (password: string) => {
@@ -242,37 +306,43 @@ const tabs = [
   };
 
   document.querySelectorAll<HTMLElement>("[data-auth]").forEach((root) => {
-    const mode = root.dataset.auth as "login" | "signup" | "reset";
+    const mode = root.dataset.auth as "login" | "signup";
     const signup = mode === "signup";
-    const reset = mode === "reset";
-    const choosing = signup || reset;
     const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
     const views = root.querySelectorAll<HTMLElement>("[data-view]");
+
     const form = $<HTMLFormElement>("[data-form]");
-    const email = root.querySelector<HTMLInputElement>("[data-email]");
+    const email = $<HTMLInputElement>("[data-email]");
     const password = $<HTMLInputElement>("[data-password]");
     const terms = root.querySelector<HTMLInputElement>("[data-terms]");
-    const show = $<HTMLButtonElement>("[data-show]");
     const submit = $<HTMLButtonElement>("[data-submit]");
-    const google = root.querySelector<HTMLButtonElement>("[data-google]");
-    const banner = $("[data-banner]");
-    const meter = root.querySelector<HTMLElement>("[data-meter]");
-    const strengthText = root.querySelector<HTMLElement>("[data-strength]");
+    const google = $<HTMLButtonElement>("[data-google]");
+    const submitLabel = submit.querySelector<HTMLElement>(".action-button_text")!;
+    const idleSubmit = submitLabel.textContent ?? "";
+
     const resetForm = $<HTMLFormElement>("[data-forgot-form]");
     const resetEmail = $<HTMLInputElement>("[data-reset-email]");
     const resetSubmit = $<HTMLButtonElement>("[data-reset-submit]");
-    const submitLabel = submit.querySelector<HTMLElement>(".action-button_text")!;
     const resetLabel = resetSubmit.querySelector<HTMLElement>(".action-button_text")!;
-    const idle = { submit: submitLabel.textContent ?? "", reset: resetLabel.textContent ?? "" };
-    const params = new URLSearchParams(location.search);
-    const next = safeNext(params.get("next"), "");
+    const idleReset = resetLabel.textContent ?? "";
 
-    /* A link from an email that could not be used lands here with ?error=link. */
-    if (params.get("error") === "link") {
-      banner.textContent =
-        "That link didn't finish signing you in. If you already confirmed your email, log in below.";
-      banner.hidden = false;
-    }
+    const codeForm = $<HTMLFormElement>("[data-code-form]");
+    const codeBox = $("[data-code]");
+    const digits = [...root.querySelectorAll<HTMLInputElement>("[data-digit]")];
+    const codeSubmit = $<HTMLButtonElement>("[data-code-submit]");
+    const codeLabel = codeSubmit.querySelector<HTMLElement>(".action-button_text")!;
+    const resend = $<HTMLButtonElement>("[data-resend]");
+
+    const newForm = $<HTMLFormElement>("[data-newpass-form]");
+    const newPassword = $<HTMLInputElement>("[data-new-password]");
+    const newSubmit = $<HTMLButtonElement>("[data-newpass-submit]");
+    const newLabel = newSubmit.querySelector<HTMLElement>(".action-button_text")!;
+    const idleNew = newLabel.textContent ?? "";
+
+    const next = safeNext(new URLSearchParams(location.search).get("next"), "");
+    /** Who the code was sent to and why. Kept in memory only. */
+    let pending: { email: string; purpose: CodePurpose } | null = null;
+    let timer = 0;
 
     const touched = new Set<string>();
     let tried = false;
@@ -293,14 +363,14 @@ const tabs = [
     const emailMessage = (value: string) =>
       emailPattern.test(value.trim()) ? null : value.trim() === "" ? "Add your email." : "That email looks off.";
     const passwordMessage = () =>
-      choosing
+      signup
         ? password.value.length >= 8 ? null : "Use at least 8 characters."
         : password.value.length >= 1 ? null : "Enter your password.";
 
     /** Messages appear after a field is left or a submit was tried, never while typing the first time. */
     const check = () => {
       const visible = (key: string) => tried || touched.has(key);
-      if (email) flag("email", visible("email") ? emailMessage(email.value) : null, email);
+      flag("email", visible("email") ? emailMessage(email.value) : null, email);
       flag("password", visible("password") ? passwordMessage() : null, password);
       if (terms) {
         flag("terms", tried && !terms.checked ? "Please agree to continue." : null);
@@ -308,21 +378,157 @@ const tabs = [
       }
     };
 
-    const valid = () =>
-      (!email || !emailMessage(email.value)) && !passwordMessage() && (!terms || terms.checked);
+    const valid = () => !emailMessage(email.value) && !passwordMessage() && (!terms || terms.checked);
 
-    const shake = () => {
-      form.classList.remove("shake");
-      void form.offsetWidth;
-      form.classList.add("shake");
+    const shake = (target: HTMLElement) => {
+      target.classList.remove("shake");
+      void target.offsetWidth;
+      target.classList.add("shake");
     };
+
+    /** Show or hide a password field, and fill its strength meter as it changes. */
+    const wirePassword = (
+      input: HTMLInputElement,
+      show: HTMLElement,
+      meter: HTMLElement | null,
+      text: HTMLElement | null,
+      onInput: () => void,
+    ) => {
+      show.addEventListener("click", () => {
+        const showing = input.type === "password";
+        input.type = showing ? "text" : "password";
+        show.textContent = showing ? "Hide" : "Show";
+        show.setAttribute("aria-label", showing ? "Hide password" : "Show password");
+        show.setAttribute("aria-pressed", String(showing));
+      });
+      input.addEventListener("input", () => {
+        onInput();
+        if (!meter || !text) return;
+        const level = strength(input.value);
+        meter.dataset.level = String(level);
+        text.textContent = strengthWords[level];
+      });
+    };
+
+    const done = (title: string, text: string, label: string, href: string) => {
+      $("[data-done-title]").textContent = title;
+      $("[data-done-text]").textContent = text;
+      const link = $<HTMLAnchorElement>("[data-done-link]");
+      link.href = href;
+      link.querySelector<HTMLElement>(".action-button_text")!.textContent = label;
+      open("done");
+    };
+
+    /* ---------- the code view ---------- */
+
+    const enteredCode = () => digits.map((digit) => digit.value).join("");
+
+    const startCooldown = () => {
+      window.clearInterval(timer);
+      let left = resendSeconds;
+      const paint = () => {
+        resend.textContent = left > 0 ? `Send a new code in ${left}s` : "Send a new code";
+        resend.disabled = left > 0;
+      };
+      paint();
+      timer = window.setInterval(() => {
+        left -= 1;
+        paint();
+        if (left <= 0) window.clearInterval(timer);
+      }, 1000);
+    };
+
+    const showCode = (address: string, purpose: CodePurpose) => {
+      pending = { email: address, purpose };
+      $("[data-code-text]").textContent = `We sent a 6-digit code to ${address}. It can take a minute to arrive.`;
+      digits.forEach((digit) => (digit.value = ""));
+      flag("code", null);
+      open("code");
+      digits[0].focus();
+      startCooldown();
+    };
+
+    const fillDigits = (value: string, from = 0) => {
+      const clean = value.replace(/\D/g, "").slice(0, 6 - from);
+      [...clean].forEach((char, offset) => (digits[from + offset].value = char));
+      digits[Math.min(from + clean.length, 5)].focus();
+      if (enteredCode().length === 6) codeForm.requestSubmit();
+    };
+
+    digits.forEach((digit, index) => {
+      digit.addEventListener("input", () => {
+        /* Autofill and paste can drop several digits into one box. */
+        if (digit.value.length > 1 || /\D/.test(digit.value)) {
+          const all = digit.value;
+          digit.value = "";
+          return fillDigits(all, index);
+        }
+        flag("code", null);
+        if (digit.value && index < 5) digits[index + 1].focus();
+        if (enteredCode().length === 6) codeForm.requestSubmit();
+      });
+      digit.addEventListener("keydown", (event) => {
+        if (event.key === "Backspace" && !digit.value && index > 0) {
+          digits[index - 1].value = "";
+          digits[index - 1].focus();
+        } else if (event.key === "ArrowLeft" && index > 0) digits[index - 1].focus();
+        else if (event.key === "ArrowRight" && index < 5) digits[index + 1].focus();
+      });
+      digit.addEventListener("paste", (event) => {
+        event.preventDefault();
+        fillDigits(event.clipboardData?.getData("text") ?? "", index);
+      });
+      digit.addEventListener("focus", () => digit.select());
+    });
+
+    codeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!pending || codeSubmit.disabled) return;
+      if (enteredCode().length < 6) {
+        flag("code", "Enter all 6 digits.");
+        return shake(codeBox);
+      }
+      codeSubmit.disabled = true;
+      codeLabel.textContent = "Checking…";
+      const result = await verifyCode({ email: pending.email, token: enteredCode(), purpose: pending.purpose });
+      codeSubmit.disabled = false;
+      codeLabel.textContent = "Verify";
+      if (!result.ok) {
+        flag("code", result.error);
+        shake(codeBox);
+        digits.forEach((digit) => (digit.value = ""));
+        return digits[0].focus();
+      }
+      window.clearInterval(timer);
+      if (pending.purpose === "recovery") return open("newpass");
+      done(
+        "You are in!",
+        "Two quick questions and you are set.",
+        "Let's set you up",
+        "next" in result ? result.next : "/app/onboarding",
+      );
+    });
+
+    resend.addEventListener("click", async () => {
+      if (!pending) return;
+      resend.disabled = true;
+      const result = await resendCode(pending);
+      if (!result.ok) {
+        flag("code", result.error);
+        resend.disabled = false;
+        return;
+      }
+      flag("code", null);
+      startCooldown();
+      digits[0].focus();
+    });
+
+    /* ---------- the form ---------- */
 
     const busy = (on: boolean) => {
       submit.disabled = on;
-      if (google) google.disabled = on;
-      submitLabel.textContent = on
-        ? reset ? "Updating…" : signup ? "Creating…" : "Logging in…"
-        : idle.submit;
+      google.disabled = on;
+      submitLabel.textContent = on ? (signup ? "Creating…" : "Logging in…") : idleSubmit;
     };
 
     const finish = (result: AuthResult) => {
@@ -331,73 +537,55 @@ const tabs = [
         flag("password", result.error, password);
         return password.focus();
       }
-      if ("checkEmail" in result) {
-        $("[data-sent-text]").textContent =
-          `We sent a confirmation link to ${email?.value.trim()}. Open it to finish creating your account.`;
-        return open("sent");
-      }
-      $("[data-done-title]").textContent = reset
-        ? "Password updated"
-        : signup ? "You are in!" : "Welcome back!";
-      $("[data-done-text]").textContent = reset
-        ? "You are signed in with your new password."
-        : signup
-          ? "Two quick questions and you are set."
-          : "Your plans and friends are right where you left them.";
-      const link = $<HTMLAnchorElement>("[data-done-link]");
-      link.href = result.next;
-      link.querySelector<HTMLElement>(".action-button_text")!.textContent = signup && !reset
-        ? "Let's set you up"
-        : "Go to my plans";
-      open("done");
+      if ("checkEmail" in result) return showCode(email.value.trim(), "signup");
+      done(
+        signup ? "You are in!" : "Welcome back!",
+        signup ? "Two quick questions and you are set." : "Your plans and friends are right where you left them.",
+        signup ? "Let's set you up" : "Go to my plans",
+        result.next,
+      );
     };
 
-    email?.addEventListener("blur", () => (touched.add("email"), check()));
-    password.addEventListener("blur", () => (touched.add("password"), check()));
-    email?.addEventListener("input", check);
-    terms?.addEventListener("change", check);
-    password.addEventListener("input", () => {
-      check();
-      if (!meter || !strengthText) return;
-      const level = strength(password.value);
-      meter.dataset.level = String(level);
-      strengthText.textContent = strengthWords[level];
-    });
+    wirePassword(password, $("[data-show]"), root.querySelector("[data-meter]"), root.querySelector("[data-strength]"), check);
+    wirePassword(newPassword, $("[data-new-show]"), $("[data-new-meter]"), $("[data-new-strength]"), () =>
+      flag("newpass", null, newPassword),
+    );
 
-    show.addEventListener("click", () => {
-      const showing = password.type === "password";
-      password.type = showing ? "text" : "password";
-      show.textContent = showing ? "Hide" : "Show";
-      show.setAttribute("aria-label", showing ? "Hide password" : "Show password");
-      show.setAttribute("aria-pressed", String(showing));
-    });
+    email.addEventListener("blur", () => (touched.add("email"), check()));
+    password.addEventListener("blur", () => (touched.add("password"), check()));
+    email.addEventListener("input", check);
+    terms?.addEventListener("change", check);
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       tried = true;
       check();
       if (!valid()) {
-        shake();
-        return (email && emailMessage(email.value) ? email : password).focus();
+        shake(form);
+        return (emailMessage(email.value) ? email : password).focus();
       }
       busy(true);
-      if (reset) return finish(await updatePassword({ password: password.value }));
-      const input = { email: email!.value.trim(), password: password.value, next: next || undefined };
+      const input = { email: email.value.trim(), password: password.value, next: next || undefined };
       finish(signup ? await signUp(input) : await logIn(input));
     });
 
-    google?.addEventListener("click", async () => {
+    google.addEventListener("click", async () => {
       busy(true);
       finish(await signInWithGoogle({ mode, next: next || undefined }));
     });
 
+    /* ---------- forgot password ---------- */
+
     root.querySelector("[data-forgot]")?.addEventListener("click", () => {
-      resetEmail.value = email?.value ?? "";
+      resetEmail.value = email.value;
       open("forgot");
       resetEmail.focus();
     });
     root.querySelectorAll("[data-back]").forEach((button) =>
-      button.addEventListener("click", () => open("form")),
+      button.addEventListener("click", () => {
+        window.clearInterval(timer);
+        open(pending?.purpose === "recovery" ? "forgot" : "form");
+      }),
     );
 
     resetForm.addEventListener("submit", async (event) => {
@@ -407,12 +595,32 @@ const tabs = [
       if (message) return resetEmail.focus();
       resetSubmit.disabled = true;
       resetLabel.textContent = "Sending…";
-      await requestPasswordReset({ email: resetEmail.value.trim() });
+      const result = await requestPasswordReset({ email: resetEmail.value.trim() });
       resetSubmit.disabled = false;
-      resetLabel.textContent = idle.reset;
-      $("[data-sent-text]").textContent =
-        `If ${resetEmail.value.trim()} has an account, a reset link is on its way.`;
-      open("sent");
+      resetLabel.textContent = idleReset;
+      if (!result.ok) return flag("reset", result.error, resetEmail);
+      showCode(resetEmail.value.trim(), "recovery");
+    });
+
+    newForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (newPassword.value.length < 8) {
+        flag("newpass", "Use at least 8 characters.", newPassword);
+        shake(newForm);
+        return newPassword.focus();
+      }
+      newSubmit.disabled = true;
+      newLabel.textContent = "Updating…";
+      const result = await updatePassword({ password: newPassword.value });
+      newSubmit.disabled = false;
+      newLabel.textContent = idleNew;
+      if (!result.ok) return flag("newpass", result.error, newPassword);
+      done(
+        "Password updated",
+        "You are signed in with your new password.",
+        "Go to my plans",
+        "next" in result ? result.next : "/app/dashboard",
+      );
     });
   });
 </script>
@@ -539,6 +747,15 @@ const tabs = [
       text-decoration: underline;
       text-underline-offset: 0.2em;
       cursor: pointer;
+
+      &.center {
+        align-self: center;
+      }
+      &:disabled {
+        color: var(--text-2);
+        cursor: default;
+        text-decoration: none;
+      }
     }
 
     .auth-form_password {
@@ -616,6 +833,24 @@ const tabs = [
       min-width: 4rem;
       font-weight: var(--primary-bold);
       text-align: end;
+    }
+
+    .auth-form_code {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: var(--space-2);
+
+      &.shake {
+        animation: auth-form-shake 0.35s ease-in-out;
+      }
+    }
+
+    .auth-form_digit {
+      min-width: 0;
+      padding-inline: 0;
+      font-family: var(--secondary-family);
+      font-weight: var(--secondary-bold);
+      text-align: center;
     }
 
     .auth-form_check {
@@ -717,7 +952,8 @@ const tabs = [
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: calc(var(--avatar-xlarge) * 1.4);
+      align-self: center;
+      width: calc(var(--avatar-xlarge) * 1.2);
       aspect-ratio: 1 / 1;
       border: var(--border-width-thick) solid var(--border-strong);
       border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
