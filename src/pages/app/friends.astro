@@ -7,12 +7,18 @@ import FriendCircle from "@/components/content/FriendCircle.astro";
 import FriendAdd from "@/components/content/FriendAdd.astro";
 import FriendRequests from "@/components/content/FriendRequests.astro";
 import FriendList from "@/components/content/FriendList.astro";
-import { friendsRepo } from "@/lib/friends-repo.ts";
+import { readFriends } from "@/lib/friends-db.ts";
+import { nowFor } from "@/utils/now.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
-const data = await friendsRepo.getFriends();
+const data = await readFriends(
+  Astro.locals.supabase,
+  Astro.locals.user!.id,
+  nowFor(Astro.cookies),
+  Astro.url.host,
+);
 ---
 
 <DashboardLayout title="Your people">

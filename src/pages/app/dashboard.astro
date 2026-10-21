@@ -23,7 +23,8 @@ const { user, freeNow, plans, invites, budget, tonight, overlap } =
   <DashboardSection paddingTop="small" paddingBottom="small">
     <DashboardColumns>
       <DashboardHeader
-        name={Astro.locals.profile?.first_name || user.name}
+        name={Astro.locals.profile?.first_name ||
+          (Astro.locals.profile?.username ? `@${Astro.locals.profile.username}` : user.name)}
         people={freeNow.people}
         summary={freeNow.summary}
       />

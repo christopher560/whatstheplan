@@ -16,6 +16,13 @@ export const createSupabase = (request: Request, cookies: AstroCookies) =>
           value: value ?? "",
         })),
       setAll: (list) =>
-        list.forEach(({ name, value, options }) => cookies.set(name, value, options)),
+        list.forEach(({ name, value, options }) =>
+          cookies.set(name, value, {
+            ...options,
+            httpOnly: true,
+            sameSite: "lax",
+            secure: !import.meta.env.DEV,
+          }),
+        ),
     },
   });

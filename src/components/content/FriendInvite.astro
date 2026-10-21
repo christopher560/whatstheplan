@@ -1,0 +1,130 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Whose link this is, or nothing when the username is unknown or the viewer's own. */
+  person?: { name: string; color: AccentColor; username: string };
+  /** Why there is no person to add. */
+  reason?: "self" | "missing";
+  /** Where "Back to friends" goes. */
+  friendsHref?: string;
+}
+
+const { render = true, person, reason = "missing", friendsHref = "/app/friends" } = Astro.props;
+---
+
+{
+  render && (
+    <Panel class="friend-invite_wrap" aria-labelledby="friend-invite-title" data-invite>
+      {person ? (
+        <div class="friend-invite_body">
+          <Avatar initial={person.name} color={person.color} size="xlarge" />
+          <h1 id="friend-invite-title" class="friend-invite_title text-style-h3">
+            Add {person.name} as a friend?
+          </h1>
+          <p class="friend-invite_user text-style-main">@{person.username}</p>
+          <p class="friend-invite_text text-style-main" hidden data-result />
+          <div class="friend-invite_buttons">
+            <ActionButton size="large" raised data-send data-username={person.username}>
+              Send friend request
+            </ActionButton>
+            <ActionButton element="link" href={friendsHref} color="white" size="large">
+              Not now
+            </ActionButton>
+          </div>
+        </div>
+      ) : (
+        <div class="friend-invite_body">
+          <h1 id="friend-invite-title" class="friend-invite_title text-style-h3">
+            {reason === "self" ? "That's your own link" : "We couldn't find that person"}
+          </h1>
+          <p class="friend-invite_text text-style-main">
+            {reason === "self"
+              ? "Send it to a friend so they can add you."
+              : "Check the link with the person who sent it."}
+          </p>
+          <ActionButton element="link" href={friendsHref} size="large" raised>
+            Back to friends
+          </ActionButton>
+        </div>
+      )}
+    </Panel>
+  )
+}
+
+<script>
+  import { sendFriendRequest } from "@/lib/friends-repo.ts";
+  import type { RequestStatus } from "@/lib/friends-repo.ts";
+
+  const messages: Record<RequestStatus, string> = {
+    sent: "Request sent. They will see it on their Friends page.",
+    accepted: "You are friends now.",
+    already_friends: "You are already friends.",
+    already_requested: "You already asked them. They have not answered yet.",
+    not_found: "We couldn't find that person.",
+    self: "That's your own username.",
+    too_many: "You have a lot of requests waiting. Try again later.",
+    rate_limited: "That's a lot of tries in a short time. Wait a bit and try again.",
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-invite]").forEach((root) => {
+    const send = root.querySelector<HTMLButtonElement>("[data-send]");
+    const result = root.querySelector<HTMLElement>("[data-result]");
+    if (!send || !result) return;
+    const label = send.querySelector<HTMLElement>(".action-button_text")!;
+
+    send.addEventListener("click", async () => {
+      send.disabled = true;
+      label.textContent = "Sending…";
+      const answer = await sendFriendRequest(send.dataset.username!);
+      result.hidden = false;
+      result.textContent = answer.ok ? messages[answer.status] : answer.error;
+      const done = answer.ok && ["sent", "accepted", "already_friends", "already_requested"].includes(answer.status);
+      label.textContent = done ? "Done" : "Send friend request";
+      send.disabled = done;
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .friend-invite_wrap {
+      width: 100%;
+      max-width: 28rem;
+      margin-inline: auto;
+    }
+
+    .friend-invite_body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      text-align: center;
+    }
+
+    .friend-invite_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .friend-invite_user,
+    .friend-invite_text {
+      color: var(--text-2);
+    }
+
+    .friend-invite_text[hidden] {
+      display: none;
+    }
+
+    .friend-invite_buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space-2);
+    }
+  }
+</style>

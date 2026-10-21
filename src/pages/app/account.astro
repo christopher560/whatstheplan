@@ -2,6 +2,7 @@
 import DashboardLayout from "@/layouts/DashbaordLayout.astro";
 import DashboardSection from "@/components/wrapper/DashboardSection.astro";
 import AccountProfile from "@/components/content/AccountProfile.astro";
+import UsernameCard from "@/components/content/UsernameCard.astro";
 import PasswordCard from "@/components/content/PasswordCard.astro";
 import DeleteAccountCard from "@/components/content/DeleteAccountCard.astro";
 import LogOutButton from "@/components/item/LogOutButton.astro";
@@ -16,6 +17,7 @@ const [saved, areas] = await Promise.all([
   onboardingRepo.getAreas(),
 ]);
 if (!saved) return Astro.redirect("/app/onboarding");
+const { data: username } = await Astro.locals.supabase.rpc("ensure_my_username");
 const { profile } = saved;
 ---
 
@@ -27,7 +29,9 @@ const { profile } = saved;
     gap="5"
     containerClass="max-width-small"
   >
-    <AccountProfile profile={profile} areas={areas} />
+    <AccountProfile profile={profile} areas={areas}>
+      <UsernameCard slot="after-basics" username={username ?? ""} host={Astro.url.host} />
+    </AccountProfile>
     <PasswordCard />
     <DeleteAccountCard name={profile.first_name} />
     <LogOutButton size="main" class="account_logout" />

@@ -1,6 +1,7 @@
 ---
 import Panel from "@/components/wrapper/Panel.astro";
 import ActionButton from "@/components/item/ActionButton.astro";
+import Input from "@/components/form/Input.astro";
 
 interface Props {
   /** Set to `false` to omit the component. */
@@ -20,7 +21,7 @@ const { render = true, link = "" } = Astro.props;
           Add a friend
         </h2>
         <p class="text-style-main">
-          Send your link. They tap it and they're in. No account needed to answer a plan.
+          Send your link. They tap it, sign in, and send you a request.
         </p>
         <div class="friend-add_row">
           <p class="friend-add_link text-style-small">{link}</p>
@@ -28,6 +29,22 @@ const { render = true, link = "" } = Astro.props;
             Copy
           </ActionButton>
         </div>
+        <form class="friend-add_form" novalidate data-find>
+          <Input
+            variant="text"
+            label="Add by username"
+            labelHidden
+            placeholder="Or type their username"
+            maxlength={20}
+            autocomplete="off"
+            autocapitalize="none"
+            data-username
+          />
+          <ActionButton type="submit" size="small" color="ink" data-find-submit>
+            Send request
+          </ActionButton>
+        </form>
+        <p class="friend-add_note text-style-small" role="status" hidden data-note />
       </div>
     </Panel>
   )
@@ -35,13 +52,48 @@ const { render = true, link = "" } = Astro.props;
 
 <script>
   import { get, subscribe, update } from "@/lib/friends-store.ts";
+  import { sendFriendRequest } from "@/lib/friends-repo.ts";
+  import type { RequestStatus } from "@/lib/friends-repo.ts";
+
+  const messages: Record<RequestStatus, string> = {
+    sent: "Request sent. They will see it on their Friends page.",
+    accepted: "You are friends now.",
+    already_friends: "You are already friends.",
+    already_requested: "You already asked them. They have not answered yet.",
+    not_found: "No one has that username.",
+    self: "That's your own username.",
+    too_many: "You have a lot of requests waiting. Try again later.",
+    rate_limited: "That's a lot of tries in a short time. Wait a bit and try again.",
+  };
 
   document.querySelectorAll<HTMLElement>("[data-friend-add]").forEach((root) => {
     const button = root.querySelector<HTMLElement>("[data-copy]")!;
     button.addEventListener("click", () => {
-      void navigator.clipboard?.writeText(`https://${root.dataset.link}`).catch(() => {});
+      /* The dev server on localhost has no HTTPS, so a copied link must not force it. */
+      const local = /^(localhost|127\.0\.0\.1)(:|\/|$)/.test(root.dataset.link ?? "");
+      void navigator.clipboard
+        ?.writeText(`${local ? "http" : "https"}://${root.dataset.link}`)
+        .catch(() => {});
       update({ copied: true });
     });
+    const form = root.querySelector<HTMLFormElement>("[data-find]")!;
+    const input = root.querySelector<HTMLInputElement>("[data-username]")!;
+    const note = root.querySelector<HTMLElement>("[data-note]")!;
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const username = input.value.trim().replace(/^@/, "").toLowerCase();
+      note.hidden = false;
+      if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+        note.textContent = "Usernames are 3 to 20 letters, numbers or underscores.";
+        return;
+      }
+      const result = await sendFriendRequest(username);
+      note.textContent = result.ok ? messages[result.status] : result.error;
+      if (result.ok && ["sent", "accepted"].includes(result.status)) input.value = "";
+      /* An accepted request means they were already waiting, so the list needs a refresh. */
+      if (result.ok && result.status === "accepted") window.setTimeout(() => location.reload(), 1200);
+    });
+
     subscribe(() => {
       const copied = get().copied;
       button.classList.toggle("green", copied);
@@ -68,6 +120,25 @@ const { render = true, link = "" } = Astro.props;
       display: flex;
       align-items: center;
       gap: var(--space-2);
+    }
+
+    .friend-add_form {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-2);
+
+      & .form-input {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .friend-add_note {
+      font-weight: var(--primary-bold);
+
+      &[hidden] {
+        display: none;
+      }
     }
 
     .friend-add_link {

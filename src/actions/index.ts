@@ -3,6 +3,7 @@ import { z } from "astro/zod";
 import { safeNext } from "@/utils/safe-next.ts";
 import { incomplete, profileSchema } from "@/lib/profile-schema.ts";
 import { profileRow } from "@/lib/profile-db.ts";
+import { cleanUsername, usernameProblem } from "@/utils/username.ts";
 
 /** What the auth pages get back. Expected problems are returned, not thrown. */
 type Result =
@@ -214,7 +215,159 @@ export const server = {
     }),
   },
 
+  calendar: {
+    /** Replaces one week of painted hours. An empty week stays saved as empty. */
+    saveAvailability: defineAction({
+      accept: "json",
+      input: z.object({
+        weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        /** Keys are `weekday-hour`: weekday 0 to 6, hour 8 to 23. */
+        cells: z.record(z.string().regex(/^[0-6]-(?:[89]|1\d|2[0-3])$/), z.enum(["free", "busy"])),
+      }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+
+        /* A Monday, from a few days back (clock differences) to the last week the calendar opens. */
+        const start = new Date(`${input.weekStart}T12:00:00Z`);
+        const today = new Date();
+        const days = (start.getTime() - today.getTime()) / 86_400_000;
+        if (Number.isNaN(start.getTime()) || start.getUTCDay() !== 1 || days < -8 || days > 7 * 8 + 1) {
+          return { ok: false, error: "That week can't be edited." };
+        }
+
+        const rows = Object.entries(input.cells).map(([key, state]) => {
+          const [weekday, hour] = key.split("-").map(Number);
+          return { weekday, hour, state };
+        });
+        const { error } = await supabase.rpc("save_availability_week", {
+          p_week_start: input.weekStart,
+          p_cells: rows,
+        });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    saveShare: defineAction({
+      accept: "json",
+      input: z.object({ share: z.boolean() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase
+          .from("profiles")
+          .update({ calendar_shared: input.share })
+          .eq("id", user.id);
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+  },
+
+  friends: {
+    /** Asks someone to be friends by their exact username. Never reveals more than whether it worked. */
+    sendRequest: defineAction({
+      accept: "json",
+      input: z.object({ username: z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,20}$/) }),
+      handler: async (input, context): Promise<{ ok: true; status: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("send_friend_request", { p_username: input.username });
+        if (error || typeof data !== "string") return { ok: false, error: generic };
+        return { ok: true, status: data };
+      },
+    }),
+
+    /** Accepts or declines a request someone sent. */
+    respond: defineAction({
+      accept: "json",
+      input: z.object({ friendId: z.uuid(), accept: z.boolean() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("respond_friend_request", {
+          p_other: input.friendId,
+          p_accept: input.accept,
+        });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    setFavorite: defineAction({
+      accept: "json",
+      input: z.object({ friendId: z.uuid(), favorite: z.boolean() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("set_friend_favorite", {
+          p_friend: input.friendId,
+          p_favorite: input.favorite,
+        });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    /** Private labels. Only the person who wrote them ever sees them. */
+    setTags: defineAction({
+      accept: "json",
+      input: z.object({
+        friendId: z.uuid(),
+        tags: z.array(z.string().trim().min(1).max(20)).max(8),
+      }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("set_friend_tags", {
+          p_friend: input.friendId,
+          p_tags: [...new Set(input.tags)],
+        });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    setCircle: defineAction({
+      accept: "json",
+      input: z.object({ friendIds: z.array(z.uuid()).max(6) }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("set_circle", { p_ids: input.friendIds });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+  },
+
   account: {
+    /** Whether a username is free. Someone's own current username counts as free. */
+    checkUsername: defineAction({
+      accept: "json",
+      input: z.object({ username: z.string().max(40) }),
+      handler: async (input, context): Promise<{ ok: true; available: boolean; problem: string | null }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const username = cleanUsername(input.username);
+        const problem = usernameProblem(username);
+        if (problem) return { ok: true, available: false, problem };
+        const { data } = await supabase.rpc("profile_by_username", { p_username: username });
+        return { ok: true, available: !data?.length, problem: null };
+      },
+    }),
+
+    /** Changes the person's username, and so their add-friend link. There is no limit on changes. */
+    setUsername: defineAction({
+      accept: "json",
+      input: z.object({ username: z.string().max(40) }),
+      handler: async (input, context): Promise<{ ok: true; username: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const username = cleanUsername(input.username);
+        const problem = usernameProblem(username);
+        if (problem) return { ok: false, error: problem };
+        const { error } = await supabase.from("profiles").update({ username }).eq("id", user.id);
+        if (error?.code === "23505") return { ok: false, error: "That username is taken." };
+        return error ? { ok: false, error: generic } : { ok: true, username };
+      },
+    }),
+
     /** Saves edits from the account page. The profile must be complete. */
     updateProfile: defineAction({
       accept: "json",
@@ -222,7 +375,7 @@ export const server = {
       handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
         const { user, supabase } = context.locals;
         if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
-        const missing = incomplete(input.profile);
+        const missing = incomplete(input.profile, false);
         if (missing) return { ok: false, error: missing };
 
         const { error } = await supabase

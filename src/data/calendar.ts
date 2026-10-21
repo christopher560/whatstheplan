@@ -56,8 +56,10 @@ export interface CalendarData {
   weekStart: string;
   /** Today, as `YYYY-MM-DD`. */
   today: string;
-  /** The person's weekly pattern, keyed `weekday-hour`. */
+  /** What a week nobody painted starts from: the latest painted week up to this one, keyed `weekday-hour`. */
   cells: Record<string, Cell>;
+  /** Painted weeks from this one on, by how many weeks ahead (0 is this week). */
+  weeks: Record<number, Record<string, Cell>>;
   friends: CalendarFriend[];
   /** Friend ids picked at the start. */
   who: string[];

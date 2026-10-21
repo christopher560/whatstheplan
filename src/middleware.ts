@@ -30,23 +30,27 @@ export const onRequest = defineMiddleware(async (context, next) => {
   locals.profile = null;
 
   const inApp = path === "/app" || path.startsWith("/app/");
-  const needsSession = inApp;
+  /* /add/<username> is the personal link people send to be added as a friend. */
+  const inAdd = path.startsWith("/add/");
+  const needsSession = inApp || inAdd;
 
   if (needsSession && !user) {
     const target = encodeURIComponent(`${path}${url.search}`);
     return redirect(`/login?next=${target}`);
   }
 
-  if (user && (inApp || signedOutOnly.has(path))) {
+  if (user && (inApp || inAdd || signedOutOnly.has(path))) {
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("onboarded, first_name, avatar_color")
+      .select("onboarded, first_name, avatar_color, username")
       .eq("id", user.id)
       .maybeSingle();
     /* A missing row means setup has not started. A failed read says nothing, so
      * it leaves the person where they are rather than bouncing them in a loop. */
     locals.onboarded = error ? null : (profile?.onboarded ?? false);
-    locals.profile = profile ? { first_name: profile.first_name, avatar_color: profile.avatar_color } : null;
+    locals.profile = profile
+      ? { first_name: profile.first_name, avatar_color: profile.avatar_color, username: profile.username }
+      : null;
 
     if (signedOutOnly.has(path)) {
       return redirect(locals.onboarded === false ? "/app/onboarding" : "/app/dashboard");

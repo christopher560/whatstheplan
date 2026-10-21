@@ -25,3 +25,16 @@ export const changePassword = async (input: { current: string; next: string }) =
 /** Deletes the account and signs out. */
 export const deleteAccount = async () =>
   unwrap(await actions.account.deleteAccount()) as Simple;
+
+/** Whether a username is free, and why not when it is not. */
+export const checkUsername = async (username: string) =>
+  unwrap(await actions.account.checkUsername({ username })) as
+    | { ok: true; available: boolean; problem: string | null }
+    | typeof failed;
+
+/** Saves a new username. The add-friend link changes with it. */
+export const setUsername = async (username: string) =>
+  unwrap(await actions.account.setUsername({ username })) as
+    | { ok: true; username: string }
+    | typeof failed
+    | { ok: false; error: string };

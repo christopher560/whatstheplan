@@ -137,6 +137,8 @@ const allAreas = [...areas, otherArea];
         </div>
       </Panel>
 
+      <slot name="after-basics" />
+
       <Panel aria-labelledby="account-interests" data-account-hide>
         <div class="account-profile_section">
           <div class="account-profile_split">
@@ -306,6 +308,7 @@ const allAreas = [...areas, otherArea];
     let base = JSON.stringify(initial);
     let justSaved = false;
     let failed = false;
+    let failMessage = "";
 
     const $ = <T extends HTMLElement>(selector: string) =>
       root.querySelector<T>(selector)!;
@@ -403,7 +406,7 @@ const allAreas = [...areas, otherArea];
       barText.textContent = saved
         ? "Saved. Your profile is up to date."
         : failed
-          ? "Couldn't save. Try again."
+          ? failMessage || "Couldn't save. Try again."
           : errors[0] ?? "You have unsaved changes.";
       saveButton.disabled = errors.length > 0;
     };
@@ -412,6 +415,7 @@ const allAreas = [...areas, otherArea];
       patch();
       justSaved = false;
       failed = false;
+      failMessage = "";
       render();
     };
 
@@ -434,14 +438,22 @@ const allAreas = [...areas, otherArea];
         saveButton.disabled = true;
         barText.textContent = "Saving...";
         updateProfile(structuredClone(state)).then(
-          () => {
+          (result) => {
+            /* The server can say no (a rule failed), and that is not a save. */
+            if (!result.ok) {
+              failed = true;
+              failMessage = result.error;
+              return render();
+            }
             base = snapshot;
             justSaved = true;
             failed = false;
+            failMessage = "";
             render();
           },
           () => {
             failed = true;
+            failMessage = "";
             render();
           },
         );

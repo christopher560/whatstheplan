@@ -1,0 +1,30 @@
+---
+import DashboardLayout from "@/layouts/DashbaordLayout.astro";
+import DashboardSection from "@/components/wrapper/DashboardSection.astro";
+import FriendInvite from "@/components/content/FriendInvite.astro";
+import { nearestAccent } from "@/utils/avatar-accent.ts";
+
+/* A personal link: whatstheplan.social/add/<username>. Signing in is required, so people
+ * who are not signed in are sent to log in and then back here. */
+export const prerender = false;
+
+const { supabase } = Astro.locals;
+const username = (Astro.params.username ?? "").toLowerCase();
+
+const [{ data: found }, { data: mine }] = await Promise.all([
+  supabase.rpc("profile_by_username", { p_username: username }),
+  supabase.from("profiles").select("username").eq("id", Astro.locals.user!.id).maybeSingle(),
+]);
+const row = found?.[0];
+const person = row
+  ? { name: row.first_name || `@${row.username}`, color: nearestAccent(row.avatar_color), username: row.username as string }
+  : undefined;
+const reason = mine?.username === username ? "self" : "missing";
+---
+
+<DashboardLayout title="Add a friend">
+  <!-- Add a friend -->
+  <DashboardSection paddingTop="small" paddingBottom="small" gap="5">
+    <FriendInvite person={person} reason={reason} />
+  </DashboardSection>
+</DashboardLayout>

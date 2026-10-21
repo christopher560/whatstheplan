@@ -4,6 +4,7 @@ import FriendPicker from "@/components/content/FriendPicker.astro";
 import OverlapStrips from "@/components/content/OverlapStrips.astro";
 import BestTimes from "@/components/content/BestTimes.astro";
 import Avatar from "@/components/item/Avatar.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
 import type { CalendarFriend } from "@/data/calendar.ts";
 
 interface Props {
@@ -15,9 +16,11 @@ interface Props {
   who?: string[];
   /** Where "Plan it" goes. */
   planHref?: string;
+  /** Where "Find friends" goes when there is nobody to compare yet. */
+  friendsHref?: string;
 }
 
-const { render = true, friends = [], who = [], planHref } = Astro.props;
+const { render = true, friends = [], who = [], planHref, friendsHref = "/app/friends" } = Astro.props;
 ---
 
 {
@@ -48,6 +51,24 @@ const { render = true, friends = [], who = [], planHref } = Astro.props;
   )
 }
 
+{
+  render && friends.length === 0 && (
+    <Panel dashed aria-labelledby="friend-overlap-empty-title">
+      <div class="friend-overlap_empty">
+        <h2 id="friend-overlap-empty-title" class="friend-overlap_title text-style-h4">
+          When are you free with friends?
+        </h2>
+        <p class="text-style-main">
+          Add friends and their free hours show up here, so you can see the times that work for everyone.
+        </p>
+        <ActionButton element="link" href={friendsHref} color="ink" size="small">
+          Find friends
+        </ActionButton>
+      </div>
+    </Panel>
+  )
+}
+
 <script>
   import { selectedFriends, subscribe } from "@/lib/calendar-store.ts";
 
@@ -66,6 +87,13 @@ const { render = true, friends = [], who = [], planHref } = Astro.props;
 
 <style is:global>
   @layer components {
+    .friend-overlap_empty {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+
     .friend-overlap_wrap {
       display: flex;
       flex-direction: column;

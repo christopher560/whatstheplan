@@ -51,8 +51,12 @@ export const profileSchema = z.object({
 
 export type ProfileInput = z.infer<typeof profileSchema>;
 
-/** What a finished profile needs. Returns the first thing missing, or null. */
-export const incomplete = (profile: ProfileInput): string | null => {
+/**
+ * What a finished profile needs. Returns the first thing missing, or null.
+ * `guidelines` is false for the account page, which has no guidelines box: the
+ * answer is whatever was given in onboarding.
+ */
+export const incomplete = (profile: ProfileInput, guidelines = true): string | null => {
   if (!profile.first_name) return "Add your first name.";
   if (!profile.age_group) return "Pick your age group.";
   if (!profile.area_id) return "Pick your area.";
@@ -60,6 +64,6 @@ export const incomplete = (profile: ProfileInput): string | null => {
   if (Object.values(profile.style).some((value) => value === null)) return "Answer all four style questions.";
   if (!profile.activity_types.length) return "Pick at least one activity.";
   if (!profile.availability.length) return "Pick when you are free.";
-  if (!profile.guidelines_accepted) return "Agree to the community guidelines to continue.";
+  if (guidelines && !profile.guidelines_accepted) return "Agree to the community guidelines to continue.";
   return null;
 };

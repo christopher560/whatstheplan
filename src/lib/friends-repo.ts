@@ -1,42 +1,51 @@
-import { sampleFriends } from "@/data/friends.ts";
-import type { FriendsData } from "@/data/friends.ts";
+import { actions } from "astro:actions";
+
+type Simple = { ok: true } | { ok: false; error: string };
+
+const failed = { ok: false as const, error: "Something went wrong. Please try again." };
+
+/** An action call returns `{ data, error }`; an error here means the request itself failed. */
+const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | typeof failed =>
+  error || data === undefined ? failed : data;
 
 /**
- * Everything the friends page reads and writes. Backed by sample data today.
- * The Supabase version reads `friendships` joined with each friend's shared
- * availability (RLS only returns friends who share), and writes the person's
- * own circle, favorites and private tags (see SUPABASE.md).
+ * What the friends page writes. The page reads friends on the server with
+ * `readFriends` (src/lib/friends-db.ts); these calls go to Astro Actions
+ * (src/actions/index.ts), which call database functions that only act for the
+ * signed-in person. Favorites, labels and the inner circle are private to them.
  */
-export interface FriendsRepo {
-  getFriends(): Promise<FriendsData>;
-  /** Accepts a friend request, which makes the friendship `accepted`. */
-  acceptRequest(friendId: string): Promise<void>;
-  /** Declines a friend request. */
-  declineRequest(friendId: string): Promise<void>;
-  setFavorite(friendId: string, favorite: boolean): Promise<void>;
-  /** Replaces the viewer's private labels for a friend. */
-  setTags(friendId: string, tags: string[]): Promise<void>;
-  /** Replaces the friends in the viewer's inner circle. */
-  setCircle(friendIds: string[]): Promise<void>;
-}
 
-const mockRepo: FriendsRepo = {
-  async getFriends() {
-    return sampleFriends;
-  },
-  async acceptRequest() {},
-  async declineRequest() {},
-  async setFavorite() {},
-  async setTags() {},
-  async setCircle() {},
-};
+/** Accepts a friend request, which makes the friendship `accepted`. */
+export const acceptRequest = async (friendId: string) =>
+  unwrap(await actions.friends.respond({ friendId, accept: true })) as Simple;
 
-export const friendsRepo: FriendsRepo = mockRepo;
+/** Declines a friend request. */
+export const declineRequest = async (friendId: string) =>
+  unwrap(await actions.friends.respond({ friendId, accept: false })) as Simple;
 
-/** The browser calls these; swap their bodies for Astro Action calls later. */
-export const acceptRequest = (friendId: string) => friendsRepo.acceptRequest(friendId);
-export const declineRequest = (friendId: string) => friendsRepo.declineRequest(friendId);
-export const setFavorite = (friendId: string, favorite: boolean) =>
-  friendsRepo.setFavorite(friendId, favorite);
-export const setTags = (friendId: string, tags: string[]) => friendsRepo.setTags(friendId, tags);
-export const setCircle = (friendIds: string[]) => friendsRepo.setCircle(friendIds);
+export const setFavorite = async (friendId: string, favorite: boolean) =>
+  unwrap(await actions.friends.setFavorite({ friendId, favorite })) as Simple;
+
+/** Replaces the viewer's private labels for a friend. */
+export const setTags = async (friendId: string, tags: string[]) =>
+  unwrap(await actions.friends.setTags({ friendId, tags })) as Simple;
+
+/** Replaces the friends in the viewer's inner circle. */
+export const setCircle = async (friendIds: string[]) =>
+  unwrap(await actions.friends.setCircle({ friendIds })) as Simple;
+
+export type RequestStatus =
+  | "sent"
+  | "accepted"
+  | "already_friends"
+  | "already_requested"
+  | "not_found"
+  | "self"
+  | "too_many"
+  | "rate_limited";
+
+/** Asks someone to be friends by username. */
+export const sendFriendRequest = async (username: string) =>
+  unwrap(await actions.friends.sendRequest({ username })) as
+    | { ok: true; status: RequestStatus }
+    | { ok: false; error: string };

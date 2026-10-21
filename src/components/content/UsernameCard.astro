@@ -1,0 +1,171 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** The person's current username. */
+  username?: string;
+  /** The site's address, for the add-friend link shown under the field. */
+  host?: string;
+}
+
+const { render = true, username = "", host = "" } = Astro.props;
+---
+
+{
+  render && username && (
+    <Panel aria-labelledby="username-title" data-account-hide>
+      <form class="username-card_form" novalidate data-username-card data-current={username} data-host={host}>
+        <h2 id="username-title" class="username-card_title text-style-h4">Your username</h2>
+        <p class="text-style-main">
+          Friends add you with this. Change it whenever you like.
+        </p>
+
+        <div class="field username-card_field">
+          <label class="field-label text-style-small" for="username-input">Username</label>
+          <div class="username-card_input">
+            <span class="username-card_at text-style-main" aria-hidden="true">@</span>
+            <input
+              id="username-input"
+              class="field-control text-style-main"
+              type="text"
+              name="username"
+              value={username}
+              maxlength="20"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
+              aria-describedby="username-status"
+              data-input
+            />
+          </div>
+          <p id="username-status" class="username-card_status text-style-small" role="status" data-status />
+        </div>
+
+        <p class="username-card_link text-style-small">
+          Your link: <strong data-link>{host}/add/{username}</strong>
+        </p>
+
+        <ActionButton type="submit" size="large" raised disabled data-save>
+          Save username
+        </ActionButton>
+      </form>
+    </Panel>
+  )
+}
+
+<script>
+  import { checkUsername, setUsername } from "@/lib/account-repo.ts";
+  import { cleanUsername, usernameProblem } from "@/utils/username.ts";
+
+  document.querySelectorAll<HTMLFormElement>("[data-username-card]").forEach((form) => {
+    const input = form.querySelector<HTMLInputElement>("[data-input]")!;
+    const status = form.querySelector<HTMLElement>("[data-status]")!;
+    const save = form.querySelector<HTMLButtonElement>("[data-save]")!;
+    const link = form.querySelector<HTMLElement>("[data-link]")!;
+    const label = save.querySelector<HTMLElement>(".action-button_text")!;
+    let current = form.dataset.current!;
+    let timer = 0;
+    let latest = 0;
+
+    const say = (text: string, tone: "" | "good" | "bad" = "") => {
+      status.textContent = text;
+      status.dataset.tone = tone;
+    };
+
+    /** Checks the typed username after a short pause, so each keystroke is not a request. */
+    const check = () => {
+      window.clearTimeout(timer);
+      const value = cleanUsername(input.value);
+      save.disabled = true;
+      if (value === current) return say("This is your username now.");
+      const problem = usernameProblem(value);
+      if (problem) return say(problem, "bad");
+      say("Checking…");
+      const mine = ++latest;
+      timer = window.setTimeout(async () => {
+        const result = await checkUsername(value);
+        if (mine !== latest) return;
+        if (!result.ok) return say(result.error, "bad");
+        if (result.problem) return say(result.problem, "bad");
+        say(result.available ? "Available." : "That username is taken.", result.available ? "good" : "bad");
+        save.disabled = !result.available;
+      }, 350);
+    };
+
+    input.addEventListener("input", check);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (save.disabled) return;
+      save.disabled = true;
+      label.textContent = "Saving…";
+      const result = await setUsername(input.value);
+      label.textContent = "Save username";
+      if (!result.ok) {
+        say(result.error, "bad");
+        return;
+      }
+      current = result.username;
+      input.value = current;
+      link.textContent = `${form.dataset.host}/add/${current}`;
+      say("Saved. Your link is new, so send this one from now on.", "good");
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .username-card_form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .username-card_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .username-card_field {
+      gap: var(--space-2);
+    }
+
+    .username-card_input {
+      position: relative;
+
+      & .field-control {
+        padding-inline-start: 2.25rem;
+      }
+    }
+
+    .username-card_at {
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: var(--space-3);
+      display: flex;
+      align-items: center;
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+      pointer-events: none;
+    }
+
+    .username-card_status {
+      min-height: 1lh;
+      font-weight: var(--primary-bold);
+
+      &[data-tone="good"] {
+        color: var(--text);
+      }
+      &[data-tone="bad"] {
+        color: var(--colors-vivid-red);
+        filter: brightness(0.75);
+      }
+    }
+
+    .username-card_link {
+      word-break: break-all;
+    }
+  }
+</style>

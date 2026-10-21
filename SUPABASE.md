@@ -514,3 +514,65 @@ Without the site key the forms show no box and Supabase rejects requests while i
 CAPTCHA is on. Someone who signed up but never typed their code gets the code
 screen with a "Send me a code" button instead of an automatic email, because the
 log-in token was already used.
+
+## Calendar availability - built (Round 1)
+
+`/app/calendar` now reads and writes the signed-in person's own free and busy hours.
+
+| Piece | Where |
+| --- | --- |
+| Table | `public.availability_cells (user_id, week_start, weekday 0-6, hour 8-23, state free or busy)`, primary key on all but `state`. `week_start` is always a Monday. RLS: the owner reads and writes only their own rows. Migration: `availability_cells`. |
+| Saving | RPC `save_availability_week(p_week_start, p_cells jsonb)` deletes and re-inserts one week in a single step (security invoker, so RLS applies) and records the week in `public.availability_weeks`, so a week cleared on purpose stays empty instead of falling back to an earlier one. Migration: `availability_weeks_marker`. Called by the action `calendar.saveAvailability`, which also checks the week is a Monday within the next 8 weeks. |
+| Sharing | `profiles.calendar_shared` (default true), saved by `calendar.saveShare`. |
+| Reading | `src/lib/availability-db.ts` `readCalendar`: painted weeks from this one on, plus a base for unpainted weeks. |
+| Client | `src/lib/calendar-repo.ts` wrappers call the actions; the store, grid and summary components are unchanged. |
+
+How weeks work: there is no separate weekly pattern. A saved week shows exactly what
+was saved, even if it is empty. A week never saved starts from the most recent saved
+week, up to this week, so a habit carries forward on its own. Saving a week affects just that week.
+
+Tested with SQL as two signed-in users: each sees only their own rows, B cannot
+insert, update or delete A's rows, a bad hour is rejected and rolls back the whole
+save, duplicate hours keep the first, and an empty save clears the week.
+
+Still sample or empty: friends on the calendar (shows a "find friends" card), plans on
+the grid, and calendar import. The server works out "this week" in its own time zone
+(UTC on Vercel), so near midnight on Sunday the week can differ from the person's; pass
+the browser's date to the page if that matters.
+
+## Friends - built (Round 2)
+
+People find each other by exact username or a personal link, never by email or by
+browsing. `/app/friends` and the calendar overlay now use real friends.
+
+| Piece | Where |
+| --- | --- |
+| Username | `profiles.username` (unique, `^[a-z0-9_]{3,20}$`). `ensure_my_username()` gives one (first name plus 4 digits) the first time the friends page loads. People change it on the Account page (`UsernameCard`, actions `account.checkUsername` and `account.setUsername`) with no limit on changes; the old add link stops working when it changes. Reserved words (admin, support, whatstheplan...) are refused in the app and by a check constraint (`reserved_usernames`). |
+| Tables | `friendships (requester_id, addressee_id, status pending or accepted)`, one row per pair either way round; `friend_prefs (user_id, friend_id, favorite, tags[], circle_position 0-5)`, private to its owner. Migrations: `friends`, `friend_free_slots_by_week`. |
+| No direct writes | `friendships` has a select policy only. Every change goes through functions that act for `auth.uid()`: `send_friend_request(username)` (answers sent, accepted, already_friends, already_requested, not_found, self, too_many; asking someone who already asked you accepts), `respond_friend_request(other, accept)`, `set_friend_favorite`, `set_friend_tags`, `set_circle(ids)` (up to 6 accepted friends). |
+| What friends may see | `list_friends()` returns only first name, avatar color, username, whether they share a calendar, and your own private favorite, labels and circle spot. `friend_free_slots(monday)` returns the hours free for each accepted friend who has `calendar_shared` on, for this week and the next seven (a saved week as saved, otherwise their latest saved week). Nobody else's profile or calendar rows are readable. `profile_by_username` gives a name and color for the add page. |
+| Server | `src/lib/friends-db.ts` builds the page data (tonight's mood and next free time are worked out from the shared hours); actions in `friends` of `src/actions/index.ts`; wrappers in `src/lib/friends-repo.ts`. |
+| Pages | `/add/[username]` asks for a sign in, shows who it is and sends the request. The Friends page also has a "type a username" box. Requests show on the page of the person asked; a decline deletes the request. |
+| Time zone | The dashboard layout sets a `tz` cookie; `src/utils/now.ts` turns it into "now" for this week, today and tonight. First visit falls back to UTC. |
+
+Tested with SQL as three signed-in users: a request, a repeat, a request to self and to
+an unknown name; the asked person sees it and the asker does not see it as theirs;
+accepting makes it two-way; a friend's free hours appear for week 0 to 7 and vanish when
+they stop sharing; a stranger sees nothing; direct inserts into `friendships` and adding
+a non-friend to the circle are refused; prefs are invisible to the friend.
+
+Not built: removing a friend, blocking, "plans together" counts
+(shown as "Friends since ..."), notifications, and `/add` for people who have not signed up
+(they sign up first and are sent back through `?next=`).
+
+## Security hardening - built
+
+- **Grants:** `anon` has no access to the `public` schema. `authenticated` has no TRUNCATE, TRIGGER or REFERENCES. New tables and functions start with no access.
+- **Writes through functions only:** `availability_cells`, `availability_weeks` and `friend_prefs` cannot be written directly. `save_availability_week`, `set_friend_favorite`, `set_friend_tags` and `set_circle` are security definer, act only for `auth.uid()`, and check the week window, friendship and sizes.
+- **Rate limits:** `rate_limits` (no API access) and `hit_rate_limit(key, max, window)`. `check_my_password` 5 per 15 min, `profile_by_username` 60 per 10 min, `send_friend_request` 30 per hour (returns `rate_limited`), `save_availability_week` 120 per 10 min.
+- **Size limits:** every interest, activity, availability and tag item is length-checked; `style` is capped.
+- **Cookies:** session cookies are httpOnly, SameSite=Lax, and Secure in production (`src/lib/supabase.ts`).
+- **Headers:** `vercel.json` sets CSP (self plus hCaptcha), HSTS, frame denial, nosniff, referrer and permissions policies.
+- **JSON in pages:** every `*State.astro` escapes `<` as `\u003c` so stored text cannot close the script tag.
+- **Known and accepted:** `npm audit` reports `path-to-regexp` through `@astrojs/vercel` (build-time routing only; the fix is a breaking adapter downgrade).
+- **Dashboard settings to check:** minimum password length 8+, leaked-password protection (Pro plan), CAPTCHA on, redirect URLs limited to whatstheplan.social.

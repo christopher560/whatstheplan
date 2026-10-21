@@ -35,8 +35,8 @@ export const getData = (): CalendarData => {
     const source = document.getElementById("calendar-data")?.textContent ?? "{}";
     data = JSON.parse(source) as CalendarData;
     state = {
-      cells: data.cells,
-      weeks: {},
+      cells: data.weeks[0] ?? data.cells,
+      weeks: { ...data.weeks },
       who: data.who,
       brush: "free",
       repeat: [],

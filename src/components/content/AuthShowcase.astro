@@ -20,7 +20,7 @@ const { render = true } = Astro.props;
         </div>
         <ol class="auth-showcase_steps" data-steps />
       </div>
-      <script is:inline type="application/json" id="auth-showcase-data" set:html={JSON.stringify(showcases)} />
+      <script is:inline type="application/json" id="auth-showcase-data" set:html={JSON.stringify(showcases).replace(/</g, "\\u003c")} />
     </aside>
   )
 }

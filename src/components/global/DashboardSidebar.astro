@@ -74,7 +74,7 @@ const isActive = (href: string) =>
           aria-label="Your profile"
           aria-current={isActive("/app/account") ? "page" : undefined}
         >
-          <Avatar initial={shell.viewer.name} color={shell.viewer.color} size="large" />
+          <Avatar initial={shell.viewer.name.replace(/^@/, "")} color={shell.viewer.color} size="large" />
           <div class="dashboard-sidebar_who">
             <p class="dashboard-sidebar_name text-style-main">{shell.viewer.name}</p>
             <p class="dashboard-sidebar_meta text-style-small">

@@ -18,8 +18,18 @@ const pathname = Astro.url.pathname.replace(/\/$/, "");
 const shell = await dashboardRepo.getShell();
 /* The sample viewer is replaced by the signed-in person's own name and color. */
 const me = Astro.locals.profile;
-if (me?.first_name) {
-  shell.viewer = { ...shell.viewer, name: me.first_name, color: nearestAccent(me.avatar_color) };
+/* Someone with no first name yet shows as their @username. */
+const shownName = me?.first_name || (me?.username ? `@${me.username}` : "");
+if (shownName) {
+  shell.viewer = { ...shell.viewer, name: shownName, color: nearestAccent(me?.avatar_color) };
+}
+/* The friend count is the number of accepted friendships; row level security limits this to the person's own. */
+if (Astro.locals.user) {
+  const { count } = await Astro.locals.supabase
+    .from("friendships")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "accepted");
+  shell.viewer = { ...shell.viewer, friendCount: count ?? 0 };
 }
 ---
 
@@ -27,6 +37,10 @@ if (me?.first_name) {
 <html lang="en">
   <head>
     <BaseHead title={title} />
+    <script is:inline>
+      /* Tells the server the person's time zone, so "this week" and "tonight" are theirs. */
+      document.cookie = "tz=" + Intl.DateTimeFormat().resolvedOptions().timeZone + ";path=/;max-age=31536000;samesite=lax";
+    </script>
   </head>
 
   <body>

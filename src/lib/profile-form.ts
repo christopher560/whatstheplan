@@ -43,7 +43,10 @@ export const styleResult = (style: Profile["style"]) => {
 export const profileErrors = (profile: Profile) => {
   const errors: string[] = [];
   if (!profile.first_name.trim()) errors.push("Add your first name.");
+  if (!profile.age_group) errors.push("Pick your age group.");
+  if (!profile.area_id) errors.push("Pick your area.");
   if (profile.interests.length < 3) errors.push("Pick at least 3 interests.");
+  if (!styleReady(profile.style)) errors.push("Answer all four style questions.");
   if (!profile.activity_types.length) errors.push("Pick at least one activity.");
   if (!profile.availability.length) errors.push("Pick when you are free.");
   return errors;
