@@ -194,6 +194,9 @@ const { render = true } = Astro.props;
       /* The swatch yellow is loud across half a page, so it is softened toward white. */
       background-color: color-mix(in srgb, var(--colors-secondary-yellow) 55%, var(--background-3));
       overflow: hidden;
+      row-gap: var(--space-8);
+      column-gap: var(--space-8);
+      padding-top: var(--space-8);
     }
 
     .auth-showcase_title {

@@ -62,12 +62,13 @@ const mockRepo: OnboardingRepo = {
 export const onboardingRepo: OnboardingRepo = mockRepo;
 
 /**
- * The browser calls this after every step. Only how far setup got is stored for
- * now (`profiles.onboarding_step` and `onboarded`), through an Astro Action. The
- * answers themselves are stored in the next round.
+ * The browser calls this after every step. The answers and how far setup got are
+ * saved to `profiles` through an Astro Action, which checks the rules again. It
+ * throws when the save fails so the page can say so.
  */
 export const saveProfile = async (save: ProfileSave) => {
-  const { error } = await actions.onboarding.saveProgress({
+  const { error } = await actions.onboarding.save({
+    profile: save.profile,
     onboarding_step: save.onboarding_step,
     onboarded: save.onboarded,
   });

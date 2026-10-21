@@ -8,5 +8,7 @@ declare namespace App {
     user: import("@supabase/supabase-js").User | null;
     /** Whether the signed-in person finished onboarding. Only set on /app pages. */
     onboarded: boolean | null;
+    /** The name and avatar color shown in the app's shell. Only set on /app pages. */
+    profile: { first_name: string | null; avatar_color: string | null } | null;
   }
 }

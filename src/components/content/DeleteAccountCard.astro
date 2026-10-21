@@ -116,7 +116,11 @@ const { render = true, name = "", startHref = "/app/onboarding" } = Astro.props;
     now.addEventListener("click", async () => {
       if (now.disabled) return;
       now.disabled = true;
-      await deleteAccount();
+      const result = await deleteAccount();
+      if (!result.ok) {
+        now.disabled = false;
+        return;
+      }
       document
         .querySelectorAll<HTMLElement>("[data-account-hide]")
         .forEach((element) => {

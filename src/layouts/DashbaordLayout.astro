@@ -5,6 +5,7 @@ import SkipLink from "@/components/global/SkipLink.astro";
 import DashboardSidebar from "@/components/global/DashboardSidebar.astro";
 import DashboardTabBar from "@/components/global/DashboardTabBar.astro";
 import { dashboardRepo } from "@/lib/dashboard-repo.ts";
+import { nearestAccent } from "@/utils/avatar-accent.ts";
 import "../styles/dashboard.css";
 import "../styles/dashboard-base.css";
 
@@ -15,6 +16,11 @@ interface Props {
 const { title = "Dashboard" } = Astro.props;
 const pathname = Astro.url.pathname.replace(/\/$/, "");
 const shell = await dashboardRepo.getShell();
+/* The sample viewer is replaced by the signed-in person's own name and color. */
+const me = Astro.locals.profile;
+if (me?.first_name) {
+  shell.viewer = { ...shell.viewer, name: me.first_name, color: nearestAccent(me.avatar_color) };
+}
 ---
 
 <!doctype html>

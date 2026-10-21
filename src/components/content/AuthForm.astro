@@ -3,6 +3,7 @@ import ActionButton from "@/components/item/ActionButton.astro";
 import Icon from "@/components/media/Icon.astro";
 import PathIcon from "@/components/media/PathIcon.astro";
 import { SITE_NAME } from "@/consts.ts";
+import { captchaEnabled as captcha } from "@/lib/captcha.ts";
 import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
 
 interface Props {
@@ -126,6 +127,15 @@ const digits = [1, 2, 3, 4, 5, 6];
             </div>
           )}
 
+          {captcha && (
+            <div class="auth-form_field">
+              <div class="auth-form_captcha" data-captcha="form" />
+              <p class="auth-form_error text-style-small" hidden data-error="captcha-form">
+                Tick the box to continue.
+              </p>
+            </div>
+          )}
+
           <ActionButton type="submit" size="large" raised data-submit>
             {signup ? "Create account" : "Log in"}
           </ActionButton>
@@ -171,6 +181,14 @@ const digits = [1, 2, 3, 4, 5, 6];
             />
             <p class="auth-form_error text-style-small" hidden data-error="reset" />
           </div>
+          {captcha && (
+            <div class="auth-form_field">
+              <div class="auth-form_captcha" data-captcha="forgot" />
+              <p class="auth-form_error text-style-small" hidden data-error="captcha-forgot">
+                Tick the box to continue.
+              </p>
+            </div>
+          )}
           <ActionButton type="submit" size="large" raised data-reset-submit>
             Send code
           </ActionButton>
@@ -214,9 +232,19 @@ const digits = [1, 2, 3, 4, 5, 6];
             Verify
           </ActionButton>
         </form>
-        <button class="auth-form_text_button center text-style-small" type="button" data-resend>
-          Send a new code
-        </button>
+        <div class="auth-form_resend">
+          {captcha && (
+            <div class="auth-form_field" hidden data-resend-captcha>
+              <div class="auth-form_captcha" data-captcha="resend" />
+              <p class="auth-form_error text-style-small" hidden data-error="captcha-resend">
+                Tick the box to continue.
+              </p>
+            </div>
+          )}
+          <button class="auth-form_text_button center text-style-small" type="button" data-resend>
+            Send a new code
+          </button>
+        </div>
       </div>
 
       <!-- Choose a new password (after a reset code) -->
@@ -289,6 +317,8 @@ const digits = [1, 2, 3, 4, 5, 6];
     verifyCode,
   } from "@/lib/auth-repo.ts";
   import type { AuthResult, CodePurpose } from "@/lib/auth-repo.ts";
+  import { captchaEnabled, mountCaptcha } from "@/lib/captcha.ts";
+  import type { Captcha } from "@/lib/captcha.ts";
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   const strengthWords = ["", "Weak", "Okay", "Good", "Strong"];
@@ -341,8 +371,10 @@ const digits = [1, 2, 3, 4, 5, 6];
 
     const next = safeNext(new URLSearchParams(location.search).get("next"), "");
     /** Who the code was sent to and why. Kept in memory only. */
-    let pending: { email: string; purpose: CodePurpose } | null = null;
+    let pending: { email: string; purpose: CodePurpose; sent: boolean } | null = null;
     let timer = 0;
+    /** Seconds until a new code may be requested. */
+    let left = 0;
 
     const touched = new Set<string>();
     let tried = false;
@@ -358,6 +390,35 @@ const digits = [1, 2, 3, 4, 5, 6];
       if (message) note.textContent = message;
       note.hidden = !message;
       field?.setAttribute("aria-invalid", String(!!message));
+    };
+
+    /* ---------- CAPTCHA: one box per place that sends an email or checks a password ---------- */
+
+    type Spot = "form" | "forgot" | "resend";
+    const boxes: Partial<Record<Spot, Captcha>> = {};
+    const mounting = new Set<Spot>();
+    const mount = async (spot: Spot, onChange: () => void = () => {}) => {
+      const holder = root.querySelector<HTMLElement>(`[data-captcha="${spot}"]`);
+      if (!captchaEnabled || !holder || mounting.has(spot)) return;
+      mounting.add(spot);
+      try {
+        boxes[spot] = await mountCaptcha(holder, () => {
+          flag(`captcha-${spot}`, null);
+          onChange();
+        });
+      } catch {
+        mounting.delete(spot);
+        flag(`captcha-${spot}`, "The CAPTCHA could not load. Check your connection and refresh.");
+      }
+    };
+    const tokenFor = (spot: Spot) => boxes[spot]?.token() ?? "";
+    /** True when there is no box, or it has been ticked. */
+    const ticked = (spot: Spot) => !captchaEnabled || tokenFor(spot) !== "";
+    /** A token works once, so clear the box after every request. */
+    const spend = (spot: Spot) => boxes[spot]?.reset();
+    const needTick = (spot: Spot) => {
+      flag(`captcha-${spot}`, "Tick the box to continue.");
+      return false;
     };
 
     const emailMessage = (value: string) =>
@@ -423,29 +484,53 @@ const digits = [1, 2, 3, 4, 5, 6];
 
     const enteredCode = () => digits.map((digit) => digit.value).join("");
 
+    const resendBox = root.querySelector<HTMLElement>("[data-resend-captcha]");
+
+    /** The resend button waits out the countdown, then needs the CAPTCHA ticked. */
+    const refreshResend = () => {
+      const waiting = left > 0;
+      resend.textContent = waiting
+        ? `Send a new code in ${left}s`
+        : pending?.sent === false
+          ? "Send me a code"
+          : "Send a new code";
+      if (resendBox) {
+        resendBox.hidden = waiting;
+        if (!waiting) void mount("resend", refreshResend);
+      }
+      resend.disabled = waiting || !ticked("resend");
+    };
+
     const startCooldown = () => {
       window.clearInterval(timer);
-      let left = resendSeconds;
-      const paint = () => {
-        resend.textContent = left > 0 ? `Send a new code in ${left}s` : "Send a new code";
-        resend.disabled = left > 0;
-      };
-      paint();
+      left = resendSeconds;
+      refreshResend();
       timer = window.setInterval(() => {
         left -= 1;
-        paint();
+        refreshResend();
         if (left <= 0) window.clearInterval(timer);
       }, 1000);
     };
 
-    const showCode = (address: string, purpose: CodePurpose) => {
-      pending = { email: address, purpose };
-      $("[data-code-text]").textContent = `We sent a 6-digit code to ${address}. It can take a minute to arrive.`;
+    const sentText = (address: string) =>
+      `We sent a 6-digit code to ${address}. It can take a minute to arrive.`;
+
+    const showCode = (address: string, purpose: CodePurpose, sent = true) => {
+      pending = { email: address, purpose, sent };
+      $("[data-code-text]").textContent = sent
+        ? sentText(address)
+        : `Confirm your email first. Tick the box and press the button, and we will send a 6-digit code to ${address}.`;
       digits.forEach((digit) => (digit.value = ""));
       flag("code", null);
       open("code");
-      digits[0].focus();
-      startCooldown();
+      if (sent) {
+        digits[0].focus();
+        startCooldown();
+      } else {
+        window.clearInterval(timer);
+        left = 0;
+        refreshResend();
+      }
     };
 
     const fillDigits = (value: string, from = 0) => {
@@ -510,14 +595,21 @@ const digits = [1, 2, 3, 4, 5, 6];
     });
 
     resend.addEventListener("click", async () => {
-      if (!pending) return;
+      if (!pending || resend.disabled) return;
+      if (!ticked("resend")) return void needTick("resend");
       resend.disabled = true;
-      const result = await resendCode(pending);
+      const result = await resendCode({
+        email: pending.email,
+        purpose: pending.purpose,
+        captchaToken: tokenFor("resend") || undefined,
+      });
+      spend("resend");
       if (!result.ok) {
         flag("code", result.error);
-        resend.disabled = false;
-        return;
+        return refreshResend();
       }
+      pending.sent = true;
+      $("[data-code-text]").textContent = sentText(pending.email);
       flag("code", null);
       startCooldown();
       digits[0].focus();
@@ -533,11 +625,12 @@ const digits = [1, 2, 3, 4, 5, 6];
 
     const finish = (result: AuthResult) => {
       busy(false);
+      spend("form");
       if (!result.ok) {
         flag("password", result.error, password);
         return password.focus();
       }
-      if ("checkEmail" in result) return showCode(email.value.trim(), "signup");
+      if ("checkEmail" in result) return showCode(email.value.trim(), "signup", result.sent !== false);
       done(
         signup ? "You are in!" : "Welcome back!",
         signup ? "Two quick questions and you are set." : "Your plans and friends are right where you left them.",
@@ -546,6 +639,7 @@ const digits = [1, 2, 3, 4, 5, 6];
       );
     };
 
+    void mount("form");
     wirePassword(password, $("[data-show]"), root.querySelector("[data-meter]"), root.querySelector("[data-strength]"), check);
     wirePassword(newPassword, $("[data-new-show]"), $("[data-new-meter]"), $("[data-new-strength]"), () =>
       flag("newpass", null, newPassword),
@@ -564,8 +658,17 @@ const digits = [1, 2, 3, 4, 5, 6];
         shake(form);
         return (emailMessage(email.value) ? email : password).focus();
       }
+      if (!ticked("form")) {
+        needTick("form");
+        return shake(form);
+      }
       busy(true);
-      const input = { email: email.value.trim(), password: password.value, next: next || undefined };
+      const input = {
+        email: email.value.trim(),
+        password: password.value,
+        next: next || undefined,
+        captchaToken: tokenFor("form") || undefined,
+      };
       finish(signup ? await signUp(input) : await logIn(input));
     });
 
@@ -579,6 +682,7 @@ const digits = [1, 2, 3, 4, 5, 6];
     root.querySelector("[data-forgot]")?.addEventListener("click", () => {
       resetEmail.value = email.value;
       open("forgot");
+      void mount("forgot");
       resetEmail.focus();
     });
     root.querySelectorAll("[data-back]").forEach((button) =>
@@ -593,9 +697,14 @@ const digits = [1, 2, 3, 4, 5, 6];
       const message = emailMessage(resetEmail.value);
       flag("reset", message, resetEmail);
       if (message) return resetEmail.focus();
+      if (!ticked("forgot")) return void needTick("forgot");
       resetSubmit.disabled = true;
       resetLabel.textContent = "Sending…";
-      const result = await requestPasswordReset({ email: resetEmail.value.trim() });
+      const result = await requestPasswordReset({
+        email: resetEmail.value.trim(),
+        captchaToken: tokenFor("forgot") || undefined,
+      });
+      spend("forgot");
       resetSubmit.disabled = false;
       resetLabel.textContent = idleReset;
       if (!result.ok) return flag("reset", result.error, resetEmail);
@@ -833,6 +942,22 @@ const digits = [1, 2, 3, 4, 5, 6];
       min-width: 4rem;
       font-weight: var(--primary-bold);
       text-align: end;
+    }
+
+    .auth-form_captcha {
+      display: flex;
+      justify-content: center;
+      min-height: 4.875rem;
+    }
+
+    .auth-form_resend {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+
+      & [hidden] {
+        display: none;
+      }
     }
 
     .auth-form_code {

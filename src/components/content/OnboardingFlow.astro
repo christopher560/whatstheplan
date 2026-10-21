@@ -29,6 +29,7 @@ import {
   recommendedPages,
 } from "@/data/onboarding.ts";
 import type { Area } from "@/data/onboarding.ts";
+import type { Profile } from "@/lib/onboarding-repo.ts";
 
 interface Props {
   /** Set to `false` to omit the component. */
@@ -37,9 +38,11 @@ interface Props {
   areas?: Area[];
   /** Where the last step sends the person. */
   dashboardHref?: string;
+  /** Answers saved earlier, so setup resumes where it stopped. */
+  initial?: { profile: Profile; step: number; onboarded: boolean };
 }
 
-const { render = true, areas = [], dashboardHref = "/app/dashboard" } = Astro.props;
+const { render = true, areas = [], dashboardHref = "/app/dashboard", initial } = Astro.props;
 
 const icons = {
   discover: icon_discover,
@@ -54,6 +57,7 @@ const icons = {
     <div
       class="onboarding-flow_wrap"
       data-onboarding
+      data-initial={initial ? JSON.stringify(initial) : undefined}
       data-steps={JSON.stringify(steps)}
       data-min-interests={minInterests}
       data-max-interests={maxInterests}
@@ -655,6 +659,33 @@ const icons = {
         else return;
         render();
       });
+
+      /* Resume: fill the form with what was saved, at the step where setup stopped.
+       * Someone who already finished starts from the top and can edit their answers. */
+      if (root.dataset.initial) {
+        const saved = JSON.parse(root.dataset.initial) as {
+          profile: Profile;
+          step: number;
+          onboarded: boolean;
+        };
+        Object.assign(state, saved.profile);
+        state.step = saved.onboarded ? 0 : Math.min(saved.step, last - 1);
+
+        $<HTMLInputElement>("[data-first-name]").value = state.first_name;
+        colorInput.value = state.avatar_color;
+        $$<HTMLInputElement>("[data-style]").forEach((input) => {
+          const key = input.dataset.style as keyof Profile["style"];
+          input.checked = state.style[key] === Number(input.value);
+        });
+        (["group_size", "discoverable_by", "contactable_by"] as const).forEach((name) =>
+          $$<HTMLInputElement>(`input[name="${name}"]`).forEach(
+            (input) => (input.checked = input.value === state[name]),
+          ),
+        );
+        (["group_first", "show_area", "guidelines_accepted"] as const).forEach((name) =>
+          $$<HTMLInputElement>(`input[name="${name}"]`).forEach((input) => (input.checked = state[name])),
+        );
+      }
 
       render();
     });

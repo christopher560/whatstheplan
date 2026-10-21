@@ -1,57 +1,27 @@
+import { actions } from "astro:actions";
 import type { Profile } from "@/lib/onboarding-repo.ts";
 
 export type PasswordResult = { ok: true } | { ok: false; error: string };
+type Simple = { ok: true } | { ok: false; error: string };
+
+const failed = { ok: false as const, error: "Something went wrong. Please try again." };
+
+/** An action call returns `{ data, error }`; an error here means the request itself failed. */
+const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | typeof failed =>
+  error || data === undefined ? failed : data;
 
 /**
- * Everything the account page reads and writes. Backed by sample data today.
- * The Supabase version reads and updates the signed-in person's `profiles`
- * row, calls `auth.updateUser` for the password, and deletes the auth user and
- * cascades their rows (see SUPABASE.md).
+ * What the account page writes. The page reads the profile on the server with
+ * `readProfile` (src/lib/profile-db.ts); these calls go to Astro Actions
+ * (src/actions/index.ts), which check the rules again and write `profiles`.
  */
-export interface AccountRepo {
-  getProfile(): Promise<Profile>;
-  updateProfile(profile: Profile): Promise<void>;
-  changePassword(input: { current: string; next: string }): Promise<PasswordResult>;
-  deleteAccount(): Promise<void>;
-}
+export const updateProfile = async (profile: Profile) =>
+  unwrap(await actions.account.updateProfile({ profile })) as Simple;
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Re-checks the current password, then sets the new one. */
+export const changePassword = async (input: { current: string; next: string }) =>
+  unwrap(await actions.account.changePassword(input)) as PasswordResult;
 
-const mockRepo: AccountRepo = {
-  async getProfile() {
-    return {
-      first_name: "Chris",
-      avatar_color: "#52DDB0",
-      age_group: "18-24",
-      area_id: "aurora-il",
-      interests: ["board-games", "outdoors", "music", "cooking"],
-      style: { energy: 3, pace: 3, planning: 4, warmup: 2 },
-      activity_types: ["game-nights", "walks", "movie-nights"],
-      availability: ["weeknights", "weekends"],
-      group_size: "small",
-      group_first: true,
-      discoverable_by: "communities",
-      contactable_by: "verified",
-      show_area: true,
-      guidelines_accepted: true,
-    };
-  },
-  async updateProfile() {
-    await wait(500);
-  },
-  async changePassword() {
-    await wait(500);
-    return { ok: true };
-  },
-  async deleteAccount() {
-    await wait(500);
-  },
-};
-
-export const accountRepo: AccountRepo = mockRepo;
-
-/** The browser calls these; swap their bodies for Astro Action calls later. */
-export const updateProfile = (profile: Profile) => accountRepo.updateProfile(profile);
-export const changePassword = (input: { current: string; next: string }) =>
-  accountRepo.changePassword(input);
-export const deleteAccount = () => accountRepo.deleteAccount();
+/** Deletes the account and signs out. */
+export const deleteAccount = async () =>
+  unwrap(await actions.account.deleteAccount()) as Simple;

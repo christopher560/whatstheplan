@@ -5,16 +5,18 @@ import AccountProfile from "@/components/content/AccountProfile.astro";
 import PasswordCard from "@/components/content/PasswordCard.astro";
 import DeleteAccountCard from "@/components/content/DeleteAccountCard.astro";
 import LogOutButton from "@/components/item/LogOutButton.astro";
-import { accountRepo } from "@/lib/account-repo.ts";
+import { readProfile } from "@/lib/profile-db.ts";
 import { onboardingRepo } from "@/lib/onboarding-repo.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
-const [profile, areas] = await Promise.all([
-  accountRepo.getProfile(),
+const [saved, areas] = await Promise.all([
+  readProfile(Astro.locals.supabase, Astro.locals.user!.id),
   onboardingRepo.getAreas(),
 ]);
+if (!saved) return Astro.redirect("/app/onboarding");
+const { profile } = saved;
 ---
 
 <DashboardLayout title="Your profile">

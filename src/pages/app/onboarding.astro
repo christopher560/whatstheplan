@@ -2,14 +2,20 @@
 import OnboardingLayout from "@/layouts/OnboardingLayout.astro";
 import OnboardingFlow from "@/components/content/OnboardingFlow.astro";
 import { onboardingRepo } from "@/lib/onboarding-repo.ts";
+import { readProfile } from "@/lib/profile-db.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
 const areas = await onboardingRepo.getAreas();
+/* Answers and progress saved earlier, so setup resumes where it stopped. */
+const saved = Astro.locals.user ? await readProfile(Astro.locals.supabase, Astro.locals.user.id) : null;
 ---
 
 <OnboardingLayout title="Set up your profile">
   <!-- Onboarding -->
-  <OnboardingFlow areas={areas} />
+  <OnboardingFlow
+    areas={areas}
+    initial={saved ? { profile: saved.profile, step: saved.step, onboarded: saved.onboarded } : undefined}
+  />
 </OnboardingLayout>

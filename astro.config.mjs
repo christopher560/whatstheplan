@@ -14,6 +14,8 @@ export default defineConfig({
     schema: {
       PUBLIC_SUPABASE_URL: envField.string({ context: "client", access: "public" }),
       PUBLIC_SUPABASE_PUBLISHABLE_KEY: envField.string({ context: "client", access: "public" }),
+      // hCaptcha site key (the public one). Supabase holds the secret. Without it the forms show no CAPTCHA box.
+      PUBLIC_HCAPTCHA_SITE_KEY: envField.string({ context: "client", access: "public", optional: true }),
     },
   },
   integrations: [

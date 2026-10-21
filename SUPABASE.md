@@ -474,3 +474,43 @@ Notes:
   pages exist.
 - Until the templates show `{{ .Token }}`, Supabase still emails a link and the
   six boxes cannot be filled, so do step 3 before testing sign up.
+
+## Profile answers, account page and CAPTCHA - built
+
+**Profiles.** `public.profiles` now holds every onboarding answer (`first_name`,
+`avatar_color`, `age_group`, `area_id`, `interests`, `style`, `activity_types`,
+`availability`, `group_size`, `group_first`, `discoverable_by`, `contactable_by`,
+`show_area`, `guidelines_accepted`, `guidelines_accepted_at`) with check constraints,
+plus `onboarded` and `onboarding_step`. Choices are stable ids from
+`src/data/onboarding.ts`. `authenticated` may update only those columns.
+Migrations: `profile_answers_and_delete_account`, `check_my_password`.
+
+| Piece | Where |
+| --- | --- |
+| Rules | `src/lib/profile-schema.ts` (zod). Every choice must be a known id; `incomplete()` is what a finished profile needs. |
+| Read and write helpers | `src/lib/profile-db.ts` (`readProfile`, `profileRow`) |
+| Actions | `onboarding.save` (drafts may be incomplete; `onboarded: true` needs a complete profile and never goes back to false), `account.updateProfile`, `account.changePassword`, `account.deleteAccount` |
+| Onboarding | resumes at the saved step with the saved answers (`data-initial`); someone who finished starts from the top and can edit |
+| Account page | reads the saved profile; edits go through `account.updateProfile` |
+| Shell | the sidebar and dashboard greeting use the saved first name and the nearest accent to the saved avatar color (`src/utils/avatar-accent.ts`) |
+
+Database functions (security definer, callable only by signed-in people, each only
+touches the caller's own row):
+- `delete_my_account()` deletes the auth user; `profiles` goes with it through the
+  foreign key. This avoids needing a service-role key.
+- `check_my_password(candidate)` confirms the current password for the change
+  password form, because signing in again would need a CAPTCHA. It could be used
+  to guess a password by someone who already holds the session, so add a throttle
+  before launch.
+
+Still sample data: friend count, plans, calendar, groups, budget.
+
+**CAPTCHA (hCaptcha).** Supabase checks a token on every sign in, sign up, reset
+and resend, so the forms show a box. `src/lib/captcha.ts` loads hCaptcha and
+`AuthForm` mounts a box in the form, the forgot-password view and the code view's
+resend. Tokens work once, so the box resets after every request. `PUBLIC_HCAPTCHA_SITE_KEY`
+(the public site key) goes in `.env` and on Vercel; the secret stays in Supabase.
+Without the site key the forms show no box and Supabase rejects requests while its
+CAPTCHA is on. Someone who signed up but never typed their code gets the code
+screen with a "Send me a code" button instead of an automatic email, because the
+log-in token was already used.

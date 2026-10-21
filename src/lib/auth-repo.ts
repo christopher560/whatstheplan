@@ -10,8 +10,8 @@ export { safeNext } from "@/utils/safe-next.ts";
 export type AuthResult =
   /** Signed in. `next` is the page to open. */
   | { ok: true; next: string }
-  /** A 6-digit code was emailed. The person finishes by typing it in. */
-  | { ok: true; checkEmail: true }
+  /** A 6-digit code was emailed (`sent` is false when none was: they must ask for one). */
+  | { ok: true; checkEmail: true; sent?: boolean }
   | { ok: false; error: string };
 
 export type AuthMode = "login" | "signup";
@@ -24,6 +24,9 @@ export interface Credentials {
   password: string;
 }
 
+/** The hCaptcha token Supabase checks. Each one works once. */
+type Captcha = { captchaToken?: string };
+
 type Simple = { ok: true } | { ok: false; error: string };
 
 const failed = { ok: false as const, error: "Something went wrong. Please try again." };
@@ -33,11 +36,11 @@ const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | typeof f
   error || data === undefined ? failed : data;
 
 /** Creates the account and emails a 6-digit code. */
-export const signUp = async (input: Credentials & { next?: string }) =>
+export const signUp = async (input: Credentials & Captcha & { next?: string }) =>
   unwrap(await actions.auth.signUp(input)) as AuthResult;
 
-/** Signs in with a password. People who have not typed their code yet get a fresh one. */
-export const logIn = async (input: Credentials & { next?: string }) =>
+/** Signs in with a password. Someone who never typed their code gets `checkEmail` with `sent: false`. */
+export const logIn = async (input: Credentials & Captcha & { next?: string }) =>
   unwrap(await actions.auth.logIn(input)) as AuthResult;
 
 /** Checks the 6-digit code. On success the person is signed in. */
@@ -45,11 +48,11 @@ export const verifyCode = async (input: { email: string; token: string; purpose:
   unwrap(await actions.auth.verifyCode(input)) as AuthResult;
 
 /** Sends a new code. */
-export const resendCode = async (input: { email: string; purpose: CodePurpose }) =>
+export const resendCode = async (input: Captcha & { email: string; purpose: CodePurpose }) =>
   unwrap(await actions.auth.resendCode(input)) as Simple;
 
 /** Emails a reset code. The answer never says whether the email has an account. */
-export const requestPasswordReset = async (input: { email: string }) =>
+export const requestPasswordReset = async (input: Captcha & { email: string }) =>
   unwrap(await actions.auth.requestPasswordReset(input)) as Simple;
 
 /** Sets a new password for the person the reset code signed in. */
