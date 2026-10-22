@@ -52,8 +52,6 @@ export interface PlanDetail {
 
 export const quickUpdates = [
   "Running 10 minutes late",
-  "Bring sunscreen and a towel",
-  "Check the weather Friday",
   "Small change of plans, details soon",
 ];
 

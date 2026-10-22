@@ -31,12 +31,13 @@ const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
 
       <div class="plans-hosting_grid">
         {plans.map((plan) => {
-          const locked = plan.replied >= plan.invited;
+          const locked = plan.invited > 0 && plan.replied >= plan.invited;
           return (
             <Panel
               tag="article"
               class="plans-hosting_card"
               data-plan={plan.id}
+              data-slug={plan.slug}
               data-category={plan.category}
             >
               <div class="plans-hosting_body">
@@ -45,7 +46,7 @@ const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
                     {categoryLabel[plan.category]}
                   </Pill>
                   <Pill size="tiny" variant="filled" color={locked ? "green" : "yellow"}>
-                    {locked ? "Locked in" : "Waiting on replies"}
+                    {locked ? "All replied" : "Waiting on replies"}
                   </Pill>
                 </div>
                 <h3 class="plans-hosting_name text-style-h4">{plan.title}</h3>
@@ -57,16 +58,16 @@ const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
                 <div class="plans-hosting_crew">
                   <AvatarStack
                     size="small"
-                    people={plan.crew.map((name) => ({ initial: name, color: personColor(name) }))}
+                    people={plan.crew.map((name, index) => ({ initial: name.replace(/^@/, ""), color: plan.crewColors?.[index] ?? personColor(name) }))}
                   />
                   <p class="plans-hosting_who text-style-small">
-                    {locked ? "Everyone is in" : `${plan.replied} of ${plan.invited} have replied`}
+                    {plan.invited === 0 ? "No one invited yet" : locked ? "Everyone has replied" : `${plan.replied} of ${plan.invited} have replied`}
                   </p>
                 </div>
                 <div class="plans-hosting_track" aria-hidden="true">
                   <div
                     class:list={["plans-hosting_bar", locked && "locked"]}
-                    style={`--_fill: ${Math.round((plan.replied / plan.invited) * 100)}%;`}
+                    style={`--_fill: ${Math.round((plan.replied / Math.max(plan.invited, 1)) * 100)}%;`}
                   />
                 </div>
                 <div class="plans-hosting_buttons">
@@ -103,7 +104,7 @@ const { render = true, plans = [], planHref = "/app/plans" } = Astro.props;
       const button = (event.target as HTMLElement).closest<HTMLElement>("[data-copy]");
       const id = button?.closest<HTMLElement>("[data-plan]")?.dataset.plan;
       if (!id) return;
-      void navigator.clipboard?.writeText(`${location.origin}/p/${id}`).catch(() => {});
+      void navigator.clipboard?.writeText(`${location.origin}/p/${button!.closest<HTMLElement>("[data-plan]")!.dataset.slug ?? id}`).catch(() => {});
       flashButton(button!, "Link copied");
     });
 

@@ -1,0 +1,54 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import InviteState from "@/components/content/InviteState.astro";
+import InviteSummary from "@/components/content/InviteSummary.astro";
+import InviteSteps from "@/components/content/InviteSteps.astro";
+import InviteReply from "@/components/content/InviteReply.astro";
+import InviteTimes from "@/components/content/InviteTimes.astro";
+import InviteExtras from "@/components/content/InviteExtras.astro";
+import InviteDone from "@/components/content/InviteDone.astro";
+import InvitePitch from "@/components/content/InvitePitch.astro";
+import type { Invite } from "@/data/invite.ts";
+
+interface Props {
+  invite: Invite;
+}
+
+const { invite } = Astro.props;
+---
+
+<PublicLayout title={invite.title}>
+  <InviteState invite={invite} />
+  <!-- Invite -->
+  <div class="invite-page_columns">
+    <InviteSummary invite={invite} />
+    <InviteSteps>
+      <InviteReply invite={invite} />
+      <InviteTimes invite={invite} />
+      <InviteExtras invite={invite} />
+      <InviteDone invite={invite} />
+    </InviteSteps>
+  </div>
+  <InvitePitch />
+</PublicLayout>
+
+<style is:global>
+  @layer components {
+    .invite-page_columns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-5);
+      align-items: flex-start;
+
+      & > .invite-summary_wrap {
+        flex: 1 1 20rem;
+        max-width: 29rem;
+        min-width: 0;
+      }
+      & > .invite-steps_wrap {
+        flex: 1.4 1 24rem;
+        min-width: 0;
+      }
+    }
+  }
+</style>

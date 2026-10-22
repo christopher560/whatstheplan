@@ -32,6 +32,8 @@ const { render = true } = Astro.props;
 
       <slot />
 
+      <p class="invite-steps_error text-style-small" role="alert" hidden data-error />
+
       <div class="invite-steps_nav" data-nav>
         <ActionButton color="white" size="large" data-back>
           Back
@@ -46,7 +48,7 @@ const { render = true } = Astro.props;
 
 <script>
   import { stepLabels } from "@/data/invite.ts";
-  import { back, canContinue, currentStep, next, sequence, stepIndex, subscribe } from "@/lib/invite-store.ts";
+  import { back, canContinue, currentStep, get, next, sequence, stepIndex, subscribe } from "@/lib/invite-store.ts";
 
   document.querySelectorAll<HTMLElement>("[data-steps]").forEach((root) => {
     const progress = root.querySelector<HTMLElement>("[data-progress]")!;
@@ -55,6 +57,7 @@ const { render = true } = Astro.props;
     const track = root.querySelector<HTMLElement>("[data-track]")!;
     const fill = root.querySelector<HTMLElement>("[data-fill]")!;
     const nav = root.querySelector<HTMLElement>("[data-nav]")!;
+    const error = root.querySelector<HTMLElement>("[data-error]")!;
     const backButton = root.querySelector<HTMLButtonElement>("[data-back]")!;
     const nextButton = root.querySelector<HTMLButtonElement>("[data-next]")!;
     const nextText = nextButton.querySelector<HTMLElement>(".action-button_text")!;
@@ -72,6 +75,8 @@ const { render = true } = Astro.props;
       const blocked = !canContinue();
       const percent = Math.round(((index + 1) / sequenceNow.length) * 100);
 
+      error.textContent = get().error;
+      error.hidden = !get().error || kind === "done";
       progress.hidden = kind === "done";
       nav.hidden = kind === "done";
       panels.forEach((panel) => (panel.hidden = panel.dataset.step !== kind));
@@ -105,6 +110,11 @@ const { render = true } = Astro.props;
   @layer components {
     .invite-steps_wrap {
       gap: var(--space-4);
+    }
+
+    .invite-steps_error {
+      color: var(--text);
+      font-weight: var(--primary-bold);
     }
 
     .invite-steps_progress {

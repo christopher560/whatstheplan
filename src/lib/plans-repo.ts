@@ -1,37 +1,43 @@
-import { samplePlansHub } from "@/data/plans-hub.ts";
-import type { InviteReply, PlansHub } from "@/data/plans-hub.ts";
+import { actions } from "astro:actions";
+import type { InviteReply } from "@/data/plans-hub.ts";
+
+type Simple = { ok: true } | { ok: false; error: string };
+
+const failed = { ok: false as const, error: "Something went wrong. Please try again." };
+
+/** An action call returns `{ data, error }`; an error here means the request itself failed. */
+const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | typeof failed =>
+  error || data === undefined ? failed : data;
 
 /**
- * Everything the plans page reads and writes. Backed by sample data today.
- * The Supabase version reads `plan_members` joined with `plans` for the
- * signed-in person, plus their `meetup_members` groups, and writes the
- * person's answers (see SUPABASE.md).
+ * What the plans pages write from the browser. The pages read plans on the
+ * server with `src/lib/plans-db.ts`; these calls go to Astro Actions, which call
+ * database functions that only act for the signed-in person.
  */
-export interface PlansRepo {
-  getHub(): Promise<PlansHub>;
-  /** Saves the answer to an invite, or clears it with `null`. */
-  answerInvite(inviteId: string, reply: InviteReply | null): Promise<void>;
-  /** Puts a plan or group on the person's calendar, or takes it off. */
-  setOnCalendar(planId: string, added: boolean): Promise<void>;
-  /** Sends or cancels a friend request to someone met in a group. */
-  setFriendRequest(personName: string, sent: boolean): Promise<void>;
+
+export interface NewPlan {
+  kind: "hangout" | "casual" | "event" | "formal" | "school";
+  vibe: "chill" | "chaotic" | "cozy" | "fancy" | "outdoorsy" | "broke";
+  budgetTier: number;
+  title: string;
+  description: string;
+  place: string;
+  when: string;
+  /** Friends with the app, by profile id. */
+  friendIds: string[];
+  /** Names of people without the app; they reply through the link. */
+  guestNames: string[];
 }
 
-const mockRepo: PlansRepo = {
-  async getHub() {
-    return samplePlansHub;
-  },
-  async answerInvite() {},
-  async setOnCalendar() {},
-  async setFriendRequest() {},
-};
+export const createPlan = async (plan: NewPlan) =>
+  unwrap(await actions.plans.create(plan)) as ({ ok: true; id: string; slug: string } | { ok: false; error: string });
 
-export const plansRepo: PlansRepo = mockRepo;
+/** Saves the answer to an invite, or clears it with `null`. */
+export const answerInvite = async (inviteId: string, reply: InviteReply | null) =>
+  unwrap(await actions.plans.answer({ memberId: inviteId, reply })) as Simple;
 
-/** The browser calls these; swap their bodies for Astro Action calls later. */
-export const answerInvite = (inviteId: string, reply: InviteReply | null) =>
-  plansRepo.answerInvite(inviteId, reply);
-export const setOnCalendar = (planId: string, added: boolean) =>
-  plansRepo.setOnCalendar(planId, added);
-export const setFriendRequest = (personName: string, sent: boolean) =>
-  plansRepo.setFriendRequest(personName, sent);
+/** Not saved yet: plans reach the calendar in a later round. */
+export const setOnCalendar = async (_planId: string, _added: boolean) => {};
+
+/** Not saved yet: it comes with Discover groups. */
+export const setFriendRequest = async (_personName: string, _sent: boolean) => {};

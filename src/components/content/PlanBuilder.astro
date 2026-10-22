@@ -24,9 +24,11 @@ interface Props {
   comfort?: number;
   /** Where the full idea list lives. */
   ideasHref?: string;
+  /** Friends the person can invite. */
+  friends?: { id: string; name: string; color: AccentColor }[];
 }
 
-const { render = true, comfort = 15, ideasHref = "/app/plans" } = Astro.props;
+const { render = true, comfort = 15, ideasHref = "/app/plans", friends = [] } = Astro.props;
 
 const stepLabels = ["Type", "Vibe", "Budget", "Friends", "Send"];
 
@@ -161,19 +163,7 @@ const budgets = [
   { label: "$40 and up", max: 9999 },
 ];
 
-const people: { id: string; name: string; color: AccentColor }[] = [
-  { id: "maya", name: "Maya", color: "red" },
-  { id: "dev", name: "Dev", color: "blue" },
-  { id: "jo", name: "Jo", color: "yellow" },
-  { id: "sam", name: "Sam", color: "green" },
-  { id: "priya", name: "Priya", color: "pink" },
-  { id: "leo", name: "Leo", color: "purple" },
-  { id: "alex", name: "Alex", color: "orange" },
-  { id: "riley", name: "Riley", color: "blue" },
-];
-
-/** Friends shown from the start; the rest appear when a link pre-fills them. */
-const everyday = ["maya", "dev", "jo", "sam", "priya", "leo"];
+const people = friends;
 const descriptionChips = [
   "Bring a snack",
   "Dress comfy",
@@ -181,7 +171,7 @@ const descriptionChips = [
   "Plus-ones welcome",
 ];
 
-const start = { type: "hangout", vibe: "cozy", budget: 1, who: ["maya", "dev", "sam"] };
+const start = { type: "hangout", vibe: "cozy", budget: 1, who: [] as string[] };
 const startType = types.find((type) => type.id === start.type)!;
 const comfortHome = `Within your group's $${comfort} comfort zone.`;
 const comfortOver = `Above your group's $${comfort} comfort zone.`;
@@ -200,7 +190,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
         data-plan-builder
         data-comfort-home={comfortHome}
         data-comfort-over={comfortOver}
-        data-everyday={JSON.stringify(everyday)}
         data-budgets={JSON.stringify(budgets)}
         data-types={JSON.stringify(
           Object.fromEntries(types.map((type) => [type.id, type.label])),
@@ -357,7 +346,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
                     size="main"
                     color={person.color}
                     pressed={start.who.includes(person.id)}
-                    hidden={!everyday.includes(person.id)}
                     data-person={person.id}
                   >
                     <Avatar
@@ -374,6 +362,10 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
                 ))
               }
             </div>
+            <p class="plan-builder_hint text-style-small" hidden data-no-friends>
+              Friends you add on the Friends page show up here. You can also add people by
+              name below.
+            </p>
             <div class="plan-builder_pills" data-others>
               <Pill element="button" size="main" variant="dashed" data-other-open>
                 <Icon slot="before" src={icon_plus} variant="small" />
@@ -484,32 +476,25 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
                 data-place
               />
             </div>
-            <div class="plan-builder_share">
-              <p class="plan-builder_link text-style-small">
-                whatstheplan.app/p/<span data-slug></span>
-              </p>
+            <p class="plan-builder_hint text-style-small" role="alert" hidden data-error></p>
+            <div class="plan-builder_share" hidden data-share>
+              <p class="plan-builder_link text-style-small" data-slug></p>
               <Pill element="button" variant="filled" color="red" data-copy>
                 Copy
               </Pill>
             </div>
-            <a class="plan-builder_preview text-style-small" href="/p/preview" data-preview>
-              Preview what your friends see
-            </a>
             <div class="plan-builder_created" role="status" hidden data-created>
               <p class="plan-builder_created_title text-style-h5">
                 <span data-created-title /> is live
               </p>
               <p class="plan-builder_created_text text-style-small">
-                It now sits in Plans, under Voting. Replies appear there the moment a
-                friend taps your link, and we ping you for each one.
+                It now sits in Plans. Friends you picked see it in their own Plans, and
+                anyone you added by name can reply from your link.
               </p>
               <ol class="plan-builder_created_steps text-style-small">
-                <li><strong>1.</strong> Friends tap your link. No account needed.</li>
-                <li>
-                  <strong>2.</strong> Their reply, time picks and comfortable spend land
-                  in your plan.
-                </li>
-                <li><strong>3.</strong> You lock a time and everyone is notified.</li>
+                <li><strong>1.</strong> Friends reply in their Plans, or from your link.</li>
+                <li><strong>2.</strong> Each reply shows up on your plan page.</li>
+                <li><strong>3.</strong> Post an update any time and it lands in the feed.</li>
               </ol>
               <div class="plan-builder_created_actions">
                 <ActionButton element="link" href="/app/plans" color="ink" size="small" data-replies>
@@ -537,7 +522,8 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
 }
 
 <script>
-  import { dashboardRepo } from "@/lib/dashboard-repo.ts";
+  import { createPlan } from "@/lib/plans-repo.ts";
+  import type { NewPlan } from "@/lib/plans-repo.ts";
 
   type Budget = { label: string; max: number };
 
@@ -578,7 +564,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       const typeNote = root.querySelector<HTMLElement>("[data-type-note]")!;
       const summary = root.querySelector<HTMLElement>("[data-summary]")!;
       const slug = root.querySelector<HTMLElement>("[data-slug]")!;
-      const everyday: string[] = JSON.parse(root.dataset.everyday ?? "[]");
       const prefill = root.querySelector<HTMLElement>("[data-prefill]")!;
       const othersBox = root.querySelector<HTMLElement>("[data-others]")!;
       const otherOpen = root.querySelector<HTMLElement>("[data-other-open]")!;
@@ -591,9 +576,10 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       const placeInput = root.querySelector<HTMLInputElement>("input[data-place]")!;
       const counter = root.querySelector<HTMLElement>("[data-counter]")!;
       const created = root.querySelector<HTMLElement>("[data-created]")!;
+      const shareBox = root.querySelector<HTMLElement>("[data-share]")!;
+      const errorBox = root.querySelector<HTMLElement>("[data-error]")!;
+      const noFriends = root.querySelector<HTMLElement>("[data-no-friends]")!;
       const repliesLink = root.querySelector<HTMLAnchorElement>("[data-replies]")!;
-      const previewLink = root.querySelector<HTMLAnchorElement>("[data-preview]")!;
-      const defaultWho = ["maya", "dev", "sam"];
 
       const state = {
         step: 0,
@@ -613,6 +599,7 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
         description: "",
         place: "",
         planId: "",
+        link: "",
       };
 
       const knownIds = [...personPills].map((pill) => pill.dataset.person!);
@@ -667,10 +654,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
         select(vibePills, (pill) => pill.dataset.vibe === state.vibe);
         select(budgetPills, (pill) => Number(pill.dataset.budget) === state.budget);
         select(personPills, (pill) => state.who.has(pill.dataset.person!));
-        personPills.forEach((pill) => {
-          const id = pill.dataset.person!;
-          pill.hidden = !everyday.includes(id) && !state.who.has(id);
-        });
 
         const showPrefill = !!state.from && state.who.size > 0;
         prefill.hidden = !showPrefill;
@@ -724,13 +707,13 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
 
         const count = state.who.size + state.others.length;
         summary.textContent = `${typeNames[state.type]} · ${vibeNames[state.vibe]} · ${budget.label.toLowerCase()} · ${count} ${count === 1 ? "friend" : "friends"}${state.when ? ` · ${state.when}` : ""}`;
-        slug.textContent = `${state.type}-${state.vibe}-${count}x9k`;
-        previewLink.href = `/p/${slug.textContent}`;
 
         const placeholder = `${vibeNames[state.vibe]} ${typeNames[state.type].toLowerCase()}`;
         titleInput.placeholder = placeholder;
         counter.textContent = `${state.description.length} of 200`;
         created.hidden = !(state.created && state.step === 4);
+        shareBox.hidden = !(state.created && state.step === 4);
+        noFriends.hidden = personPills.length > 0;
         root.querySelector<HTMLElement>("[data-created-title]")!.textContent =
           state.title.trim() || placeholder;
         repliesLink.href = `/app/plans/${state.planId}`;
@@ -787,18 +770,27 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
           return render();
         }
         next.disabled = true;
-        const result = await dashboardRepo.createPlan({
-          type: state.type,
-          vibe: state.vibe,
+        errorBox.hidden = true;
+        const result = await createPlan({
+          kind: state.type as NewPlan["kind"],
+          vibe: state.vibe as NewPlan["vibe"],
           budgetTier: state.budget,
           friendIds: [...state.who],
           guestNames: state.others,
-          title: state.title.trim() || titleInput.placeholder,
-          description: state.description,
-          place: state.place,
+          title: (state.title.trim() || titleInput.placeholder).slice(0, 40),
+          description: state.description.trim(),
+          place: state.place.trim(),
           when: state.when,
         });
+        if (!result.ok) {
+          errorBox.textContent = result.error;
+          errorBox.hidden = false;
+          next.disabled = false;
+          return;
+        }
         state.planId = result.id;
+        state.link = `${location.origin}/p/${result.slug}`;
+        slug.textContent = state.link;
         state.created = true;
         render();
       });
@@ -808,7 +800,7 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
         .addEventListener("click", () => {
           state.from = "";
           state.when = "";
-          state.who = new Set(defaultWho);
+          state.who = new Set();
           render();
         });
       root.querySelector("[data-when-drop]")!.addEventListener("click", () => {
@@ -863,7 +855,7 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       copy.addEventListener("click", async () => {
         try {
           await navigator.clipboard.writeText(
-            `whatstheplan.app/p/${slug.textContent}`,
+            state.link,
           );
         } catch {}
         copy.classList.replace("red", "green");

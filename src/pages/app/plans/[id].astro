@@ -11,14 +11,17 @@ import PlanTimes from "@/components/content/PlanTimes.astro";
 import PlanDescription from "@/components/content/PlanDescription.astro";
 import PlanBudget from "@/components/content/PlanBudget.astro";
 import PlanActivity from "@/components/content/PlanActivity.astro";
-import { planRepo } from "@/lib/plan-repo.ts";
+import { z } from "astro/zod";
+import { readPlan } from "@/lib/plans-db.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
 
 const { id } = Astro.params;
-const plan = await planRepo.getPlan(id!);
+const plan = z.uuid().safeParse(id).success
+  ? await readPlan(Astro.locals.supabase, Astro.locals.user!.id, id!)
+  : null;
 if (!plan) return Astro.redirect("/app/plans");
 ---
 

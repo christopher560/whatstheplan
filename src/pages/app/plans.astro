@@ -9,12 +9,12 @@ import PlansInvites from "@/components/content/PlansInvites.astro";
 import PlansHosting from "@/components/content/PlansHosting.astro";
 import PlansGoing from "@/components/content/PlansGoing.astro";
 import PlansGroups from "@/components/content/PlansGroups.astro";
-import { plansRepo } from "@/lib/plans-repo.ts";
+import { readHub } from "@/lib/plans-db.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
-const hub = await plansRepo.getHub();
+const hub = await readHub(Astro.locals.supabase, Astro.locals.user!.id);
 ---
 
 <DashboardLayout title="Your plans">

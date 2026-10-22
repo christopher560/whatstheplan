@@ -1,6 +1,5 @@
 ---
 import ActionButton from "@/components/item/ActionButton.astro";
-import Avatar from "@/components/item/Avatar.astro";
 import PathIcon from "@/components/media/PathIcon.astro";
 import type { Invite } from "@/data/invite.ts";
 
@@ -32,25 +31,10 @@ const { render = true, invite } = Astro.props;
             <PathIcon d="M5 12l5 5 9-10" />
           </span>
           <div class="invite-done_win_text">
-            <p class="text-style-tiny">Time that won</p>
+            <p class="text-style-tiny">{invite.winner.slotId ? "Time that won" : "When"}</p>
             <p class="invite-done_win_time text-style-h4">{invite.winner.time}</p>
             <p class="text-style-small" data-win-sub />
           </div>
-        </div>
-
-        <div class="invite-done_updates">
-          <p class="invite-steps_label text-style-main">Updates from {invite.host.name}</p>
-          <ul class="invite-done_list">
-            {invite.updates.map((update) => (
-              <li class="invite-done_update">
-                <Avatar initial={invite.host.name} color={invite.host.color} size="small" />
-                <div class="invite-done_update_text">
-                  <p class="text-style-main">{update.text}</p>
-                  <p class="invite-reply_hint text-style-small">{update.time}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
 
@@ -65,7 +49,7 @@ const { render = true, invite } = Astro.props;
       </div>
 
       <div class="invite-done_buttons" data-actions>
-        <ActionButton color="white" size="large" data-calendar>
+        <ActionButton color="white" size="large" data-calendar hidden>
           Add to calendar
         </ActionButton>
         <ActionButton color="yellow" size="large" data-copy>
@@ -169,8 +153,9 @@ const { render = true, invite } = Astro.props;
 
       extras.hidden = !going;
       winSub.textContent = `${invite.winner.sub}${winnerMissed() ? ". Not one of your picks, change your reply if it does not work." : ""}`;
-      linkBox.hidden = !going;
-      actions.hidden = !going;
+      linkBox.hidden = !going || !!invite.signedIn;
+      actions.hidden = !going || !!invite.signedIn;
+      winSub.hidden = !winSub.textContent;
       url.textContent = s.receipt ? `${location.origin}${s.receipt}` : "Saving your link…";
       mark(calendar, s.calendar, "white", "Added to calendar", "Add to calendar");
       mark(copy, s.copied, "yellow", "Link copied", "Copy my link");
@@ -302,38 +287,6 @@ const { render = true, invite } = Astro.props;
       font-weight: var(--secondary-bold);
     }
 
-    .invite-done_updates {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-
-    .invite-done_list {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .invite-done_update {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--space-2);
-      padding: var(--space-2) var(--space-3);
-      border: var(--border-width) solid var(--border-subtle);
-      border-radius: var(--radius-main);
-      background-color: var(--background-3);
-    }
-
-    .invite-done_update_text {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      gap: var(--space-0);
-      min-width: 0;
-    }
 
     .invite-done_summary {
       display: grid;

@@ -101,6 +101,22 @@ export interface Invite {
   winner: { time: string; sub: string; slotId?: string };
   /** What the host posted since sending the link, newest first. Maps to `plan_events`. */
   updates: { text: string; time: string }[];
+  /** The `plans` row, for real invites. */
+  planId?: string;
+  /** The secret from the guest's own link, set on `/r/{token}`. */
+  token?: string;
+  /** True when a signed-in person is looking, so their reply goes to their account. */
+  signedIn?: boolean;
+  /** The visitor's stored reply, so the page can open on it. */
+  mine?: {
+    rsvp: Rsvp | null;
+    name: string;
+    color: AccentColor;
+    /** Index into `inviteOptions.budget`. */
+    budget?: number;
+    plusOne: string;
+    host: boolean;
+  };
 }
 
 export interface InviteOptions {

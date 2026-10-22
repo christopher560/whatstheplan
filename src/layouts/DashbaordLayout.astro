@@ -6,6 +6,7 @@ import DashboardSidebar from "@/components/global/DashboardSidebar.astro";
 import DashboardTabBar from "@/components/global/DashboardTabBar.astro";
 import { dashboardRepo } from "@/lib/dashboard-repo.ts";
 import { nearestAccent } from "@/utils/avatar-accent.ts";
+import { countPending } from "@/lib/plans-db.ts";
 import "../styles/dashboard.css";
 import "../styles/dashboard-base.css";
 
@@ -30,6 +31,8 @@ if (Astro.locals.user) {
     .select("id", { count: "exact", head: true })
     .eq("status", "accepted");
   shell.viewer = { ...shell.viewer, friendCount: count ?? 0 };
+  /* The Plans badge counts invites the person has not answered. */
+  shell.badges = { plans: await countPending(Astro.locals.supabase, Astro.locals.user.id) };
 }
 ---
 

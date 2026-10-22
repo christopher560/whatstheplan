@@ -64,6 +64,23 @@ const { render = true, invite } = Astro.props;
         <Avatar initial={invite.host.name} color={invite.host.color} size="small" />
         <p class="invite-summary_bubble text-style-main">{invite.note}</p>
       </div>
+
+      {invite.updates.length > 0 && (
+        <section class="invite-summary_updates" aria-label={`Updates from ${invite.host.name}`}>
+          <h2 class="invite-summary_updates_title text-style-small">Updates from {invite.host.name}</h2>
+          <ul class="invite-summary_updates_list">
+            {invite.updates.map((update) => (
+              <li class="invite-summary_note">
+                <Avatar initial={invite.host.name} color={invite.host.color} size="small" />
+                <div class="invite-summary_update">
+                  <p class="invite-summary_bubble text-style-main">{update.text}</p>
+                  <p class="invite-summary_time text-style-tiny">{update.time}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </Panel>
   )
 }
@@ -80,7 +97,8 @@ const { render = true, invite } = Astro.props;
     subscribe(() => {
       const s = get();
       /* The guest joins the stack once they say yes and give a name. */
-      const joined = s.rsvp === "in" && cleanName().length > 0 && stepIndex() >= 1 && currentStep() !== "reply";
+      const reached = stepIndex() >= 1 && currentStep() !== "reply";
+      const joined = s.rsvp === "in" && cleanName().length > 0 && (reached || invite.mine?.rsvp === "in");
       stack.querySelector("[data-you]")?.remove();
       if (joined) {
         const you = avatarElement(cleanName(), s.color, "main");
@@ -211,6 +229,38 @@ const { render = true, invite } = Astro.props;
       display: flex;
       align-items: flex-start;
       gap: var(--space-2);
+    }
+
+    .invite-summary_updates {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .invite-summary_updates_title {
+      font-weight: var(--primary-bold);
+    }
+
+    .invite-summary_updates_list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .invite-summary_update {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .invite-summary_time {
+      padding-inline-start: var(--space-1);
+      color: var(--text-2);
     }
 
     .invite-summary_bubble {

@@ -31,6 +31,7 @@ const cards = [
     place: invite.place,
     cost: invite.cost,
     crew: invite.crew,
+    crewColors: invite.crewColors,
     who: `You and ${invite.crew.length} others`,
     fromInvite: true,
   })),
@@ -74,9 +75,9 @@ const cards = [
                 <div class="plans-going_crew">
                   <AvatarStack
                     size="small"
-                    people={[...plan.crew, "You"].map((name) => ({
-                      initial: name,
-                      color: personColor(name),
+                    people={[...plan.crew, "You"].map((name, index) => ({
+                      initial: name.replace(/^@/, ""),
+                      color: plan.crewColors?.[index] ?? personColor(name),
                     }))}
                   />
                   <p class="plans-going_who text-style-small">{plan.who}</p>

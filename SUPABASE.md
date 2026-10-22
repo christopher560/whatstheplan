@@ -576,3 +576,22 @@ Not built: removing a friend, blocking, "plans together" counts
 - **JSON in pages:** every `*State.astro` escapes `<` as `\u003c` so stored text cannot close the script tag.
 - **Known and accepted:** `npm audit` reports `path-to-regexp` through `@astrojs/vercel` (build-time routing only; the fix is a breaking adapter downgrade).
 - **Dashboard settings to check:** minimum password length 8+, leaked-password protection (Pro plan), CAPTCHA on, redirect URLs limited to whatstheplan.social.
+
+## Plans, round A - built
+
+Real plans for the plan builder, the Plans page and the host's plan page.
+
+- **Tables** (read-only through the API, RLS on): `plans` (owner, unguessable `slug`, kind, vibe, budget tier, title, description, place, free-text time, stage, auto nudge), `plan_members` (a friend by `user_id` or a guest by `guest_name`, `is_host`, `reply` in/maybe/out), `plan_events` (the feed: created, reply, update, description). `in_plan(plan)` is the security-definer helper the policies use, so members can read a plan but strangers see nothing.
+- **Functions** (security definer, act for `auth.uid()`): `create_plan` (friends must be accepted friends, up to 30 friends and 20 guests, 20 plans an hour), `answer_plan` (only your own invite, not the host's), `set_plan_description` and `post_plan_update` (host only), `set_plan_auto_nudge`, `my_plan_people`, `plan_feed`.
+- **App:** `src/lib/plans-db.ts` reads (hub, host plan, builder friends, pending count); `src/lib/plans-repo.ts` and `plan-repo.ts` call the `plans.*` actions. The sidebar Plans badge counts unanswered invites. The builder lists the person's real friends, and people without the app are added by name.
+- **Not built yet:** the public `/p/[slug]` page and guest replies (round B), time slots and locking, nudges and reminders, calendar pins, group chat. `Add to calendar`, `nudge` and `lockTime` save nothing yet.
+- Finishing onboarding now creates the person's `@username`.
+
+## Plans, round B (public invite and guests) - built
+
+- **`/p/[slug]`** renders on request from `public_invite(slug)`; **`/r/[token]`** is a guest's own page from `guest_receipt(token)`. The steps come from the plan kind (hangout/casual/event: reply, name, budget; formal: reply, name, guests; school: reply, name). A signed-in visitor skips the name step and replies as themselves; the host is sent to their plan page.
+- **Guest tokens** are 64 hex characters (two random UUIDs), stored on `plan_members.guest_token`, and only the definer functions can read them: members get column-level SELECT without `guest_token` or the private `comfort_dollars`. A guest who types a name the host already added takes that spot; otherwise they get a new row. A plan holds at most 60 people and takes at most 30 new guests an hour.
+- **Public surface (anon can call):** `public_invite`, `guest_receipt`, `guest_reply`. They return first names and colors of people going, never usernames, ids or contact details. `member_reply` is for signed-in people.
+- Both pages send `Cache-Control: private, no-store` and are `noindex`. The link is the key, so share it only with the guest.
+- **Not built yet:** time slots to vote on, locking a time, reminders, "add to calendar", Realtime.
+- To limit abuse by IP, add a Vercel Firewall rate limit rule on `/_actions/invite.reply`.

@@ -61,7 +61,7 @@ const tabs = [
             >
               <div class="plans-invites_body">
                 <div class="plans-invites_top">
-                  <Avatar initial={invite.from} color={personColor(invite.from)} size="small" />
+                  <Avatar initial={invite.from.replace(/^@/, "")} color={invite.fromColor ?? personColor(invite.from)} size="small" />
                   <p class="plans-invites_from text-style-small">{invite.from} invited you</p>
                   <Pill size="tiny" variant="filled" color={categoryColor[invite.category]}>
                     {categoryLabel[invite.category]}
@@ -93,7 +93,7 @@ const tabs = [
                     <span class="plans-invites_dot in">
                       <PathIcon d="M5 12l5 5 9-10" variant="small" />
                     </span>
-                    <span class="text-style-small">You're in. On your calendar.</span>
+                    <span class="text-style-small">You're in.</span>
                   </div>
                   <ActionButton color="white" size="small" data-answer="out">
                     Change to can't make it

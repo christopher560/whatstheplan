@@ -28,6 +28,8 @@ export interface InviteReplyState {
   copied: boolean;
   /** The guest's own link, filled in once the reply is saved. */
   receipt: string;
+  /** Why the last save failed, shown on the step before the end. */
+  error: string;
 }
 
 let invite: Invite | null = null;
@@ -36,14 +38,14 @@ const listeners = new Set<() => void>();
 
 const initial = (source: Invite): InviteReplyState => ({
   step: 0,
-  rsvp: "in",
-  name: "",
-  color: "yellow",
+  rsvp: source.mine?.rsvp ?? "in",
+  name: source.mine?.name ?? "",
+  color: source.mine?.color ?? "yellow",
   slots: source.slots.filter((slot) => slot.preset).map((slot) => slot.id),
   none: false,
-  budget: 1,
-  plus: false,
-  guest: "",
+  budget: source.mine?.budget ?? 1,
+  plus: !!source.mine?.plusOne,
+  guest: source.mine?.plusOne ?? "",
   meal: source.meals?.[0]?.id ?? "",
   diets: [],
   section: source.sections?.[0]?.id ?? "",
@@ -51,7 +53,8 @@ const initial = (source: Invite): InviteReplyState => ({
   when: "day",
   calendar: false,
   copied: false,
-  receipt: "",
+  receipt: source.token ? `/r/${source.token}` : "",
+  error: "",
 });
 
 export const getInvite = (): Invite => {
@@ -59,6 +62,8 @@ export const getInvite = (): Invite => {
     const source = document.getElementById("invite-data")?.textContent ?? "{}";
     invite = JSON.parse(source) as Invite;
     state = initial(invite);
+    /* Someone who already replied opens on the last step, with their answer in place. */
+    if (invite.mine?.rsvp) state = { ...state, step: sequence().length - 1 };
   }
   return invite;
 };
@@ -86,7 +91,7 @@ export const reset = () => update({ ...initial(getInvite()) });
 /** Steps for the current answer. Declining skips the questions. */
 export const sequence = (): InviteStepId[] => {
   const source = getInvite();
-  return get().rsvp === "out" ? ["reply", "name", "done"] : source.steps;
+  return get().rsvp === "out" ? source.steps.filter((step) => ["reply", "name", "done"].includes(step)) : source.steps;
 };
 
 export const stepIndex = () => Math.min(get().step, sequence().length - 1);
@@ -113,20 +118,19 @@ export const toggleRemind = (id: string) => update({ remind: toggle(get().remind
 const submit = () => {
   const s = get();
   const source = getInvite();
+  update({ error: "" });
   void replyAsGuest(source.slug, {
     rsvp: s.rsvp,
     name: cleanName(),
     color: s.color,
-    slotIds: s.slots,
-    noSlotWorks: s.none,
-    comfortDollars: source.steps.includes("budget") ? budgetLimit() : undefined,
-    plusOne: source.steps.includes("guests") && s.plus ? s.guest.trim() || "Guest" : undefined,
-    meal: source.steps.includes("meal") ? s.meal : undefined,
-    diets: source.steps.includes("meal") ? s.diets : undefined,
-    section: source.steps.includes("class") ? s.section : undefined,
-    remindVia: source.steps.includes("remind") ? s.remind : undefined,
-    remindWhen: source.steps.includes("remind") ? s.when : undefined,
-  }).then((receipt) => update({ receipt: receipt.path }));
+    comfortDollars: source.steps.includes("budget") && s.rsvp !== "out" ? budgetLimit() : undefined,
+    plusOne: source.steps.includes("guests") && s.plus && s.rsvp !== "out" ? s.guest.trim() || "Guest" : undefined,
+    token: source.token,
+  }).then((receipt) => {
+    /* If saving failed, go back a step and say why instead of showing a false "You're in". */
+    if (!receipt.ok) return update({ error: receipt.error, step: Math.max(0, sequence().length - 2) });
+    update({ receipt: receipt.path });
+  });
 };
 
 export const next = () => {
@@ -222,7 +226,7 @@ export const doneCopy = (): { title: string; sub: string } => {
   if (s.rsvp === "in") {
     return {
       title: source.kind === "formal" ? `See you there, ${first}!` : `You're in, ${first}!`,
-      sub: `${host} has your reply and everyone going can see you joined. We will nudge you before it starts.`,
+      sub: `${host} has your reply and everyone going can see you joined.`,
     };
   }
   if (s.rsvp === "maybe") {

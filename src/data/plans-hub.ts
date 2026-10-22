@@ -20,6 +20,9 @@ export interface HubInvite {
   due: string;
   /** First names of the others invited. */
   crew: string[];
+  /** Avatar colors for `from` and `crew`, in the same order. */
+  fromColor?: AccentColor;
+  crewColors?: AccentColor[];
 }
 
 /** A plan the viewer hosts. */
@@ -32,6 +35,9 @@ export interface HubHosted {
   place: string;
   cost: string;
   crew: string[];
+  crewColors?: AccentColor[];
+  /** The public link is `/p/{slug}`. */
+  slug?: string;
   replied: number;
   invited: number;
 }
@@ -46,6 +52,7 @@ export interface HubGoing {
   place: string;
   cost: string;
   crew: string[];
+  crewColors?: AccentColor[];
   who: string;
 }
 

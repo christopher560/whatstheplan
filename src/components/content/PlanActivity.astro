@@ -40,8 +40,8 @@ const { render = true, plan } = Astro.props;
         <div class="plan-activity_updates">
           <h3 class="plan-activity_subtitle text-style-h6">Send a quick update</h3>
           <p class="plan-activity_hint text-style-small">
-            One tap tells all {plan.friends.length} friends. They get it as a
-            notification, text or email, whichever they picked when they replied.
+            One tap posts it for all {plan.friends.length} friends. They see it on their
+            invite page, under updates from you.
           </p>
           <div class="plan-activity_buttons">
             {quickUpdates.map((message) => (
@@ -55,6 +55,25 @@ const { render = true, plan } = Astro.props;
               </button>
             ))}
           </div>
+          <form class="plan-activity_custom" data-custom>
+            <label class="plan-activity_label text-style-small" for="plan-custom-update">
+              Or write your own
+            </label>
+            <div class="plan-activity_custom_row">
+              <input
+                id="plan-custom-update"
+                class="field-control text-style-main"
+                type="text"
+                maxlength="120"
+                placeholder="Meet at the north entrance"
+                autocomplete="off"
+                data-custom-input
+              />
+              <button type="submit" class="plan-activity_custom_send text-style-small" data-custom-send disabled>
+                Send
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </Panel>
@@ -62,12 +81,26 @@ const { render = true, plan } = Astro.props;
 }
 
 <script>
-  import { get, subscribe, sendQuickUpdate } from "@/lib/plan-store.ts";
+  import { get, subscribe, sendQuickUpdate, sendCustomUpdate } from "@/lib/plan-store.ts";
 
   document.querySelectorAll<HTMLElement>("[data-activity]").forEach((root) => {
     const list = root.querySelector<HTMLElement>("[data-feed]")!;
     const buttons = root.querySelectorAll<HTMLElement>("[data-update]");
     let shown = list.children.length;
+    const form = root.querySelector<HTMLFormElement>("[data-custom]")!;
+    const input = form.querySelector<HTMLInputElement>("[data-custom-input]")!;
+    const sendButton = form.querySelector<HTMLButtonElement>("[data-custom-send]")!;
+
+    input.addEventListener("input", () => {
+      sendButton.disabled = input.value.trim().length === 0;
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!input.value.trim()) return;
+      sendCustomUpdate(input.value);
+      input.value = "";
+      sendButton.disabled = true;
+    });
 
     buttons.forEach((button) =>
       button.addEventListener("click", () => sendQuickUpdate(button.dataset.update!)),
@@ -206,6 +239,41 @@ const { render = true, plan } = Astro.props;
       &.sent {
         background-color: var(--status-free-background);
         cursor: default;
+      }
+    }
+
+    .plan-activity_custom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .plan-activity_label {
+      font-weight: var(--primary-bold);
+    }
+
+    .plan-activity_custom_row {
+      display: flex;
+      gap: var(--space-2);
+
+      & > input {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .plan-activity_custom_send {
+      flex: none;
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-vivid-yellow);
+      color: var(--colors-on-vivid);
+      font-weight: var(--primary-bold);
+
+      &:disabled {
+        background-color: var(--background-3);
+        color: var(--text-2);
       }
     }
 

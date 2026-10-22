@@ -99,7 +99,7 @@ export const nudgeWaiting = () => {
     nudged: true,
     feed: addFeed(
       `nudged ${names.map((f) => f.name).join(" and ")}`,
-      "A friendly reminder went out by text",
+      "Text reminders are not switched on yet",
     ),
     tick: get().tick + 1,
   });
@@ -141,6 +141,17 @@ export const sendQuickUpdate = (message: string) => {
   if (get().sent[message]) return;
   update({
     sent: { ...get().sent, [message]: true },
+    feed: addFeed(`sent an update to ${getPlan().friends.length} friends`, message),
+    tick: get().tick + 1,
+  });
+  void repo.sendUpdate(getPlan().id, message);
+};
+
+/** A message the host typed. Unlike the quick ones it can be sent again with new words. */
+export const sendCustomUpdate = (text: string) => {
+  const message = text.trim().slice(0, 120);
+  if (!message) return;
+  update({
     feed: addFeed(`sent an update to ${getPlan().friends.length} friends`, message),
     tick: get().tick + 1,
   });

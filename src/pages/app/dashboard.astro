@@ -10,12 +10,14 @@ import BudgetCard from "@/components/content/BudgetCard.astro";
 import FreeTonightCard from "@/components/content/FreeTonightCard.astro";
 import OverlapCard from "@/components/content/OverlapCard.astro";
 import { dashboardRepo } from "@/lib/dashboard-repo.ts";
+import { readBuilderFriends } from "@/lib/plans-db.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
 const { user, freeNow, plans, invites, budget, tonight, overlap } =
   await dashboardRepo.getHome();
+const friends = await readBuilderFriends(Astro.locals.supabase);
 ---
 
 <DashboardLayout title="Dashboard">
@@ -28,7 +30,7 @@ const { user, freeNow, plans, invites, budget, tonight, overlap } =
         people={freeNow.people}
         summary={freeNow.summary}
       />
-      <PlanBuilder comfort={budget.comfort} />
+      <PlanBuilder comfort={budget.comfort} friends={friends} />
       <PlanBubbles plans={plans} />
       <InviteList invites={invites} />
       <Fragment slot="rail">

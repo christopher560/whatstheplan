@@ -1,57 +1,30 @@
 ---
-import PublicLayout from "@/layouts/PublicLayout.astro";
-import InviteState from "@/components/content/InviteState.astro";
-import InviteSummary from "@/components/content/InviteSummary.astro";
-import InviteSteps from "@/components/content/InviteSteps.astro";
-import InviteReply from "@/components/content/InviteReply.astro";
-import InviteTimes from "@/components/content/InviteTimes.astro";
-import InviteExtras from "@/components/content/InviteExtras.astro";
-import InviteDone from "@/components/content/InviteDone.astro";
-import InvitePitch from "@/components/content/InvitePitch.astro";
-import { inviteRepo } from "@/lib/invite-repo.ts";
+import InvitePage from "@/components/content/InvitePage.astro";
+import { readInvite } from "@/lib/invite-db.ts";
+import { nearestAccent } from "@/utils/avatar-accent.ts";
 
-export async function getStaticPaths() {
-  const slugs = await inviteRepo.listSlugs();
-  return slugs.map((slug) => ({ params: { slug } }));
-}
+/* Depends on the plan and on who is looking, so it renders on each request. */
+export const prerender = false;
 
 const { slug } = Astro.params;
-const invite = await inviteRepo.getInvite(slug!);
-if (!invite) return Astro.redirect("/");
+const invite = /^[a-z0-9-]{8,80}$/.test(slug ?? "")
+  ? await readInvite(Astro.locals.supabase, slug!, !!Astro.locals.user)
+  : null;
+if (!invite) return Astro.rewrite("/404");
+/* The host does not reply to their own plan; they manage it. */
+/* A signed-in visitor replies as themselves, with their own name and color. */
+const profile = Astro.locals.profile;
+if (Astro.locals.user && !invite.mine && profile) {
+  invite.mine = {
+    rsvp: null,
+    name: profile.first_name || (profile.username ? `@${profile.username}` : ""),
+    color: nearestAccent(profile.avatar_color),
+    plusOne: "",
+    host: false,
+  };
+}
+if (invite.mine?.host) return Astro.redirect(`/app/plans/${invite.planId}`);
+Astro.response.headers.set("Cache-Control", "private, no-store");
 ---
 
-<PublicLayout title={invite.title}>
-  <InviteState invite={invite} />
-  <!-- Invite -->
-  <div class="invite-page_columns">
-    <InviteSummary invite={invite} />
-    <InviteSteps>
-      <InviteReply invite={invite} />
-      <InviteTimes invite={invite} />
-      <InviteExtras invite={invite} />
-      <InviteDone invite={invite} />
-    </InviteSteps>
-  </div>
-  <InvitePitch />
-</PublicLayout>
-
-<style is:global>
-  @layer components {
-    .invite-page_columns {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-5);
-      align-items: flex-start;
-
-      & > .invite-summary_wrap {
-        flex: 1 1 20rem;
-        max-width: 29rem;
-        min-width: 0;
-      }
-      & > .invite-steps_wrap {
-        flex: 1.4 1 24rem;
-        min-width: 0;
-      }
-    }
-  }
-</style>
+<InvitePage invite={invite} />

@@ -1,0 +1,14 @@
+---
+import InvitePage from "@/components/content/InvitePage.astro";
+import { readReceipt } from "@/lib/invite-db.ts";
+
+/* A guest's own page: their reply, the plan and the host's updates. The secret in the link is the key. */
+export const prerender = false;
+
+const { token } = Astro.params;
+const invite = /^[0-9a-f]{64}$/.test(token ?? "") ? await readReceipt(Astro.locals.supabase, token!) : null;
+if (!invite) return Astro.rewrite("/404");
+Astro.response.headers.set("Cache-Control", "private, no-store");
+---
+
+<InvitePage invite={invite} />

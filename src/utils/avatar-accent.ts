@@ -30,3 +30,7 @@ export const nearestAccent = (hex: string | null | undefined): AccentColor => {
   });
   return best;
 };
+
+/** The hex for an accent name, for places that store a color as hex. */
+export const accentHex = (name: AccentColor): string =>
+  `#${swatches[name].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;

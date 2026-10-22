@@ -33,20 +33,6 @@ export interface DashboardRepo {
   setRsvp(inviteId: string, answer: Rsvp): Promise<void>;
   setMonthlyBudget(month: string, total: number): Promise<void>;
   setFreeTonight(free: boolean): Promise<void>;
-  createPlan(input: {
-    type: string;
-    vibe: string;
-    budgetTier: number;
-    /** Friends with the app. */
-    friendIds: string[];
-    /** Names of people without the app; they get the link. */
-    guestNames: string[];
-    title: string;
-    description: string;
-    place: string;
-    /** Suggested time carried over from the calendar, if any. */
-    when: string;
-  }): Promise<{ id: string; slug: string }>;
 }
 
 const mockRepo: DashboardRepo = {
@@ -71,10 +57,6 @@ const mockRepo: DashboardRepo = {
   async setRsvp() {},
   async setMonthlyBudget() {},
   async setFreeTonight() {},
-  async createPlan() {
-    // Returns an existing sample plan so "See replies" resolves in the mock.
-    return { id: "beach-day", slug: "mock" };
-  },
 };
 
 export const dashboardRepo: DashboardRepo = mockRepo;
