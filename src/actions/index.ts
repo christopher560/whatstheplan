@@ -605,6 +605,31 @@ export const server = {
       },
     }),
 
+    /** New lines in the group's chat since a line number (0 gives the latest 50). */
+    messages: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid(), after: z.number().int().min(0) }),
+      handler: async (input, context): Promise<{ ok: true; lines: unknown[] } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("group_messages", { p_group: input.groupId, p_after: input.after });
+        return error || !Array.isArray(data) ? { ok: false, error: generic } : { ok: true, lines: data };
+      },
+    }),
+
+    send: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid(), text: z.string().trim().min(1).max(500) }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("send_group_message", { p_group: input.groupId, p_body: input.text });
+        return error
+          ? { ok: false, error: error.message === "Too many messages" ? "You're sending a lot. Wait a moment and try again." : generic }
+          : { ok: true };
+      },
+    }),
+
     block: defineAction({
       accept: "json",
       input: z.object({ groupId: z.uuid(), handle: z.uuid() }),

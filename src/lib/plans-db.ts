@@ -160,6 +160,8 @@ export const readHub = async (supabase: SupabaseClient, userId: string, zoneName
     going: number;
     people: { name: string; color: string | null }[];
     vote: string | null;
+    last: string | null;
+    unread: number;
   }[]).map((group) => {
     const category = groupCategories.find((item) => item.id === group.category)!;
     const status = group.total < group.minPeople ? "form" : group.going >= group.minPeople ? "ok" : "wait";
@@ -181,8 +183,8 @@ export const readHub = async (supabase: SupabaseClient, userId: string, zoneName
           : status === "wait"
             ? `Needs ${group.minPeople - group.going} more ${group.minPeople - group.going === 1 ? "yes" : "yeses"}`
             : "Confirmed",
-      last: "",
-      unread: 0,
+      last: group.last ?? "",
+      unread: group.unread,
       vote: group.vote ? `Vote: ${group.vote}` : "",
     };
   });

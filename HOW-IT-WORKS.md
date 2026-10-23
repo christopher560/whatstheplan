@@ -147,7 +147,9 @@ Groups you already joined always show, so you can find them again.
 | Newcomer fit | 5 | Groups that welcome new people, a little more if you said you like groups that go easy on newcomers. |
 
 Groups under the **minimum score** (50 for now) are hidden, and the page says how
-many were hidden. A group that overlaps hours you marked busy on your calendar is
+many were hidden. There is one exception: if *nothing* near you reaches that score
+(a quiet area, or nothing matches your interests yet), the page shows the closest
+groups anyway, with a line saying so, so you never open Discover to an empty page. A group that overlaps hours you marked busy on your calendar is
 **sent down the list**, not hidden, and the page says so.
 
 The page shows two numbers on each group. "Fits you" is the score above. "You fit
@@ -183,6 +185,10 @@ time and length, a public place from the list near you, a size up to 10, and
 whether newcomers are welcome. The database checks it again: your band must be on,
 the place must be on the places list, the start must be between half an hour and 30
 days away, and you can start at most five groups a day. You become the first member.
+
+**On the cards:** a group you are in shows an "Open group" button and a "Leave
+group" button, and clicking anywhere else on that card opens the group page too.
+A place in your own town reads "Right nearby" instead of "0.0 mi".
 
 ### Where groups come from
 
@@ -234,7 +240,12 @@ nothing. It has:
   still counts in the headcount.
 - **Leave:** one tap, with an undo (the undo fails if someone took your spot).
 
-Chat is not on the page yet; it says "Group chat is coming soon".
+- **Chat:** text only, up to 500 characters a message. Joining, starting or
+  leaving a group adds a line ("Sam joined the group"). New messages appear within
+  about 4 seconds while the page is open (the page asks for new lines; it does not
+  hold a live connection yet). A message you send shows at once as "Sending…". People
+  you blocked, or who blocked you, never appear in your chat. The Plans page shows
+  each group's latest line and how many you have not read.
 
 ### Limits to know about
 
@@ -488,8 +499,7 @@ These protections are shared by every feature above.
 
 | Not built | What it will do |
 | --- | --- |
-| Group chat | Live, text-only chat on the group page. It is the next thing to build. |
-| Live updates | Replies, votes and spots appear without reloading. |
+| Live updates | Replies, votes and spots appear without reloading. (Chat already refreshes every few seconds.) |
 | Email nudges and reminders | The Nudge and auto-nudge buttons do nothing yet. Emails would go through Resend; texts need a paid text-message service. |
 | Teen Discover | 13 to 15 and 16 to 17 meeting only their own band. Waits for an age check (school email or parent consent) and a legal review. |
 | Groups the app forms | The app grouping people from a waitlist who share interests and free hours. |

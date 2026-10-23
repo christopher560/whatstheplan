@@ -34,9 +34,14 @@ const { render = true } = Astro.props;
         <span class="text-style-small" data-them />
       </div>
       <div class="group-card_tags" data-tags></div>
-      <ActionButton class="group-card_join" data-join>
-        Join
-      </ActionButton>
+      <div class="group-card_buttons">
+        <ActionButton element="link" href="#" color="ink" class="group-card_open" hidden data-open-group>
+          Open group
+        </ActionButton>
+        <ActionButton class="group-card_join" data-join>
+          Join
+        </ActionButton>
+      </div>
     </Panel>
   )
 }
@@ -68,9 +73,15 @@ const { render = true } = Astro.props;
       display: flex;
       align-items: center;
       gap: var(--space-2);
+
+      & .avatar-stack_wrap {
+        flex: none;
+        flex-wrap: nowrap;
+      }
     }
 
     .group-card_going {
+      min-width: 0;
       font-weight: var(--primary-bold);
     }
 
@@ -87,8 +98,20 @@ const { render = true } = Astro.props;
       gap: var(--space-1);
     }
 
-    .group-card_join {
+    .group-card_buttons {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
       margin-block-start: auto;
+
+      & [hidden] {
+        display: none;
+      }
+    }
+
+    /* A card for a group you are in opens that group, anywhere you click that is not a button. */
+    .group-card_wrap.clickable {
+      cursor: pointer;
     }
   }
 </style>

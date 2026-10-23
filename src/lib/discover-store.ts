@@ -212,15 +212,26 @@ const filtered = (group: OpenGroup, ignoreTime = false) => {
   );
 };
 
-/** Feed groups that pass the filters and the mutual fit bar, soonest first. */
+/**
+ * The score a group needs to be shown. If nothing nearby reaches it (a quiet area, or nothing matches
+ * the person's interests yet), the bar drops to zero so the page shows the closest groups instead of nothing.
+ */
+const scoreBar = () => {
+  const d = getData();
+  const reaches = d.groups.some((group) => eligible(d, group) && fitOf(d, group).mutual >= minFit(d));
+  return reaches ? minFit(d) : 0;
+};
+
+/** Feed groups that pass the filters and the match bar, soonest first. */
 export const feed = () => {
   const d = getData();
+  const bar = scoreBar();
   const byFit = (a: OpenGroup, b: OpenGroup) => fitOf(d, b).mutual - fitOf(d, a).mutual;
   /* A group that overlaps something on the calendar goes after the ones that do not. */
   const bySoon = (a: OpenGroup, b: OpenGroup) =>
     Number(clashes(d, a)) - Number(clashes(d, b)) || hoursUntil(d, a) - hoursUntil(d, b) || byFit(a, b);
   const shown = d.groups
-    .filter((group) => eligible(d, group) && filtered(group) && fitOf(d, group).mutual >= minFit(d))
+    .filter((group) => eligible(d, group) && filtered(group) && fitOf(d, group).mutual >= bar)
     .sort(bySoon);
   const hidden = d.groups.filter((group) => filtered(group)).length - shown.length;
   return {
@@ -228,12 +239,15 @@ export const feed = () => {
     later: shown.filter((group) => hoursUntil(d, group) > SOON_HOURS),
     shown: shown.length,
     hidden,
+    /** Nothing reached the match bar, so these are just the closest groups. */
+    relaxed: bar === 0 && shown.length > 0,
   };
 };
 
 /** One column per day: the viewer's busy blocks and the groups that fit. */
 export const week = () => {
   const d = getData();
+  const bar = scoreBar();
   return d.days.map((day, index) => ({
     ...day,
     busy: d.busy[index],
@@ -242,7 +256,7 @@ export const week = () => {
         group.day === index &&
         eligible(d, group) &&
         filtered(group, true) &&
-        fitOf(d, group).mutual >= minFit(d),
+        fitOf(d, group).mutual >= bar,
     ),
   }));
 };

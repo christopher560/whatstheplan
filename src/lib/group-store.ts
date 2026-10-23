@@ -1,10 +1,12 @@
 import type { AccentColor } from "@/types.ts";
-import type { GroupDetail, GroupMember } from "@/data/group.ts";
+import type { ChatItem, GroupDetail, GroupMember } from "@/data/group.ts";
 import {
   blockMember,
   createPoll,
+  fetchMessages,
   friendMember,
   reportMember,
+  sendMessage,
   setGoing,
   vote as saveVote,
 } from "@/lib/group-repo.ts";
@@ -26,19 +28,16 @@ export interface GroupPage {
   viewer: GroupViewer;
 }
 
-export interface SentMessage {
-  id: string;
-  text: string;
-  time: string;
-}
-
 export interface GroupViewState {
   /** The viewer's answer to the group's plan. */
   going: boolean | null;
   onCalendar: boolean;
   /** Poll option the viewer picked. */
   vote: string | null;
-  sent: SentMessage[];
+  /** Chat lines from the database, oldest first. */
+  chat: ChatItem[];
+  /** Lines the viewer just sent that are not saved yet. */
+  pending: ChatItem[];
   blocked: Record<string, boolean>;
   reported: Record<string, boolean>;
   /** Friend requests sent, by member id. */
@@ -64,7 +63,8 @@ export const getPage = (): GroupPage => {
       going: page.group.going,
       onCalendar: page.group.onCalendar,
       vote: page.group.poll?.mine ?? null,
-      sent: [],
+      chat: page.group.chat,
+      pending: [],
       blocked: {},
       reported: {},
       friends: {},
@@ -156,13 +156,44 @@ export const askGroup = async (question: string, options: string[]) => {
   return result;
 };
 
+let fetching = false;
+
+/** Asks for lines newer than the last one shown. Called every few seconds while the page is open. */
+export const loadNew = async () => {
+  if (fetching) return;
+  fetching = true;
+  const last = get().chat.reduce((top, line) => Math.max(top, line.seq), 0);
+  const result = await fetchMessages(group().id, last);
+  fetching = false;
+  if (!result.ok || result.lines.length === 0) return;
+  const known = new Set(get().chat.map((line) => line.seq));
+  const fresh = result.lines.filter((line) => !known.has(line.seq));
+  if (fresh.length) update({ chat: [...get().chat, ...fresh] });
+};
+
+let sentCount = 0;
+
+/** Shows the line at once, saves it, then fetches so the saved copy replaces it. */
 export const send = (text: string) => {
   const clean = text.trim().slice(0, 500);
   if (!clean) return false;
-  update({
-    sent: [...get().sent, { id: `sent-${get().sent.length}`, text: clean, time: "Just now" }],
+  const line: ChatItem = {
+    seq: -(++sentCount),
+    kind: "message",
+    text: clean,
+    at: new Date().toISOString(),
+    mine: true,
+    handle: null,
+    name: viewer().name,
+    color: null,
+    pending: true,
+  };
+  update({ pending: [...get().pending, line] });
+  void sendMessage(group().id, clean).then(async (result) => {
+    if (result.ok) await loadNew();
+    else update({ toast: result.error });
+    update({ pending: get().pending.filter((item) => item.seq !== line.seq) });
   });
-  /* Chat is the next round: nothing is saved yet, and the page does not show the chat box. */
   return true;
 };
 

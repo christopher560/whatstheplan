@@ -38,6 +38,10 @@ export const hoursUntil = (data: DiscoverData, group: OpenGroup) =>
 
 export const spotsOpen = (group: OpenGroup) => group.capacity - group.memberIds.length;
 
+/** "Right nearby" for a place in the viewer's own town, otherwise "2.2 mi" (or "2.2 mi away"). */
+export const milesText = (miles: number, away = false) =>
+  miles < 0.2 ? "Right nearby" : `${miles.toFixed(1)} mi${away ? " away" : ""}`;
+
 export const clashes = (data: DiscoverData, group: OpenGroup) =>
   data.busy[group.day].some(([from, to]) => from < group.end && to > group.start);
 
@@ -119,11 +123,14 @@ export const findGroups = (data: DiscoverData, answers: Answers): Pick => {
       "Nothing open matched that activity in your time, so this is the closest.",
     ],
     [hostOk, "Nothing open at that time, so this is the soonest that fits you."],
+    /* Last resort: nothing matches the person's interests yet, so offer the closest group to try something new. */
+    [hostOk, "Nothing matches your interests yet, so this is the closest group. It could be something new to try."],
   ];
 
-  for (const [test, note] of tiers) {
+  for (const [index, [test, note]] of tiers.entries()) {
+    const gated = index < tiers.length - 1;
     const groups = data.groups.filter(
-      (group) => eligible(data, group) && test(group) && fitOf(data, group).mutual >= minFit(data),
+      (group) => eligible(data, group) && test(group) && (!gated || fitOf(data, group).mutual >= minFit(data)),
     );
     if (groups.length) {
       const bias = (group: OpenGroup) =>

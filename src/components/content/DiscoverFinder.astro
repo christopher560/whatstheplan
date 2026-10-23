@@ -222,7 +222,7 @@ const { render = true, groupHref = "/app/groups" } = Astro.props;
     whenOptions,
   } from "@/data/discover.ts";
   import type { GroupCategoryId, OpenGroup, SizeId, WhenId } from "@/data/discover.ts";
-  import { clashes, fitOf, spotsOpen, memberOf } from "@/lib/discover-fit.ts";
+  import { clashes, fitOf, milesText, spotsOpen, memberOf } from "@/lib/discover-fit.ts";
   import {
     get,
     getData,
@@ -454,7 +454,7 @@ const { render = true, groupHref = "/app/groups" } = Astro.props;
       setText(root, "[data-name]", g.title);
       setText(root, "[data-purpose]", g.purpose);
       setText(root, "[data-when]", whenFull(g));
-      setText(root, "[data-where]", `${g.place} · ${g.distance.toFixed(1)} mi away`);
+      setText(root, "[data-where]", `${g.place} · ${milesText(g.distance, true)}`);
       const open = spotsOpen(g);
       setText(
         root,

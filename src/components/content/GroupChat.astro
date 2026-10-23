@@ -66,8 +66,17 @@ const { render = true, viewerName = "" } = Astro.props;
 }
 
 <script>
-  import { get, group, memberById, send, status, subscribe, viewer } from "@/lib/group-store.ts";
+  import { get, loadNew, send, status, subscribe, viewer } from "@/lib/group-store.ts";
   import { cloneFirst, setAccent } from "@/lib/ui.ts";
+  import { nearestAccent } from "@/utils/avatar-accent.ts";
+
+  const timeText = (iso: string) => {
+    const date = new Date(iso);
+    const clock = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return date.toDateString() === new Date().toDateString()
+      ? clock
+      : `${date.toLocaleDateString([], { weekday: "short" })} ${clock}`;
+  };
 
   document.querySelectorAll<HTMLElement>("[data-chat]").forEach((root) => {
     const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
@@ -78,7 +87,8 @@ const { render = true, viewerName = "" } = Astro.props;
     const draft = $<HTMLInputElement>("[data-draft]");
     const systemTemplate = $<HTMLTemplateElement>("[data-system-template]");
     const messageTemplate = $<HTMLTemplateElement>("[data-message-template]");
-    let drawn = -1;
+    let drawn = 0;
+    let first = true;
 
     composer.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -91,46 +101,47 @@ const { render = true, viewerName = "" } = Astro.props;
       draft.focus();
     });
 
+    /* New lines arrive by asking every few seconds while the page is in view. */
+    const poll = () => {
+      if (document.visibilityState === "visible") void loadNew();
+    };
+    window.setInterval(poll, 4000);
+    document.addEventListener("visibilitychange", poll);
+
     subscribe(() => {
       const s = get();
-      const g = group();
       const me = viewer();
+      const lines = [...s.chat, ...s.pending].filter((line) => !(line.handle && s.blocked[line.handle]));
+      const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
       let messages = 0;
 
-      const rows = [
-        ...g.chat.map((line) => ({ ...line, own: false })),
-        ...s.sent.map((line) => ({ kind: "message" as const, id: line.id, from: "you", text: line.text, time: line.time, own: true })),
-      ].map((line) => {
+      const rows = lines.map((line) => {
         if (line.kind === "system") {
           const row = cloneFirst(systemTemplate);
           row.textContent = line.text;
           return row;
         }
         messages += 1;
-        const member = line.own ? undefined : memberById(line.from);
-        const name = line.own ? "You" : (member?.name ?? "Someone");
-        const hidden = !line.own && !!s.blocked[line.from];
-
         const row = cloneFirst(messageTemplate);
-        row.classList.toggle("own", line.own);
+        row.classList.toggle("own", line.mine);
         const avatar = row.querySelector<HTMLElement>(".avatar_wrap")!;
-        avatar.textContent = (line.own ? me.name : name).charAt(0).toUpperCase();
-        setAccent(avatar, line.own ? me.color : member?.color);
-        row.querySelector(".group-chat_from")!.textContent = `${name} · ${line.time}`;
-        const bubble = row.querySelector<HTMLElement>(".group-chat_bubble")!;
-        bubble.textContent = hidden ? `Hidden. You blocked ${name}.` : line.text;
-        bubble.classList.toggle("hidden", hidden);
+        const name = line.mine ? "You" : line.name;
+        avatar.textContent = (line.mine ? me.name : line.name).replace(/^@/, "").charAt(0).toUpperCase();
+        setAccent(avatar, line.mine ? me.color : nearestAccent(line.color));
+        row.querySelector(".group-chat_from")!.textContent = `${name} · ${line.pending ? "Sending…" : timeText(line.at)}`;
+        row.querySelector<HTMLElement>(".group-chat_bubble")!.textContent = line.text;
         return row;
       });
-      /* Only the line the viewer just sent slides in; redraws stay still. */
-      if (drawn !== -1 && s.sent.length > drawn) rows[rows.length - 1].classList.add("new");
+      /* Only newly arrived lines slide in; a redraw keeps the rest still. */
+      if (!first && lines.length > drawn) rows.slice(drawn).forEach((row) => row.classList.add("new"));
       log.replaceChildren(...rows);
-      /* Stay at the newest line on first paint and after the viewer sends. */
-      if (drawn !== s.sent.length) log.scrollTop = log.scrollHeight;
-      drawn = s.sent.length;
+      /* Stay at the newest line on first paint, after sending, and while the viewer is already at the bottom. */
+      if (first || nearBottom || s.pending.length > 0) log.scrollTop = log.scrollHeight;
+      first = false;
+      drawn = lines.length;
 
       meta.textContent = `${status().going} going · ${messages} ${messages === 1 ? "message" : "messages"}`;
-      starters.hidden = s.sent.length > 0;
+      starters.hidden = messages > 0;
     });
   });
 </script>

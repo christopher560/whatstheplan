@@ -35,6 +35,7 @@ const { render = true } = Astro.props;
         </ActionButton>
       </div>
 
+      <p class="discover-feed_note text-style-small" hidden data-note />
       <p class="discover-feed_hidden text-style-small" hidden data-hidden />
 
       <template data-card-template>
@@ -50,7 +51,7 @@ const { render = true } = Astro.props;
 <script>
   import { groupCategories } from "@/data/discover.ts";
   import type { OpenGroup } from "@/data/discover.ts";
-  import { fitOf, memberOf } from "@/lib/discover-fit.ts";
+  import { fitOf, memberOf, milesText } from "@/lib/discover-fit.ts";
   import {
     get,
     getData,
@@ -72,6 +73,7 @@ const { render = true } = Astro.props;
     const later = root.querySelector<HTMLElement>("[data-later]")!;
     const empty = root.querySelector<HTMLElement>("[data-empty]")!;
     const hiddenLine = root.querySelector<HTMLElement>("[data-hidden]")!;
+    const note = root.querySelector<HTMLElement>("[data-note]")!;
     const cardTemplate = root.querySelector<HTMLTemplateElement>("[data-card-template]")!;
     const tagTemplate = root.querySelector<HTMLTemplateElement>("[data-tag-template]")!;
     const cards = new Map<string, HTMLElement>();
@@ -79,8 +81,11 @@ const { render = true } = Astro.props;
     root.addEventListener("click", (event) => {
       const target = event.target as HTMLElement;
       if (target.closest("[data-clear]")) return clearFilters();
-      const id = target.closest<HTMLElement>("[data-card]")?.dataset.card;
-      if (id && target.closest("[data-join]")) toggleJoin(id);
+      const card = target.closest<HTMLElement>("[data-card]");
+      const id = card?.dataset.card;
+      if (id && target.closest("[data-join]")) return toggleJoin(id);
+      /* Anywhere else on a card for a group you are in opens that group. */
+      if (id && get().joined[id] && !target.closest("a, button")) location.href = `/app/groups/${id}`;
     });
 
     const tagsFor = (group: OpenGroup) => [
@@ -94,10 +99,14 @@ const { render = true } = Astro.props;
       const fit = fitOf(data, group);
       const names = group.memberIds.map((id) => memberOf(data, id));
       const going = names.length + (joined ? 1 : 0);
-      const open = group.capacity - going;
+      const spots = group.capacity - going;
 
       card.dataset.card = group.id;
       card.classList.toggle("green", joined);
+      card.classList.toggle("clickable", joined);
+      const open = card.querySelector<HTMLAnchorElement>("[data-open-group]")!;
+      open.hidden = !joined;
+      open.href = `/app/groups/${group.id}`;
 
       const category = card.querySelector<HTMLElement>("[data-category]")!;
       setAccent(category, colorOf[group.category]);
@@ -111,12 +120,12 @@ const { render = true } = Astro.props;
       setText(
         card,
         "[data-where]",
-        `${whenFull(group)} · ${group.place} · ${group.distance.toFixed(1)} mi`,
+        `${whenFull(group)} · ${group.place} · ${milesText(group.distance)}`,
       );
       setText(
         card,
         "[data-going]",
-        `${going} going · ${open > 0 ? `${open} spot${open === 1 ? "" : "s"} open` : "Full"}`,
+        `${going} going · ${spots > 0 ? `${spots} spot${spots === 1 ? "" : "s"} open` : "Full"}`,
       );
       setText(card, "[data-you]", `Fits you ${fit.you}%`);
       setText(card, "[data-them]", `You fit them ${fit.them}%`);
@@ -127,7 +136,7 @@ const { render = true } = Astro.props;
         ...(joined ? [{ name: data.viewer.initial, color: data.viewer.color }] : []),
       ];
       stack.replaceChildren(
-        ...people.slice(0, 5).map((person) => avatarElement(person.name, person.color)),
+        ...people.slice(0, 4).map((person) => avatarElement(person.name, person.color)),
       );
 
       const tags = card.querySelector<HTMLElement>("[data-tags]")!;
@@ -145,7 +154,7 @@ const { render = true } = Astro.props;
       join.classList.toggle("ink", !joined);
       join.classList.toggle("white", joined);
       join.setAttribute("aria-pressed", String(joined));
-      setText(join, ".action-button_text", joined ? "You're in. Tap to leave" : "Join");
+      setText(join, ".action-button_text", joined ? "Leave group" : "Join");
     };
 
     /** Keeps one card per group, in order, without redrawing cards that stay. */
@@ -179,8 +188,11 @@ const { render = true } = Astro.props;
       sync(soon, view.soon, true);
       sync(later, view.later, false);
       empty.hidden = view.shown > 0;
+      note.hidden = !view.relaxed;
+      note.textContent =
+        "Nothing matches your interests yet, so these are the groups closest to you. A good chance to try something new.";
       hiddenLine.hidden = view.hidden <= 0;
-      hiddenLine.textContent = `${view.hidden} hidden. Not a fit for you or your calendar.`;
+      hiddenLine.textContent = `${view.hidden} more ${view.hidden === 1 ? "group is" : "groups are"} not shown because they don't match your interests.`;
     });
   });
 </script>
@@ -235,6 +247,14 @@ const { render = true } = Astro.props;
     .discover-feed_empty_text {
       flex: 1 1 var(--card-width-small);
       color: var(--text-2);
+    }
+
+    .discover-feed_note {
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-secondary-yellow);
+      font-weight: var(--primary-bold);
     }
 
     .discover-feed_hidden {

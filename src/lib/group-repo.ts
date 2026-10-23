@@ -1,4 +1,5 @@
 import { actions } from "astro:actions";
+import type { ChatItem } from "@/data/group.ts";
 
 type Simple = { ok: true } | { ok: false; error: string };
 
@@ -31,3 +32,12 @@ export const reportMember = async (groupId: string, handle: string, reason: Repo
 
 export const friendMember = async (groupId: string, handle: string) =>
   unwrap(await actions.groups.friend({ groupId, handle })) as { ok: true; status: string } | { ok: false; error: string };
+
+/** New chat lines after a line number. */
+export const fetchMessages = async (groupId: string, after: number) => {
+  const { data, error } = await actions.groups.messages({ groupId, after });
+  return error || !data || !data.ok ? failed : { ok: true as const, lines: data.lines as ChatItem[] };
+};
+
+export const sendMessage = async (groupId: string, text: string) =>
+  unwrap(await actions.groups.send({ groupId, text })) as Simple;

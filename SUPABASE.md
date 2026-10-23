@@ -22,7 +22,8 @@ named in the "built" sections.
 | Discover, round 2: places, groups, joining, blocks, reports, starter groups (database) | built |
 | Discover, round 3: ranking function, the Discover page, start a group | built |
 | Discover, round 4: the real group page (members, plan, poll; chat comes next) | built |
-| Group chat (live, text only) and live updates (Realtime) | after Discover |
+| Group chat (text only, refreshes every few seconds) | built |
+| Live updates for everything else (Realtime) | after that |
 | Email nudges, reminders and "locked in" emails | after group chat |
 | Teen Discover with an age check | later, needs a decision on verification and legal review |
 
@@ -751,3 +752,17 @@ Database only: nothing on the Discover page uses it until round 3.
 - **Calendar:** groups you are in show on the calendar grid automatically (kind "group") and open the group page; "Add to my calendar" downloads a calendar file (`/app/groups/<id>/calendar.ics`, members only). The plans' calendar files now share the same builder (`src/utils/ics.ts`).
 - **Plans page:** the "groups" view lists the groups you are in (`my_groups`), with a real status ("Needs 1 more yes", "Confirmed"), people, and an open question you have not answered.
 - **Chat:** the page says "Group chat is coming soon" instead of showing a chat box that saves nothing. Group chat is the next round.
+
+## Group chat - built
+
+- **Table:** `group_messages` (`seq` is a running number used as the cursor, `kind` message or system, `body` 1 to 500 characters). Nobody reads or writes it directly; `send_group_message` and `group_messages` check membership.
+- **Sending:** members only, 40 messages every ten minutes. The text is trimmed, empty and over-long messages are refused, and it is shown as plain text (never as markup).
+- **Reading:** `group_messages(group, after)` gives the lines newer than `after` (0 gives the latest 50), leaves out anyone the viewer blocked or who blocked them, names senders by first name, color and the per-group `handle` (never account ids), and marks the group as read for the viewer.
+- **System lines:** a trigger on `meetup_members` writes "X started the group", "X joined the group" and "X left the group".
+- **"Live":** the browser's session cookie is not readable by page scripts (a security choice), so the page cannot open a Supabase Realtime connection. Instead the page asks for new lines every 4 seconds while the tab is visible, and straight away when the tab comes back. A sent message appears at once as "Sending…" and is replaced by the saved copy. Real Realtime can replace this later through a server-side stream.
+- **Plans page:** each group card shows the latest line and the number of unread messages (lines other people wrote after the viewer last opened the chat).
+
+## Discover: quiet areas still show something
+
+- Found while testing a second adult account whose interests matched nothing (sports, volunteering, dance) in a town 8 miles from the test groups: both groups scored about 40, under the bar of 50, so the page showed nothing even though groups existed.
+- **Fix:** if no group in reach scores above the bar, the page drops the bar and shows the closest groups with a line saying "Nothing matches your interests yet, so these are the groups closest to you. A good chance to try something new." The quiz does the same as a last step. As soon as one group matches, the bar applies again and the others are counted as "not shown". The scores are unchanged and the bar is still the `discover_min_score` setting.

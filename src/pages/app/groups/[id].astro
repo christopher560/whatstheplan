@@ -2,13 +2,13 @@
 import DashboardLayout from "@/layouts/DashbaordLayout.astro";
 import DashboardSection from "@/components/wrapper/DashboardSection.astro";
 import DashboardColumns from "@/components/wrapper/DashboardColumns.astro";
-import Panel from "@/components/wrapper/Panel.astro";
 import GroupState from "@/components/content/GroupState.astro";
 import GroupLeft from "@/components/content/GroupLeft.astro";
 import GroupBody from "@/components/content/GroupBody.astro";
 import GroupHeader from "@/components/content/GroupHeader.astro";
 import GroupPlan from "@/components/content/GroupPlan.astro";
 import GroupPoll from "@/components/content/GroupPoll.astro";
+import GroupChat from "@/components/content/GroupChat.astro";
 import GroupMembers from "@/components/content/GroupMembers.astro";
 import GroupLeave from "@/components/content/GroupLeave.astro";
 import GroupToast from "@/components/content/GroupToast.astro";
@@ -44,13 +44,7 @@ Astro.response.headers.set("Cache-Control", "private, no-store");
       <DashboardColumns>
         <GroupPlan group={group} viewer={you} />
         <GroupPoll poll={group.poll} isHost={group.isHost} />
-        <Panel aria-labelledby="group-chat-soon">
-          <h2 id="group-chat-soon" class="text-style-h4">Group chat is coming soon</h2>
-          <p class="text-style-main">
-            Until then, the plan above, the question for the group, and the member list are all here. Chat is the next
-            thing we are building.
-          </p>
-        </Panel>
+        <GroupChat viewerName={you.name} />
         <Fragment slot="rail">
           <GroupMembers members={group.members} viewer={you} organizers={group.organizers} />
           <GroupLeave />

@@ -48,6 +48,7 @@ const icons = {
         {organizers && (
           <li class="group-members_item">
             <div class="group-members_row">
+              <Avatar initial={organizers.label} color="orange" size="small" />
               <div class="group-members_text">
                 <p class="group-members_name text-style-main">{organizers.label}</p>
                 <p class="group-members_sub text-style-small">
@@ -136,7 +137,7 @@ const icons = {
           ? "Blocked"
           : reported
             ? "Reported"
-            : `${member.going ? "Going · " : ""}${member.note}`;
+            : [member.going ? "Going" : "", member.note].filter(Boolean).join(" · ");
 
         const friend = item.querySelector<HTMLElement>("[data-friend]")!;
         friend.hidden = blocked;
@@ -204,6 +205,7 @@ const icons = {
 
     .group-members_name {
       font-weight: var(--primary-bold);
+      line-height: 1.25;
     }
 
     .group-members_sub {

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { groupCategories } from "@/data/discover.ts";
 import type { GroupCategoryId } from "@/data/discover.ts";
-import type { GroupDetail, GroupMember, GroupPoll } from "@/data/group.ts";
+import type { ChatItem, GroupDetail, GroupMember, GroupPoll } from "@/data/group.ts";
 import { interests } from "@/data/onboarding.ts";
 import { nearestAccent } from "@/utils/avatar-accent.ts";
 
@@ -80,9 +80,14 @@ export const readGroupPage = async (
   groupId: string,
   zoneName: string | undefined,
 ): Promise<GroupDetail | null> => {
-  const { data } = await supabase.rpc("group_page", { p_group: groupId });
-  const json = data as PageJson | null;
+  const [page, lines] = await Promise.all([
+    supabase.rpc("group_page", { p_group: groupId }),
+    /* Reading the chat also marks it as read for this person. */
+    supabase.rpc("group_messages", { p_group: groupId, p_after: 0 }),
+  ]);
+  const json = page.data as PageJson | null;
   if (!json) return null;
+  const chat = (lines.data ?? []) as ChatItem[];
 
   const zone = safeZone(zoneName);
   const now = new Date();
@@ -129,7 +134,7 @@ export const readGroupPage = async (
     minimum: json.group.minPeople,
     members,
     poll,
-    chat: [],
+    chat,
     going: json.me.going,
     onCalendar: false,
     isHost: json.group.isHost,
