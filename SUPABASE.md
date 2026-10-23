@@ -1,9 +1,32 @@
-# Supabase plan (not implemented yet)
+# Supabase: what is built and what is next
 
-The dashboard is built so Supabase drops in behind one seam:
-`src/lib/dashboard-repo.ts`. Pages call `dashboardRepo.getHome()` and the
-interactive components will call the write methods. Today the repo returns the
-sample data in `src/data/dashboard.ts`.
+For a plain-language explanation of how each feature works, read `HOW-IT-WORKS.md`.
+
+Most of the app now runs on Supabase. The sections marked "built" at the bottom of
+this file describe what exists; the early sections (Wiring, Proposed tables,
+Mapping from the UI) are the original plan and are partly out of date: the
+host is Vercel, not Cloudflare, and the real tables and functions are the ones
+named in the "built" sections.
+
+## Where things stand
+
+| Area | State |
+| --- | --- |
+| Sign up and log in (email, password, 6-digit code, CAPTCHA) | built |
+| Profiles, onboarding, account page | built |
+| Calendar availability | built |
+| Friends (usernames, requests, circle, tags, `/add/<username>`) | built |
+| Plans: builder, invites, guest replies, time voting, locking, calendar, host updates | built |
+| Security pass (grants, RLS, rate limits, headers, cookies) | built |
+| Discover, round 1: your town and distance | built |
+| Discover, round 2: places, groups, joining, blocks, reports, starter groups (database) | built |
+| Discover, round 3: ranking function, the Discover page, start a group | built |
+| Discover, round 4: the real group page | next |
+| Group chat (live, text only) and live updates (Realtime) | after Discover |
+| Email nudges, reminders and "locked in" emails | after group chat |
+| Teen Discover with an age check | later, needs a decision on verification and legal review |
+
+Order was set by the owner: Discover and group chat come before nudges and live updates.
 
 ## Wiring
 
@@ -81,7 +104,7 @@ be upserted as it is. The page already routes through `onboardingRepo`.
 
 **Areas.** The Area step lists towns near the person (Aurora, Oswego,
 Naperville and so on), not a fixed list in code.
-- `areas`: `id`, `name`, `state`, `center geography(point)` with a GiST index.
+- `areas`: `id`, `name`, `state` (the area step is still a fixed list in code today). Where someone lives for Discover is the separate saved town on the account page (see "Discover - plan"), not this list.
 - `onboardingRepo.getAreas()` returns them nearest first. The query takes the
   person's approximate location (coarse IP location or a rounded, opt-in
   browser position, never stored raw) and orders by `ST_Distance` with a
@@ -190,7 +213,7 @@ Notes:
   (Vercel Cron for reminders; Hobby allows daily runs only, so 24h nudges need
   Pro or a Supabase `pg_cron` job). Cloudflare is no longer used, so swap
   `@astrojs/cloudflare` and `wrangler.jsonc` for `@astrojs/vercel`.
-- Supabase: Postgres, Auth, Storage, Realtime and PostGIS.
+- Supabase: Postgres, Auth, Storage and Realtime. PostGIS is not needed: distance is between town centres, worked out with a plain formula.
 - Resend: invite and reminder emails, sent from a server action or an Edge
   Function, never from the browser.
 - GitHub: code, deploys, and weekly database backups via Actions.
@@ -200,18 +223,8 @@ Notes:
 
 ## Planned later (design for it, do not build yet)
 
-**Meet people nearby.** Discover matches people by interests, age range and
-distance, then suggests a public place (park, cafe) to meet.
-- `profiles` gains `birth_year`, `interests text[]`, `discoverable bool`
-  (default false) and `home_area geography(point)`. Store an approximate
-  location only (rounded to a neighborhood), never a live position.
-- `places` (public venues: name, kind, `geo geography(point)`) with a GiST
-  index. Nearby search is an RPC using `ST_DWithin`; matching is an RPC that
-  returns only opted-in profiles, filtered by age band and shared interests.
-- `meetups` reuse `plans` and `plan_members` with a `source = 'discover'` flag,
-  so RSVP, budget and reminders work unchanged.
-- Strangers see only first name, color, shared interests and an age band, never
-  exact age, school or location. RLS enforces this through a view, not the UI.
+**Meet people nearby.** Superseded by the "Discover (`/app/discover`)" plan below,
+which is the current design: town-level location, age bands, public places only.
 
 **Safety and wellbeing (the mental health side).** Read as: reduce loneliness
 without putting people at risk. Needs your confirmation.
@@ -249,14 +262,16 @@ returns only exact username matches, so the user list cannot be browsed.
 
 ## Open questions
 
-- Confirmed: under-18 users are allowed; "mental health" means loneliness
-  plus safety when meeting strangers.
-- Should minor-to-minor discovery ever ship, and who verifies age (self-report,
-  school code, parent consent)?
-- Realtime: subscribe to `plan_members` and `profiles.free_tonight` for live
-  updates, or refresh on navigation first?
-- Friends without the app (the share link in the builder) need an anonymous
-  RSVP path. That likely means a signed token on `plans.slug`.
+- Decided: under-18 users are allowed in the app. Discover launches for adults
+  only; teen Discover (13-15 with 13-15, 16-17 with 16-17) waits for an age
+  check (school email or parent consent) and legal review. Age is self-reported
+  until then.
+- Decided: location is a town (ZIP code), for every age. No device location.
+- Decided: Discover groups come from hosts and from the app forming them; the
+  owner seeds a few starter groups. Hosts are adults at launch.
+- Still open: which age check for teens, and whether 13-15 needs parent consent
+  where you launch.
+- Friends without the app reply from the invite link (`/p/<slug>`, built).
 
 ## Plan builder inputs (home dashboard)
 
@@ -270,38 +285,105 @@ and a signed `guest_token` per guest. The home page also reads
 suggested time; the Calendar's "Plan it" buttons already link that way. Validate
 the ids server-side against the person's real friends.
 
-## Discover (`/app/discover`)
+## Discover (`/app/discover`) - plan
 
 Reads and writes go through `src/lib/discover-repo.ts` (`getDiscover`,
-`joinGroup`, `leaveGroup`). Today it returns `sampleDiscover`.
+`joinGroup`, `leaveGroup`). Today it returns `sampleDiscover`; the rounds below
+replace it with the database.
 
-- **Open groups** are a new `meetup_groups` table: `title`, `category` (a stable
-  id: outdoors, games, food, create, active, chill), `tags text[]`, `purpose`,
-  `starts_at`/`ends_at` (timestamptz, the UI shows the viewer's zone), `place_id`
-  (a row in `places`, public venues only), `capacity` (max 10), `host_id`,
-  `newcomer_friendly`, and `age_band`. `meetup_members` joins people to groups.
-  A group starts when a viewer taps "Join this group" on a result and the group
-  does not exist yet, or joins an existing one (see "Open your group" below).
-- **Who can see what.** `getDiscover` returns only groups in the viewer's
-  `age_band`, within range of `profiles.home_area` (PostGIS `ST_DWithin`).
-  Stranger Discover is adults-only at launch (see "Planned later"), so a minor
-  gets an empty feed from the RPC, not a UI check. Members are returned as first
-  name, color and shared interests only.
-- **Matching.** `src/lib/discover-fit.ts` is the prototype of a SQL view,
-  `discover_matches(viewer_id)`, that returns each group with `fit_you`,
-  `fit_them`, `spots_open` and `calendar_clash` (compared with `availability`).
-  The page then only filters. Groups under a mutual fit of 60 are hidden, and the
-  page says how many.
-- **Joining.** `joinGroup` is one transaction that checks capacity under a row
-  lock, inserts `meetup_members`, and rejects when the group filled meanwhile.
-  `leaveGroup` deletes the row. Both hold a spot, so write them as RPCs.
-- **Open your group.** The success banner links to the group page, which is not
-  built yet (it links to `/app/plans` for now).
-- **Safety copy.** "Everyone is verified" and "Always in public places" are
-  promises: only show them once verification exists and `places` is the only
-  venue source. Leave, block and report reuse the `blocks` and `reports` tables.
-- **Realtime.** Subscribe to `meetup_members` so "spots open" updates without a
-  refresh.
+### Who can use it
+- **Age bands, enforced in the database** (not the page): 13-15 only meet 13-15,
+  16-17 only 16-17, adults only adults. Nobody sees across a band, and a join
+  across bands is refused by the function.
+- **Launch: adults only.** `app_settings` holds `discover_bands` (starts as
+  `["adult"]`). A person's band comes from `profiles.age_group`. Turning teens on
+  later is a settings change, plus the teen rules: public venues only and none
+  that serve alcohol, daytime and early evening starts only, teen hosts only,
+  reports about a teen first in the queue. Friends and plans work for all ages.
+- Age is self-reported. A band is only as true as what people enter, which is why
+  teen Discover waits for an age check.
+
+### Location (built)
+A town, saved as the approximate centre of a ZIP code, with a distance setting of
+5, 10 or 25 miles (`profiles.home_lat`, `home_lng`, `location_label`,
+`discover_radius_km`). Distance between a person and a venue is a plain formula
+on those coordinates, so no PostGIS. People see a rough distance ("about 3
+miles") and the venue name; the street address appears once they join.
+
+### Tables (round 2)
+- `places`: public venues only (name, kind, town, address, `lat`, `lng`,
+  `serves_alcohol`). Filled by hand. A group can only be placed at a `places` row.
+- `meetup_groups`: `host_id` (null for starter groups), `source` (`host`, `seed`,
+  `formed`), `title`, `category` (outdoors, games, food, create, active, chill),
+  `tags text[]`, `purpose` (200), `starts_at`, `ends_at`, `place_id`, `capacity`
+  (3 to 10), `min_people`, `newcomer_friendly`, `age_band`, `status` (open, full,
+  cancelled).
+- `meetup_members`: `group_id`, `user_id`, `going`, `note`, `joined_at`.
+- `blocks` and `reports` (a block hides both people from each other everywhere,
+  including Discover and the calendar; a report about a minor goes first).
+- `discover_waitlist`: a person, their categories and town, for "tell me when a
+  group forms near me" and for groups the app forms.
+- Writes only through functions, like plans: `create_group` (host, adults at
+  launch, public place, start within 30 days), `join_group` (locks the row so
+  capacity holds, checks band, distance and calendar clash), `leave_group`.
+
+### How the feed is ranked (round 3)
+One database function, `discover_matches`, filters then scores, so the page only
+displays what it is given.
+
+**Filters** (a group that fails any of these is never shown):
+1. The viewer's band is switched on, and the group is in the same band.
+2. Within the viewer's distance setting.
+3. At least one spot open and at least 2 people already in, so nobody meets one
+   stranger alone.
+4. Starts in the future, inside the window the viewer asked for (right now,
+   tonight, this weekend, this week).
+5. Nobody in it is blocked either way.
+
+**Score** (out of 100) for what is left:
+
+| Part | Weight | What it measures |
+| --- | --- | --- |
+| Interests | 30 | shared interests with the group's tags, and how many members share them |
+| Vibe | 15 | the viewer's four style answers (energy, pace, planning, warm-up) against the group's |
+| Distance | 15 | closer scores higher |
+| Timing | 15 | sooner scores higher when the viewer asked for "right now" |
+| Mutual friends | 10 | members who are the viewer's friends or friends of friends |
+| Nearly formed | 10 | a group that needs one more person to happen |
+| Newcomer fit | 5 | newcomer-friendly and a comfortable size, higher for first-time users |
+
+- Groups under 60 are hidden, and the page says how many.
+- A group that clashes with hours the viewer marked busy is pushed down, not removed.
+- Every result carries its reasons ("3 shared interests, 2 miles, you're free
+  Thursday") so people can see why it was shown.
+- Variety: the page mixes categories instead of five of the same.
+- Later, once there is data: learn from joins, leaves and "not for me", and rank
+  reliable hosts higher.
+
+### Where groups come from
+- **Hosted:** an adult starts a group at a public place and it joins the feed.
+- **Starter groups:** the owner seeds a few real groups (venue, day, time, size,
+  activity) from a template, loaded with `source = 'seed'` and no host, so the page
+  is never empty in a town.
+- **Formed by the app (later round):** people on the waitlist in the same town
+  with the same category and overlapping free hours are grouped and offered a
+  group of at least 3, which becomes `source = 'formed'`.
+
+### Safety copy
+"Everyone is verified" and "Always in public places" are promises: only show
+them once verification exists and `places` is the only venue source. Leave, block
+and report are always one tap.
+
+### Rounds
+1. Your town and distance. **Built.**
+2. Places, groups and members; joining with a capacity lock; blocks and reports;
+   the age-band setting; starter groups. **Built (database).**
+3. `discover_matches`, the quiz, the feed and filters on the real data, and
+   "Start a group" for hosts. **Built.**
+4. The real group page `/app/groups/[id]` (members, the plan, the poll), with
+   "Open your group" linking to it.
+Then group chat and Realtime ("spots open" updates without a refresh), then
+email nudges and reminders, then teen Discover with an age check.
 
 ## Calendar, Plans and Friends updates
 
@@ -367,7 +449,10 @@ Notes:
 - The prototype resolves `preview`, `beach-day`, `hangout-chill-5x9k` and
   `trivia-crew` to the taco night sample so existing links do not 404.
 
-## Group page (`/app/groups/[id]`)
+## Group page (`/app/groups/[id]`) - plan (Discover round 4, chat after)
+
+Built after the Discover feed. The members, the plan and the poll come first;
+the live chat is its own round right after, with Realtime.
 
 The page for one Discover group the viewer joined, with its persistent chat. It
 shares one client store (`src/lib/group-store.ts`) between its components.
@@ -622,3 +707,37 @@ Real plans for the plan builder, the Plans page and the host's plan page.
 - **Add to calendar for accounts** puts the plan on their in-app calendar: `calendar_pins (user_id, plan_id)` (read own; written only by `set_plan_pin`, members only). The button on the invite's last step and on the Plans page's "You're going to" cards toggles it ("On your calendar" in green). Guests without an account still get the `.ics` file.
 - **The grid** (`readCalendarPlans`) shows plans the person hosts, plans with a locked time, and plans they pinned, at the locked time or the host's pick. "Can't make it" plans stay off.
 - **Host adds friends.** The host's "Who said what" list shows "Add friend" next to anyone in the plan who has an account and is not already a friend (`plan_member_friend_states`, `add_plan_member_friend`, which reuses `send_friend_request`). Guests are labelled "Guest, no account", accounts that joined from the link "Joined from your link". The old made-up "Opened the link 2 h ago" is gone.
+
+## Discover, round 1 (your town) - built
+
+- **Saved town, for every age:** `profiles.home_lat`, `home_lng` (the approximate centre of the town or ZIP, rounded to two decimals), `location_label` ("Aurora, IL"), `location_set_at`, and `discover_radius_km` (8, 16 or 40: 5, 10 or 25 miles). Only the definer functions write them: `set_my_location`, `clear_my_location`, `set_discover_radius`. Nobody can read another person's row, and the page is never sent the coordinates, only whether a town is saved, its label and the distance.
+- **How it is set** (card "Your town" on the account page): a US ZIP code, looked up server-side on api.zippopotam.us, limited to 20 lookups an hour per person (`location_lookup_allowed`). There is no device location button: only a town is ever kept.
+
+### Decision: who sees Discover (age bands, adults first)
+
+- **Age bands, enforced in the database when groups are listed or joined:** 13-15 only meet 13-15, 16-17 only 16-17, adults only adults. Nobody sees across a band.
+- **Launch: adults only.** A setting lists the bands that may use Discover; it starts as adults only. Friends and plans work for everyone.
+- **Later: teens**, only after an age check is chosen (school email or parent consent) and the legal side is settled. Turning it on is a settings change, not new code. Teen groups would also be public venues only (no alcohol), daytime and early evening only, hosted by teens, with reports to the front of the queue. Age is self-reported today, so a band is only as true as what people enter.
+- **Next rounds:** places and groups with joining and your starter groups; the ranking function (filters, then score: interests 30, vibe 15, distance 15, timing 15, mutual friends 10, nearly formed 10, newcomer fit 5); the real group page.
+
+## Discover, round 2 (places, groups, joining) - built
+
+Database only: nothing on the Discover page uses it until round 3.
+
+- **Switch:** `app_settings.discover_bands` is `["adult"]`. `discover_band(age_group)` maps `18-24` and `25+` to `adult`, `13-15` and `16-17` to themselves. To open a teen band later, add it to that list (the database refuses everything for a band that is off, for creating, joining and later listing).
+- **Tables:** `places` (public venues; the street `address` column is not readable by the API, only name, kind, town, coordinates and `serves_alcohol`), `meetup_groups` (`source` host, seed or formed; `starter_people` and `host_label` for starter groups; capacity 3-10; `age_band`; status open, full or cancelled), `meetup_members`, `blocks`, `reports` (queue only the owner reads; `priority` is set for reports about anyone outside the adult band, or for "underage"), `app_settings`. People read only groups they are in; everyone else finds groups through the Discover function (round 3). Writes only through functions.
+- **Functions:** `create_group` (the person's band must be on, a real `places` row, start 30 minutes to 30 days ahead, five groups a day; a teen band cannot use a venue that serves alcohol), `join_group` (locks the group so the last spot cannot go to two people; refuses another band, a blocked host or member, a started or cancelled group, and returns `joined`, `already`, `full`, `closed`, `not_found`, `not_allowed` or `rate_limited`), `leave_group` (reopens a full group; a hosted group with nobody left is cancelled, a starter group stays), `block_user`, `unblock_user`, `report_user`.
+- **Blocks reach the friend tools:** `profile_by_username`, `send_friend_request` and `list_friends` ignore anyone blocked either way, and a block ends an existing friendship.
+- **Starter groups:** `supabase/seed-groups.sql` is the template. A starter group has no host account; `starter_people` is how many organizers the owner knows will be there, and they count toward people in and capacity.
+- Tested as adults, a teen, a not-yet-onboarded person and a blocked person: cross-band joins and creating while the switch is off or at an alcohol venue are all refused, and a full group reopens when someone leaves.
+
+## Discover, round 3 (ranking and the page) - built
+
+- **`discover_matches()`** (one database function) returns what the page needs: the groups that pass the filters, each with its score, plus the public places near the viewer. It returns `status: "closed"` when the viewer's age band is switched off and `"needs_location"` when no town is saved, and the page shows a card for each instead of the feed.
+- **Filters:** same band as the viewer (and the band is on), within the viewer's distance, open and not started, at least 2 people in counting starter organizers, at least one spot, no blocked host or member. Groups the viewer already joined always show.
+- **Score (out of 100):** interests 30 (shared tags 20 or 14, plus up to 10 for how many members share an interest), vibe 15 (four style answers against the members', neutral 9 with nothing to compare), distance 15 (within about 3, 8 or 16 miles), timing 15 (within 3 hours, a day or three days), mutual friends 10 (two friends 10, one 7, a friend of a friend 4), nearly formed 10 (one person from the minimum), newcomer fit 5. The page's "Fits you" is this score; "You fit them" is how many members share an interest, how close the vibe is, and newcomer fit.
+- **The bar is a setting:** `app_settings.discover_min_score` (50 for now; the early prototype used 60). Raise it as more groups exist, lower it while an area is quiet. A group that overlaps hours the viewer marked busy is sent down the list, not hidden.
+- **Privacy:** strangers in a group arrive as first name, color and only the interests they share with the viewer; they get made-up ids for the page, never profile ids. Distance is a rounded figure from the town centre.
+- **Page wiring:** `src/lib/discover-db.ts` turns the function's output into the shape the existing store expects (days, hours in the viewer's time zone, busy blocks from the calendar, members). Joining and leaving call `join_group` and `leave_group`; if the database says no (it filled up, say) the button goes back and the header says why. The safety line "Everyone is verified" now reads "18 and over only", because nothing verifies people yet.
+- **Start a group:** "Start your own group" on the page (name, kind, up to three interests, start and length, a public place near you, size up to 10, newcomer-friendly, a line about it) calls `create_group`. With no places set up nearby it says so. Places are added by you through `supabase/seed-groups.sql`.
+- **Not built yet:** the real group page (round 4: "Open my group" still goes to the sample page), the teen bands, groups the app forms from the waitlist, and block and report buttons on the page.

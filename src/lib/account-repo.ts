@@ -38,3 +38,13 @@ export const setUsername = async (username: string) =>
     | { ok: true; username: string }
     | typeof failed
     | { ok: false; error: string };
+
+
+/** Saves the person's town from a US ZIP code. */
+export const saveLocationFromZip = async (zip: string) =>
+  unwrap(await actions.account.locationFromZip({ zip })) as { ok: true; label: string } | typeof failed | { ok: false; error: string };
+
+export const removeLocation = async () => unwrap(await actions.account.clearLocation()) as Simple;
+
+/** How far around their spot Discover looks, in miles. */
+export const saveRadius = async (miles: 5 | 10 | 25) => unwrap(await actions.account.setRadius({ miles })) as Simple;

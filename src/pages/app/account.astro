@@ -3,6 +3,7 @@ import DashboardLayout from "@/layouts/DashbaordLayout.astro";
 import DashboardSection from "@/components/wrapper/DashboardSection.astro";
 import AccountProfile from "@/components/content/AccountProfile.astro";
 import UsernameCard from "@/components/content/UsernameCard.astro";
+import LocationCard from "@/components/content/LocationCard.astro";
 import PasswordCard from "@/components/content/PasswordCard.astro";
 import DeleteAccountCard from "@/components/content/DeleteAccountCard.astro";
 import LogOutButton from "@/components/item/LogOutButton.astro";
@@ -19,6 +20,13 @@ const [saved, areas] = await Promise.all([
 if (!saved) return Astro.redirect("/app/onboarding");
 const { data: username } = await Astro.locals.supabase.rpc("ensure_my_username");
 const { profile } = saved;
+/* The saved spot itself stays on the server; the page only learns whether one exists, its label and the distance. */
+const { data: place } = await Astro.locals.supabase
+  .from("profiles")
+  .select("home_lat, location_label, discover_radius_km")
+  .eq("id", Astro.locals.user!.id)
+  .maybeSingle();
+const miles = ({ 8: 5, 16: 10, 40: 25 } as const)[(place?.discover_radius_km ?? 16) as 8 | 16 | 40] ?? 10;
 ---
 
 <DashboardLayout title="Your profile">
@@ -32,6 +40,11 @@ const { profile } = saved;
     <AccountProfile profile={profile} areas={areas}>
       <UsernameCard slot="after-basics" username={username ?? ""} host={Astro.url.host} />
     </AccountProfile>
+    <LocationCard
+      saved={place?.home_lat != null}
+      label={place?.location_label ?? ""}
+      miles={miles}
+    />
     <PasswordCard />
     <DeleteAccountCard name={profile.first_name} />
     <LogOutButton size="main" class="account_logout" />

@@ -2,6 +2,7 @@ import type {
   DiscoverData,
   DiscoverMember,
   GroupCategoryId,
+  GroupFit,
   OpenGroup,
   SizeId,
   WhenId,
@@ -13,19 +14,13 @@ import type {
  * (`discover_matches`) so the feed arrives ranked and the client only filters.
  */
 
-/** Groups scoring under this mutual fit are hidden. */
+/** Groups scoring under this are hidden, unless the database sends its own bar. */
 export const MIN_FIT = 60;
+export const minFit = (data: DiscoverData) => data.minScore ?? MIN_FIT;
 /** Hours ahead that count as "starting soon". */
 export const SOON_HOURS = 3;
 
-export interface Fit {
-  you: number;
-  them: number;
-  mutual: number;
-  sharedTags: string[];
-  /** Members who share an interest with the viewer. */
-  overlap: number;
-}
+export type Fit = GroupFit;
 
 export interface Answers {
   want: GroupCategoryId[];
@@ -46,14 +41,15 @@ export const spotsOpen = (group: OpenGroup) => group.capacity - group.memberIds.
 export const clashes = (data: DiscoverData, group: OpenGroup) =>
   data.busy[group.day].some(([from, to]) => from < group.end && to > group.start);
 
-/** Open to the viewer: room left, someone already in, a sane size, no calendar clash. */
-export const eligible = (data: DiscoverData, group: OpenGroup) =>
-  spotsOpen(group) >= 1 &&
-  group.memberIds.length >= 2 &&
-  group.capacity <= 10 &&
-  !clashes(data, group);
+/**
+ * Open to the viewer: room left, someone already in, a sane size. A calendar clash
+ * does not hide a group, it only sends it down the list (see `clashes`).
+ */
+export const eligible = (_data: DiscoverData, group: OpenGroup) =>
+  !!group.joined || (spotsOpen(group) >= 1 && group.memberIds.length >= 2 && group.capacity <= 10);
 
 export const fitOf = (data: DiscoverData, group: OpenGroup): Fit => {
+  if (group.fit) return group.fit;
   const interests = data.viewer.interests;
   const sharedTags = group.tags.filter((tag) => interests.includes(tag));
   const overlap = group.memberIds.filter((id) =>
@@ -127,13 +123,15 @@ export const findGroups = (data: DiscoverData, answers: Answers): Pick => {
 
   for (const [test, note] of tiers) {
     const groups = data.groups.filter(
-      (group) => eligible(data, group) && test(group) && fitOf(data, group).mutual >= MIN_FIT,
+      (group) => eligible(data, group) && test(group) && fitOf(data, group).mutual >= minFit(data),
     );
     if (groups.length) {
       const bias = (group: OpenGroup) =>
         answers.when === "now" && hoursUntil(data, group) <= SOON_HOURS ? -3 : 0;
       groups.sort(
-        (a, b) => fitOf(data, b).mutual - fitOf(data, a).mutual + bias(a),
+        (a, b) =>
+          Number(clashes(data, a)) - Number(clashes(data, b)) ||
+          fitOf(data, b).mutual - fitOf(data, a).mutual + bias(a),
       );
       return { groups, note };
     }

@@ -1,30 +1,34 @@
-import { sampleDiscover } from "@/data/discover.ts";
-import type { DiscoverData } from "@/data/discover.ts";
+import { actions } from "astro:actions";
+
+type Simple = { ok: true } | { ok: false; error: string };
+
+const failed = { ok: false as const, error: "Something went wrong. Please try again." };
+
+const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | typeof failed =>
+  error || data === undefined ? failed : data;
 
 /**
- * Everything the Discover page reads and writes. Backed by sample data today.
- * The Supabase version reads open `meetup_groups` near the viewer's area
- * (PostGIS), already limited to the viewer's age band, and joins the signed-in
- * person into `meetup_members` (see SUPABASE.md).
+ * What the Discover page writes. The page reads on the server with `readDiscover`
+ * (src/lib/discover-db.ts). Joining checks the age band, blocks and the last spot
+ * in the database, so these can say no.
  */
-export interface DiscoverRepo {
-  getDiscover(): Promise<DiscoverData>;
-  /** Adds the viewer to an open group. Rejects when the group is full. */
-  joinGroup(groupId: string): Promise<void>;
-  /** Removes the viewer from a group. */
-  leaveGroup(groupId: string): Promise<void>;
+export const joinGroup = async (groupId: string) => unwrap(await actions.discover.join({ groupId })) as Simple;
+export const leaveGroup = async (groupId: string) => unwrap(await actions.discover.leave({ groupId })) as Simple;
+
+export interface NewGroup {
+  title: string;
+  category: "outdoors" | "games" | "food" | "create" | "active" | "chill";
+  /** Interest ids from onboarding. */
+  tags: string[];
+  purpose: string;
+  /** ISO instants. */
+  startsAt: string;
+  endsAt: string;
+  placeId: string;
+  capacity: number;
+  minPeople: number;
+  newcomerFriendly: boolean;
 }
 
-const mockRepo: DiscoverRepo = {
-  async getDiscover() {
-    return sampleDiscover;
-  },
-  async joinGroup() {},
-  async leaveGroup() {},
-};
-
-export const discoverRepo: DiscoverRepo = mockRepo;
-
-/** The browser calls these; swap their bodies for Astro Action calls later. */
-export const joinGroup = (groupId: string) => discoverRepo.joinGroup(groupId);
-export const leaveGroup = (groupId: string) => discoverRepo.leaveGroup(groupId);
+export const createGroup = async (group: NewGroup) =>
+  unwrap(await actions.discover.create(group)) as { ok: true; id: string } | { ok: false; error: string };

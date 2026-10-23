@@ -25,6 +25,9 @@ const purpose = z.enum(["signup", "recovery"]);
 
 const generic = "Something went wrong. Please try again.";
 
+const locationProblem = (message: string) =>
+  message === "Too many tries" ? "Too many tries. Please wait a little and try again." : generic;
+
 const friendly = (error: { code?: string; message: string }): string => {
   switch (error.code) {
     case "invalid_credentials":
@@ -558,7 +561,145 @@ export const server = {
     }),
   },
 
+  discover: {
+    /** Takes a spot in a group. The database holds the group while it counts, so the last spot goes to one person. */
+    join: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("join_group", { p_group: input.groupId });
+        if (error || typeof data !== "string") return { ok: false, error: generic };
+        const said: Record<string, string> = {
+          full: "That group just filled up.",
+          closed: "That group has already started or was cancelled.",
+          not_found: "That group isn't available.",
+          not_allowed: "Discover isn't open for your age group yet.",
+          rate_limited: "Too many tries. Please wait a little and try again.",
+        };
+        return data === "joined" || data === "already" ? { ok: true } : { ok: false, error: said[data] ?? generic };
+      },
+    }),
+
+    leave: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("leave_group", { p_group: input.groupId });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    /** Starts a group at a public place. The database checks the age band, the place and the time again. */
+    create: defineAction({
+      accept: "json",
+      input: z.object({
+        title: z.string().trim().min(1).max(60),
+        category: z.enum(["outdoors", "games", "food", "create", "active", "chill"]),
+        tags: z.array(z.string().regex(/^[a-z0-9-]{1,30}$/)).max(3),
+        purpose: z.string().trim().max(200),
+        startsAt: z.iso.datetime(),
+        endsAt: z.iso.datetime(),
+        placeId: z.uuid(),
+        capacity: z.number().int().min(3).max(10),
+        minPeople: z.number().int().min(2).max(10),
+        newcomerFriendly: z.boolean(),
+      }),
+      handler: async (input, context): Promise<{ ok: true; id: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("create_group", {
+          p_title: input.title,
+          p_category: input.category,
+          p_tags: input.tags,
+          p_purpose: input.purpose,
+          p_starts: input.startsAt,
+          p_ends: input.endsAt,
+          p_place: input.placeId,
+          p_capacity: input.capacity,
+          p_min: input.minPeople,
+          p_newcomer: input.newcomerFriendly,
+        });
+        if (error || typeof data !== "string") {
+          const said: Record<string, string> = {
+            "Not open to you yet": "Starting groups isn't open for your age group yet.",
+            "Too many groups": "You've started a lot of groups today. Try again tomorrow.",
+            "Pick a public place": "Pick one of the public places on the list.",
+            "Bad time": "Pick a time between half an hour from now and 30 days away.",
+            "Bad size": "A group needs between 3 and 10 people.",
+          };
+          return { ok: false, error: said[error?.message ?? ""] ?? generic };
+        }
+        return { ok: true, id: data };
+      },
+    }),
+  },
+
   account: {
+    /** Saves the person's town from a US ZIP code: the town's approximate centre, never a precise spot. */
+    locationFromZip: defineAction({
+      accept: "json",
+      input: z.object({ zip: z.string().trim().regex(/^\d{5}$/, "Enter a 5-digit ZIP code.") }),
+      handler: async (input, context): Promise<{ ok: true; label: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data: allowed } = await supabase.rpc("location_lookup_allowed");
+        if (allowed !== true) return { ok: false, error: "Too many tries. Please wait a little and try again." };
+
+        let place: { lat: number; lng: number; label: string } | null = null;
+        try {
+          const response = await fetch(`https://api.zippopotam.us/us/${input.zip}`, { signal: AbortSignal.timeout(5000) });
+          if (response.status === 404) return { ok: false, error: "We couldn't find that ZIP code." };
+          if (!response.ok) return { ok: false, error: "We couldn't look that up just now. Please try again in a moment." };
+          const body = (await response.json()) as {
+            places?: { "place name": string; "state abbreviation": string; latitude: string; longitude: string }[];
+          };
+          const first = body.places?.[0];
+          if (first) {
+            place = {
+              lat: Number(first.latitude),
+              lng: Number(first.longitude),
+              label: `${first["place name"]}, ${first["state abbreviation"]}`,
+            };
+          }
+        } catch {
+          return { ok: false, error: "We couldn't look that up just now. Please try again in a moment." };
+        }
+        if (!place || Number.isNaN(place.lat) || Number.isNaN(place.lng)) {
+          return { ok: false, error: "We couldn't find that ZIP code." };
+        }
+        const { error } = await supabase.rpc("set_my_location", { p_lat: place.lat, p_lng: place.lng, p_label: place.label });
+        if (error) return { ok: false, error: locationProblem(error.message) };
+        return { ok: true, label: place.label };
+      },
+    }),
+
+    clearLocation: defineAction({
+      accept: "json",
+      handler: async (_input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("clear_my_location");
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    /** How far around their spot Discover looks, in miles: 5, 10 or 25. */
+    setRadius: defineAction({
+      accept: "json",
+      input: z.object({ miles: z.union([z.literal(5), z.literal(10), z.literal(25)]) }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const km = { 5: 8, 10: 16, 25: 40 }[input.miles];
+        const { error } = await supabase.rpc("set_discover_radius", { p_km: km });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
     /** Whether a username is free. Someone's own current username counts as free. */
     checkUsername: defineAction({
       accept: "json",

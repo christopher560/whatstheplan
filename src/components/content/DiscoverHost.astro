@@ -1,0 +1,300 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import Pill from "@/components/item/Pill.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import { groupCategories } from "@/data/discover.ts";
+import type { HostPlace } from "@/data/discover.ts";
+import { interests } from "@/data/onboarding.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Public places near the viewer, nearest first. */
+  places?: HostPlace[];
+}
+
+const { render = true, places = [] } = Astro.props;
+const sizes = [3, 4, 5, 6, 7, 8, 9, 10];
+---
+
+{
+  render && (
+    <Panel aria-labelledby="discover-host-title">
+      <div class="discover-host_wrap" data-host>
+        <div class="discover-host_head">
+          <h2 id="discover-host-title" class="discover-host_title text-style-h4">
+            Start your own group
+          </h2>
+          <p class="text-style-main">
+            Pick a public place and a time. People nearby who fit will see it, and you meet at the place, never at a
+            home.
+          </p>
+        </div>
+
+        {places.length === 0 ? (
+          <p class="text-style-small">
+            No public places are set up near you yet, so groups can't be started here. Check back soon.
+          </p>
+        ) : (
+          <>
+            <div>
+              <ActionButton color="yellow" size="large" raised data-open>
+                Start a group
+              </ActionButton>
+            </div>
+
+            <form class="discover-host_form" novalidate hidden data-form>
+              <div class="field">
+                <label class="field-label text-style-small" for="host-title">What is it?</label>
+                <input
+                  id="host-title"
+                  class="field-control text-style-main"
+                  type="text"
+                  maxlength="60"
+                  placeholder="Saturday board games"
+                  data-title
+                />
+              </div>
+
+              <div class="discover-host_field" role="group" aria-labelledby="host-category">
+                <p id="host-category" class="field-label text-style-small">Kind of group</p>
+                <div class="discover-host_pills">
+                  {groupCategories.map((category) => (
+                    <Pill element="button" size="main" color={category.color} data-category={category.id}>
+                      {category.label}
+                    </Pill>
+                  ))}
+                </div>
+              </div>
+
+              <div class="discover-host_field" role="group" aria-labelledby="host-interests">
+                <p id="host-interests" class="field-label text-style-small">
+                  What are people into? (up to 3, this helps match people)
+                </p>
+                <div class="discover-host_pills">
+                  {interests.map((interest) => (
+                    <Pill element="button" size="tiny" color={interest.color} data-interest={interest.id}>
+                      {interest.name}
+                    </Pill>
+                  ))}
+                </div>
+              </div>
+
+              <div class="discover-host_row">
+                <div class="field">
+                  <label class="field-label text-style-small" for="host-start">Starts</label>
+                  <input id="host-start" class="field-control text-style-main" type="datetime-local" data-start />
+                </div>
+                <div class="field">
+                  <label class="field-label text-style-small" for="host-length">How long</label>
+                  <select id="host-length" class="field-control text-style-main" data-length>
+                    <option value="1">1 hour</option>
+                    <option value="2" selected>2 hours</option>
+                    <option value="3">3 hours</option>
+                    <option value="4">4 hours</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="discover-host_row">
+                <div class="field">
+                  <label class="field-label text-style-small" for="host-place">Where (a public place)</label>
+                  <select id="host-place" class="field-control text-style-main" data-place>
+                    {places.map((place) => (
+                      <option value={place.id}>
+                        {place.name} · {place.town} · {place.miles} mi
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field-label text-style-small" for="host-size">Up to how many people</label>
+                  <select id="host-size" class="field-control text-style-main" data-size>
+                    {sizes.map((size) => (
+                      <option value={size} selected={size === 6}>
+                        {size} people
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field-label text-style-small" for="host-purpose">A line about it (optional)</label>
+                <textarea
+                  id="host-purpose"
+                  class="field-control text-style-main"
+                  rows="2"
+                  maxlength="200"
+                  placeholder="Easy games, friendly people. Come as you are."
+                  data-purpose
+                />
+              </div>
+
+              <label class="discover-host_check text-style-main">
+                <input type="checkbox" checked data-newcomer />
+                <span>New people are welcome. I will say hello to anyone who is new.</span>
+              </label>
+
+              <p class="discover-host_status text-style-small" role="status" data-status />
+
+              <ActionButton type="submit" color="orange" size="large" raised data-submit>
+                Start my group
+              </ActionButton>
+            </form>
+          </>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { createGroup } from "@/lib/discover-repo.ts";
+  import type { NewGroup } from "@/lib/discover-repo.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-host]").forEach((root) => {
+    const open = root.querySelector<HTMLButtonElement>("[data-open]");
+    const form = root.querySelector<HTMLFormElement>("[data-form]");
+    if (!open || !form) return;
+    const status = form.querySelector<HTMLElement>("[data-status]")!;
+    const submit = form.querySelector<HTMLButtonElement>("[data-submit]")!;
+    const submitText = submit.querySelector<HTMLElement>(".action-button_text")!;
+    const startInput = form.querySelector<HTMLInputElement>("[data-start]")!;
+    const categories = form.querySelectorAll<HTMLButtonElement>("[data-category]");
+    const tagPills = form.querySelectorAll<HTMLButtonElement>("[data-interest]");
+    let category: NewGroup["category"] | "" = "";
+    const tags = new Set<string>();
+
+    const say = (text: string, tone: "" | "good" | "bad" = "") => {
+      status.textContent = text;
+      status.dataset.tone = tone;
+    };
+
+    open.addEventListener("click", () => {
+      form.hidden = false;
+      open.hidden = true;
+      form.querySelector<HTMLInputElement>("[data-title]")!.focus();
+    });
+
+    categories.forEach((pill) =>
+      pill.addEventListener("click", () => {
+        category = pill.dataset.category as NewGroup["category"];
+        categories.forEach((other) => other.setAttribute("aria-pressed", String(other === pill)));
+      }),
+    );
+    tagPills.forEach((pill) =>
+      pill.addEventListener("click", () => {
+        const id = pill.dataset.interest!;
+        if (tags.has(id)) tags.delete(id);
+        else if (tags.size < 3) tags.add(id);
+        tagPills.forEach((other) => other.setAttribute("aria-pressed", String(tags.has(other.dataset.interest!))));
+      }),
+    );
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const title = form.querySelector<HTMLInputElement>("[data-title]")!.value.trim();
+      if (!title) return say("Give your group a name.", "bad");
+      if (!category) return say("Pick a kind of group.", "bad");
+      const start = new Date(startInput.value);
+      if (!startInput.value || Number.isNaN(start.getTime())) return say("Pick when it starts.", "bad");
+      if (start.getTime() < Date.now() + 30 * 60_000) return say("Start at least half an hour from now.", "bad");
+      const hours = Number(form.querySelector<HTMLSelectElement>("[data-length]")!.value);
+      const end = new Date(start.getTime() + hours * 3_600_000);
+
+      submit.disabled = true;
+      submitText.textContent = "Starting…";
+      say("");
+      const result = await createGroup({
+        title,
+        category,
+        tags: [...tags],
+        purpose: form.querySelector<HTMLTextAreaElement>("[data-purpose]")!.value.trim(),
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
+        placeId: form.querySelector<HTMLSelectElement>("[data-place]")!.value,
+        capacity: Number(form.querySelector<HTMLSelectElement>("[data-size]")!.value),
+        minPeople: 3,
+        newcomerFriendly: form.querySelector<HTMLInputElement>("[data-newcomer]")!.checked,
+      });
+      if (!result.ok) {
+        submit.disabled = false;
+        submitText.textContent = "Start my group";
+        return say(result.error, "bad");
+      }
+      say("Your group is live. People nearby who fit will see it.", "good");
+      submitText.textContent = "Started";
+      window.setTimeout(() => location.reload(), 1500);
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .discover-host_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .discover-host_head {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .discover-host_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .discover-host_form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .discover-host_field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .discover-host_pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .discover-host_row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+
+      & > .field {
+        flex: 1 1 14rem;
+        min-width: 0;
+      }
+    }
+
+    .discover-host_check {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+    }
+
+    .discover-host_status {
+      min-height: 1lh;
+      font-weight: var(--primary-bold);
+
+      &[data-tone="bad"] {
+        color: var(--colors-vivid-red);
+        filter: brightness(0.75);
+      }
+    }
+  }
+</style>

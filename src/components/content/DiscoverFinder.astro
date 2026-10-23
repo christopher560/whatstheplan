@@ -222,7 +222,7 @@ const { render = true, groupHref = "/app/groups" } = Astro.props;
     whenOptions,
   } from "@/data/discover.ts";
   import type { GroupCategoryId, OpenGroup, SizeId, WhenId } from "@/data/discover.ts";
-  import { fitOf, spotsOpen, memberOf } from "@/lib/discover-fit.ts";
+  import { clashes, fitOf, spotsOpen, memberOf } from "@/lib/discover-fit.ts";
   import {
     get,
     getData,
@@ -369,7 +369,13 @@ const { render = true, groupHref = "/app/groups" } = Astro.props;
           ok: fit.overlap > 0,
           text: `${fit.overlap} of ${g.memberIds.length} members share an interest with you`,
         },
-        { ok: true, text: `${whenFull(g)}, free on your calendar` },
+        clashes(data, g)
+          ? { ok: false, text: `${whenFull(g)}. It overlaps something on your calendar` }
+          : { ok: true, text: `${whenFull(g)}, free on your calendar` },
+        ...(fit.friends
+          ? [{ ok: true, text: `${fit.friends} ${fit.friends === 1 ? "person" : "people"} in it ${fit.friends === 1 ? "is" : "are"} your friend` }]
+          : []),
+        ...(fit.nearly ? [{ ok: true, text: "One more person and this group happens" }] : []),
         {
           ok: true,
           text: `Group of ${g.capacity} max, ${open} spot${open === 1 ? "" : "s"} open`,
@@ -393,9 +399,7 @@ const { render = true, groupHref = "/app/groups" } = Astro.props;
           initial: person.name,
           color: person.color,
           name: person.name,
-          line: shared.length
-            ? `Also likes ${shared.join(", ")}`
-            : `Likes ${person.likes.slice(0, 2).join(", ")}`,
+          line: shared.length ? `Also likes ${shared.join(", ")}` : "Here to meet new people",
           you: false,
         };
       });

@@ -32,12 +32,38 @@ const { render = true, data, buildHref = "/app/dashboard#builder" } = Astro.prop
           Know them already? Make a plan
         </a>
       </div>
+      <p class="discover-header_notice text-style-small" role="status" hidden data-notice />
     </header>
   )
 }
 
+<script>
+  import { get, subscribe } from "@/lib/discover-store.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-notice]").forEach((notice) => {
+    get();
+    subscribe(() => {
+      const text = get().notice;
+      notice.textContent = text;
+      notice.hidden = !text;
+    });
+  });
+</script>
+
 <style is:global>
   @layer components {
+    .discover-header_notice {
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width) solid var(--border);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-secondary-pink);
+      font-weight: var(--primary-bold);
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
     .discover-header_wrap {
       display: flex;
       flex-direction: column;

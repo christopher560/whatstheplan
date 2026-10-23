@@ -90,7 +90,7 @@ export const findingSteps = [
 
 export const safetyPoints: { color: AccentColor; icon: string; text: string }[] = [
   { color: "green", icon: "M5 21V8l7-5 7 5v13M9 21v-6h6v6", text: "Always in public places" },
-  { color: "blue", icon: "M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9 12l2 2 4-4", text: "Everyone is verified" },
+  { color: "blue", icon: "M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9 12l2 2 4-4", text: "18 and over only" },
   { color: "yellow", icon: "M4 5h16v11H9l-5 4V5z", text: "You see the group before you join" },
   { color: "purple", icon: "M15 5l-7 7 7 7", text: "Leave, block or report anytime" },
 ];
@@ -102,6 +102,22 @@ export interface DiscoverMember {
   name: string;
   color: AccentColor;
   likes: string[];
+}
+
+/** How well a group suits the viewer. From the database for real groups (see `discover_matches`). */
+export interface GroupFit {
+  /** 0 to 100: the score the feed is ranked by. */
+  you: number;
+  /** 0 to 100: how well the viewer suits the people already in it. */
+  them: number;
+  mutual: number;
+  sharedTags: string[];
+  /** Members who share an interest with the viewer. */
+  overlap: number;
+  /** Members who are the viewer's friends. */
+  friends?: number;
+  /** One person away from having enough to happen. */
+  nearly?: boolean;
 }
 
 /** One open group anyone nearby can join. Maps to `meetup_groups`. */
@@ -128,6 +144,10 @@ export interface OpenGroup {
   hostId: string;
   /** The host greets people who are new to the group. */
   newcomerFriendly: boolean;
+  /** Set when the score comes from the database. */
+  fit?: GroupFit;
+  /** The viewer is already in it. */
+  joined?: boolean;
 }
 
 export interface DiscoverDay {
@@ -139,8 +159,24 @@ export interface DiscoverDay {
   weekday: string;
 }
 
+/** A public place where a host could start a group. */
+export interface HostPlace {
+  id: string;
+  name: string;
+  kind: string;
+  town: string;
+  /** Miles from the viewer's town. */
+  miles: number;
+}
+
 export interface DiscoverData {
   area: string;
+  /** Groups scoring under this are hidden. */
+  minScore?: number;
+  /** Ids of the groups the viewer is already in. */
+  joined?: string[];
+  /** Public places near the viewer, for starting a group. */
+  places?: HostPlace[];
   /** Prototype clock. The Supabase version sends the real time in the viewer's zone. */
   clock: { weekday: string; time: string; hour: number };
   viewer: { initial: string; color: AccentColor; interests: string[] };

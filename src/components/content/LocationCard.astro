@@ -1,0 +1,191 @@
+---
+import Panel from "@/components/wrapper/Panel.astro";
+import ActionButton from "@/components/item/ActionButton.astro";
+import Pill from "@/components/item/Pill.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Whether a location is saved, and how it reads ("Aurora, IL" or "Near you"). */
+  saved?: boolean;
+  label?: string;
+  /** How far around the spot Discover looks, in miles. */
+  miles?: 5 | 10 | 25;
+}
+
+const { render = true, saved = false, label = "", miles = 10 } = Astro.props;
+const distances = [5, 10, 25] as const;
+---
+
+{
+  render && (
+    <Panel aria-labelledby="location-title" data-account-hide>
+      <div class="location-card_wrap" data-location data-saved={saved} data-label={label}>
+        <h2 id="location-title" class="location-card_title text-style-h4">Your town</h2>
+
+        <p class="text-style-main">
+          Discover shows groups near your town. We only keep the town, never where you are right now.
+        </p>
+
+        <p class="location-card_current text-style-main" role="status" data-current>
+          {saved ? `Saved: ${label}` : "No town saved yet."}
+        </p>
+
+        <form class="location-card_zip" novalidate data-zip-form>
+          <label class="field-label text-style-small" for="location-zip">ZIP code</label>
+          <div class="location-card_zip_row">
+            <input
+              id="location-zip"
+              class="field-control text-style-main"
+              type="text"
+              inputmode="numeric"
+              autocomplete="postal-code"
+              maxlength="5"
+              placeholder="60504"
+              data-zip
+            />
+            <ActionButton type="submit" size="large" color="yellow" raised data-zip-save>
+              Set my town
+            </ActionButton>
+          </div>
+        </form>
+
+        <div class="location-card_field" role="group" aria-labelledby="location-radius">
+          <p id="location-radius" class="field-label text-style-small">How far to look</p>
+          <div class="location-card_pills">
+            {distances.map((distance) => (
+              <Pill element="button" size="main" pressed={distance === miles} data-miles={distance}>
+                {distance} miles
+              </Pill>
+            ))}
+          </div>
+        </div>
+
+        <p class="location-card_status text-style-small" role="status" data-status />
+
+        <button type="button" class="location-card_remove text-style-small" hidden={!saved} data-remove>
+          Remove my town
+        </button>
+      </div>
+    </Panel>
+  )
+}
+
+<script>
+  import { removeLocation, saveLocationFromZip, saveRadius } from "@/lib/account-repo.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-location]").forEach((root) => {
+    const current = root.querySelector<HTMLElement>("[data-current]")!;
+    const status = root.querySelector<HTMLElement>("[data-status]")!;
+    const remove = root.querySelector<HTMLButtonElement>("[data-remove]")!;
+    const zipForm = root.querySelector<HTMLFormElement>("[data-zip-form]")!;
+    const zip = root.querySelector<HTMLInputElement>("[data-zip]")!;
+    const pills = root.querySelectorAll<HTMLButtonElement>("[data-miles]");
+
+    const say = (text: string, tone: "" | "good" | "bad" = "") => {
+      status.textContent = text;
+      status.dataset.tone = tone;
+    };
+    const saved = (label: string) => {
+      current.textContent = `Saved: ${label}`;
+      remove.hidden = false;
+    };
+
+    zipForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const value = zip.value.trim();
+      if (!/^\d{5}$/.test(value)) return say("Enter a 5-digit ZIP code.", "bad");
+      say("Looking it up…");
+      const result = await saveLocationFromZip(value);
+      if (!result.ok) return say(result.error, "bad");
+      saved(result.label);
+      zip.value = "";
+      say("Saved. Discover will look around your town.", "good");
+    });
+
+    pills.forEach((pill) =>
+      pill.addEventListener("click", async () => {
+        const miles = Number(pill.dataset.miles) as 5 | 10 | 25;
+        pills.forEach((other) => other.setAttribute("aria-pressed", String(other === pill)));
+        const result = await saveRadius(miles);
+        if (!result.ok) return say(result.error, "bad");
+        say(`Looking within ${miles} miles.`, "good");
+      }),
+    );
+
+    remove.addEventListener("click", async () => {
+      const result = await removeLocation();
+      if (!result.ok) return say(result.error, "bad");
+      current.textContent = "No town saved yet.";
+      remove.hidden = true;
+      say("Removed.", "good");
+    });
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .location-card_wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .location-card_title {
+      font-weight: var(--secondary-bold);
+    }
+
+    .location-card_current {
+      font-weight: var(--primary-bold);
+    }
+
+    .location-card_zip {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .location-card_zip_row {
+      display: flex;
+      gap: var(--space-2);
+
+      & > input {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .location-card_field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .location-card_pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .location-card_status {
+      min-height: 1lh;
+      font-weight: var(--primary-bold);
+
+      &[data-tone="bad"] {
+        color: var(--colors-vivid-red);
+        filter: brightness(0.75);
+      }
+    }
+
+    .location-card_remove {
+      align-self: flex-start;
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.25em;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+  }
+</style>

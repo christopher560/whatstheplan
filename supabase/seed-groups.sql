@@ -1,0 +1,34 @@
+-- Starter groups for Discover.
+--
+-- Fill in the two lists below with REAL public places and groups, then tell Claude to load this file
+-- (or paste it into the Supabase SQL editor). Nothing here runs by itself and nothing in it is live data.
+--
+-- Rules the database enforces:
+--   * A group is held at a row in `places`: a public venue, never a home.
+--   * capacity is 3 to 10 and includes the organizers you list in starter_people.
+--   * starter_people is how many people YOU know will be there (organizers). They count toward "people in",
+--     so a starter group can show up before anyone has joined. Use 2 or more, so nobody meets one stranger alone.
+--   * age_band is 'adult' while Discover is adults only.
+--   * starts_at is a time in the future. Use the venue's own time zone, for example '2026-11-07 10:00-06'.
+--   * Starter groups have no host account: host_label is how the host reads ("whatstheplan crew").
+
+-- 1. Places --------------------------------------------------------------------------------------------
+-- kind: park, cafe, library, community, games, food, trail, other
+-- lat and lng are the venue's coordinates (right-click the spot in a map and copy them).
+-- serves_alcohol: true if it serves alcohol (adult groups may still meet there).
+--
+-- insert into public.places (name, kind, town, address, lat, lng, serves_alcohol) values
+--   ('EXAMPLE Public Library', 'library', 'Aurora, IL', '1 Example St', 41.75000, -88.31000, false);
+
+-- 2. Groups --------------------------------------------------------------------------------------------
+-- category: outdoors, games, food, create, active, chill
+-- tags: up to 6 short interest words that match the interests in onboarding (board-games, outdoors, music, ...)
+--
+-- insert into public.meetup_groups
+--   (source, host_label, starter_people, title, category, tags, purpose, starts_at, ends_at, place_id,
+--    capacity, min_people, newcomer_friendly, age_band)
+-- select
+--   'seed', 'whatstheplan crew', 2, 'EXAMPLE Saturday board games', 'games', array['board-games'],
+--   'Easy games, friendly people. Bring a favorite or just show up.',
+--   '2026-11-07 10:00-06', '2026-11-07 12:00-06', p.id, 8, 3, true, 'adult'
+-- from public.places p where p.name = 'EXAMPLE Public Library';

@@ -6,13 +6,14 @@ import type {
   WhenId,
 } from "@/data/discover.ts";
 import {
-  MIN_FIT,
   SOON_HOURS,
+  clashes,
   eligible,
   fitOf,
   findGroups,
   hoursUntil,
   memberOf,
+  minFit,
   sizeMatches,
   spotsOpen,
 } from "@/lib/discover-fit.ts";
@@ -47,6 +48,8 @@ export interface DiscoverState {
   filterSize: SizeId;
   /** Group ids the viewer joined. */
   joined: Record<string, boolean>;
+  /** Why the last join or leave did not go through. */
+  notice: string;
 }
 
 const initial: DiscoverState = {
@@ -64,6 +67,7 @@ const initial: DiscoverState = {
   filterSoon: false,
   filterSize: "any",
   joined: {},
+  notice: "",
 };
 
 let data: DiscoverData | null = null;
@@ -75,6 +79,7 @@ export const getData = (): DiscoverData => {
   if (!data) {
     const source = document.getElementById("discover-data")?.textContent ?? "{}";
     data = JSON.parse(source) as DiscoverData;
+    state = { ...state, joined: Object.fromEntries((data.joined ?? []).map((id) => [id, true])) };
   }
   return data;
 };
@@ -211,10 +216,11 @@ const filtered = (group: OpenGroup, ignoreTime = false) => {
 export const feed = () => {
   const d = getData();
   const byFit = (a: OpenGroup, b: OpenGroup) => fitOf(d, b).mutual - fitOf(d, a).mutual;
+  /* A group that overlaps something on the calendar goes after the ones that do not. */
   const bySoon = (a: OpenGroup, b: OpenGroup) =>
-    hoursUntil(d, a) - hoursUntil(d, b) || byFit(a, b);
+    Number(clashes(d, a)) - Number(clashes(d, b)) || hoursUntil(d, a) - hoursUntil(d, b) || byFit(a, b);
   const shown = d.groups
-    .filter((group) => eligible(d, group) && filtered(group) && fitOf(d, group).mutual >= MIN_FIT)
+    .filter((group) => eligible(d, group) && filtered(group) && fitOf(d, group).mutual >= minFit(d))
     .sort(bySoon);
   const hidden = d.groups.filter((group) => filtered(group)).length - shown.length;
   return {
@@ -236,7 +242,7 @@ export const week = () => {
         group.day === index &&
         eligible(d, group) &&
         filtered(group, true) &&
-        fitOf(d, group).mutual >= MIN_FIT,
+        fitOf(d, group).mutual >= minFit(d),
     ),
   }));
 };
@@ -245,8 +251,11 @@ export const week = () => {
 
 export const toggleJoin = (id: string) => {
   const joined = !get().joined[id];
-  update({ joined: { ...get().joined, [id]: joined } });
-  void (joined ? joinGroup(id) : leaveGroup(id));
+  update({ joined: { ...get().joined, [id]: joined }, notice: "" });
+  /* If the database says no (the group filled up, say), put the button back and say why. */
+  void (joined ? joinGroup(id) : leaveGroup(id)).then((result) => {
+    if (!result.ok) update({ joined: { ...get().joined, [id]: !joined }, notice: result.error });
+  });
 };
 
 export const clearFilters = () =>
