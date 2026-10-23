@@ -3,6 +3,7 @@ import "@/styles/global.css";
 import "../styles/dashboard-base.css";
 import BaseHead from "@/components/utility/BaseHead.astro";
 import SkipLink from "@/components/global/SkipLink.astro";
+import Analytics from '@vercel/analytics/astro';
 
 interface Props {
   title?: string;
@@ -15,6 +16,7 @@ const { title = "Log in" } = Astro.props;
 <html lang="en">
   <head>
     <BaseHead title={title} noindex />
+    <Analytics />
   </head>
 
   <body>
