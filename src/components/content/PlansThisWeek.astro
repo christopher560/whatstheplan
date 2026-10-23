@@ -127,7 +127,7 @@ const { render = true, planHref = "/app/plans" } = Astro.props;
         setText(detail, "[data-when]", picked.when);
         setText(detail, "[data-place]", picked.place);
         setText(cta, ".action-button_text", kind.cta);
-        cta.href = picked.kind === "host" ? `${base}/${picked.id}` : base;
+        cta.href = picked.kind === "host" ? `${base}/${picked.id}` : picked.kind === "group" ? `/app/groups/${picked.id}` : base;
       }
     });
   });

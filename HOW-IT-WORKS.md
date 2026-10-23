@@ -213,11 +213,32 @@ The venue's street address is not available to the page at all.
 - The line "Everyone is verified" was removed, because nothing verifies people yet.
   Age is **self-reported**, and the page says "18 and over only", not "verified".
 
+### The group page
+
+Once you join, "Open my group" takes you to the group's page. Only people in the
+group can open it; anyone else is sent back to Discover, so a link alone shows
+nothing. It has:
+
+- **The plan:** who is going ("3 of 4 going"), what it is, where (the street
+  address appears only now that you are in), and when, with a downloadable
+  calendar file. Groups you are in also show on your calendar automatically.
+- **Your answer:** "I'm going" or "Can't make it". Joining counts as going. The
+  status at the top compares yeses with the group's minimum: "Needs 1 more
+  person", "2 more yeses to lock it in", or "Locked in".
+- **A question for the group:** the person who started the group can ask one
+  question with two to four answers ("Where do we meet?"). Everyone votes once
+  and can change or take back their vote.
+- **Members:** first name and color. Each person has a "stand-in id" for the page,
+  so you can add someone as a friend, block them, or report them without the page
+  ever holding their account id. Someone you block disappears from your list but
+  still counts in the headcount.
+- **Leave:** one tap, with an undo (the undo fails if someone took your spot).
+
+Chat is not on the page yet; it says "Group chat is coming soon".
+
 ### Limits to know about
 
 - Nothing shows until you add real places and starter groups.
-- "Open my group" still goes to a sample page. The real group page comes next.
-- There are no block or report buttons on the page yet (the database part is done).
 - Because age is self-reported, an adult could claim to be 16. That is the main
   reason teen Discover waits for an age check.
 
@@ -467,13 +488,11 @@ These protections are shared by every feature above.
 
 | Not built | What it will do |
 | --- | --- |
-| The real group page | Members, the plan, the poll for each Discover group you join. Chat comes right after. |
-| Group chat | Live, text-only chat for a group. |
+| Group chat | Live, text-only chat on the group page. It is the next thing to build. |
 | Live updates | Replies, votes and spots appear without reloading. |
 | Email nudges and reminders | The Nudge and auto-nudge buttons do nothing yet. Emails would go through Resend; texts need a paid text-message service. |
 | Teen Discover | 13 to 15 and 16 to 17 meeting only their own band. Waits for an age check (school email or parent consent) and a legal review. |
 | Groups the app forms | The app grouping people from a waitlist who share interests and free hours. |
-| Block and report buttons on pages | The database side exists already. |
 | Idea stash, and real data for the dashboard home | The home page still shows some sample cards. |
 
 ---

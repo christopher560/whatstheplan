@@ -35,13 +35,17 @@ export type GroupLine =
 export interface GroupPollOption {
   id: string;
   label: string;
-  /** Ids of members who voted for it. */
+  /** Ids of the other members who voted for it. */
   voters: string[];
 }
 
 export interface GroupPoll {
+  /** Primary key of the `group_polls` row. */
+  id?: string;
   question: string;
   options: GroupPollOption[];
+  /** The option the viewer voted for. */
+  mine?: string | null;
 }
 
 /**
@@ -65,6 +69,8 @@ export interface GroupDetail {
   when: string;
   /** "In 3 hours" */
   countdown: string;
+  /** "about 2 hours" */
+  lasts?: string;
   capacity: number;
   /** People needed for it to go ahead. */
   minimum: number;
@@ -75,6 +81,14 @@ export interface GroupDetail {
   /** The viewer's answer when the page opens. */
   going: boolean | null;
   onCalendar: boolean;
+  /** The viewer started this group, so they can ask it a question. */
+  isHost?: boolean;
+  /** People in it other than the viewer, and how many said yes. Includes starter organizers. */
+  counts?: { total: number; going: number };
+  /** Organizers of a starter group, who are not accounts. */
+  organizers?: { label: string; count: number };
+  /** Where the time downloads as a calendar file. */
+  calendarHref?: string;
 }
 
 const maya: GroupMember = { id: "maya", name: "Maya", color: "pink", note: "Brings Catan", going: true };

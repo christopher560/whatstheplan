@@ -96,10 +96,12 @@ const mapHref = group
           <div class="group-plan_body">
             <p class="group-plan_eyebrow text-style-tiny">When</p>
             <p class="group-plan_big text-style-h4">{group.when}</p>
-            <p class="text-style-small">{group.countdown} · about 2 hours</p>
-            <ActionButton color="white" size="small" class="group-plan_action" data-calendar>
-              Add to calendar
-            </ActionButton>
+            <p class="text-style-small">{group.countdown} · {group.lasts ?? "about 2 hours"}</p>
+            {group.calendarHref && (
+              <ActionButton element="link" href={group.calendarHref} color="white" size="small" class="group-plan_action" download>
+                Add to my calendar
+              </ActionButton>
+            )}
           </div>
         </div>
       </div>
@@ -120,21 +122,19 @@ const mapHref = group
 }
 
 <script>
-  import { get, group, setAnswer, status, subscribe, toggleCalendar } from "@/lib/group-store.ts";
+  import { get, group, setAnswer, status, subscribe } from "@/lib/group-store.ts";
 
   document.querySelectorAll<HTMLElement>("[data-plan]").forEach((root) => {
     const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
     const goingLine = $("[data-going-line]");
     const spots = $("[data-spots]");
     const people = [...$("[data-stack]").children] as HTMLElement[];
-    const calendar = $("[data-calendar]");
     const prompt = $("[data-prompt]");
     const yes = $("[data-yes]");
     const no = $("[data-no]");
 
     $("[data-yes]").addEventListener("click", () => setAnswer(true));
     $("[data-no]").addEventListener("click", () => setAnswer(false));
-    calendar.addEventListener("click", toggleCalendar);
 
     /** Swaps a button's color class and label. */
     const paint = (button: HTMLElement, pressed: boolean, off: string, on: string, offText: string, onText: string) => {
@@ -158,7 +158,6 @@ const mapHref = group
       people[0].classList.toggle("dim", s.going !== true);
       g.members.forEach((member, index) => people[index + 1].classList.toggle("dim", !member.going));
 
-      paint(calendar, s.onCalendar, "white", "purple", "Add to calendar", "On your calendar");
       prompt.textContent =
         s.going === true ? "You are going." : s.going === false ? "You are not going." : "Are you going?";
       paint(yes, s.going === true, "ink", "green", "I'm going", "You're going");

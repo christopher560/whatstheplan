@@ -7,9 +7,11 @@ interface Props {
   render?: boolean;
   /** The open vote, if the group has one. */
   poll?: GroupPoll;
+  /** The person who started the group can ask it a question. */
+  isHost?: boolean;
 }
 
-const { render = true, poll } = Astro.props;
+const { render = true, poll, isHost = false } = Astro.props;
 ---
 
 {
@@ -31,8 +33,45 @@ const { render = true, poll } = Astro.props;
   )
 }
 
+{
+  render && !poll && isHost && (
+    <Panel aria-labelledby="group-ask-title">
+      <form class="group-poll_ask" novalidate data-ask>
+        <h2 id="group-ask-title" class="group-poll_title text-style-h4">Ask the group</h2>
+        <p class="text-style-small">For example "Where do we meet?" with two to four answers.</p>
+        <input class="field-control text-style-main" type="text" maxlength="80" placeholder="Where do we meet?" aria-label="Question" data-question />
+        <input class="field-control text-style-main" type="text" maxlength="40" placeholder="Answer 1" aria-label="Answer 1" data-answer />
+        <input class="field-control text-style-main" type="text" maxlength="40" placeholder="Answer 2" aria-label="Answer 2" data-answer />
+        <input class="field-control text-style-main" type="text" maxlength="40" placeholder="Answer 3 (optional)" aria-label="Answer 3" data-answer />
+        <input class="field-control text-style-main" type="text" maxlength="40" placeholder="Answer 4 (optional)" aria-label="Answer 4" data-answer />
+        <p class="group-poll_status text-style-small" role="status" data-status />
+        <button type="submit" class="group-poll_submit text-style-main" data-submit>Ask the group</button>
+      </form>
+    </Panel>
+  )
+}
+
 <script>
-  import { castVote, get, group, subscribe } from "@/lib/group-store.ts";
+  import { askGroup, castVote, get, group, subscribe } from "@/lib/group-store.ts";
+
+  document.querySelectorAll<HTMLFormElement>("[data-ask]").forEach((form) => {
+    const status = form.querySelector<HTMLElement>("[data-status]")!;
+    const submit = form.querySelector<HTMLButtonElement>("[data-submit]")!;
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const question = form.querySelector<HTMLInputElement>("[data-question]")!.value.trim();
+      const answers = [...form.querySelectorAll<HTMLInputElement>("[data-answer]")].map((input) => input.value.trim()).filter(Boolean);
+      if (!question) return void (status.textContent = "Write the question.");
+      if (answers.length < 2) return void (status.textContent = "Give at least two answers.");
+      submit.disabled = true;
+      status.textContent = "Asking…";
+      const result = await askGroup(question, answers);
+      if (!result.ok) {
+        submit.disabled = false;
+        status.textContent = result.error;
+      }
+    });
+  });
 
   document.querySelectorAll<HTMLElement>("[data-poll]").forEach((root) => {
     const poll = group().poll;
@@ -68,6 +107,28 @@ const { render = true, poll } = Astro.props;
   @layer components {
     .group-poll_title {
       font-weight: var(--secondary-bold);
+    }
+
+    .group-poll_ask {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .group-poll_status {
+      min-height: 1lh;
+      font-weight: var(--primary-bold);
+    }
+
+    .group-poll_submit {
+      align-self: flex-start;
+      min-height: var(--control-height-main);
+      padding: var(--space-1) var(--space-4);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-yellow);
+      color: var(--colors-on-vivid);
+      font-weight: var(--primary-bold);
     }
 
     .group-poll_options {

@@ -21,7 +21,7 @@ named in the "built" sections.
 | Discover, round 1: your town and distance | built |
 | Discover, round 2: places, groups, joining, blocks, reports, starter groups (database) | built |
 | Discover, round 3: ranking function, the Discover page, start a group | built |
-| Discover, round 4: the real group page | next |
+| Discover, round 4: the real group page (members, plan, poll; chat comes next) | built |
 | Group chat (live, text only) and live updates (Realtime) | after Discover |
 | Email nudges, reminders and "locked in" emails | after group chat |
 | Teen Discover with an age check | later, needs a decision on verification and legal review |
@@ -381,7 +381,7 @@ and report are always one tap.
 3. `discover_matches`, the quiz, the feed and filters on the real data, and
    "Start a group" for hosts. **Built.**
 4. The real group page `/app/groups/[id]` (members, the plan, the poll), with
-   "Open your group" linking to it.
+   "Open your group" linking to it. **Built (chat is the next round).**
 Then group chat and Realtime ("spots open" updates without a refresh), then
 email nudges and reminders, then teen Discover with an age check.
 
@@ -741,3 +741,13 @@ Database only: nothing on the Discover page uses it until round 3.
 - **Page wiring:** `src/lib/discover-db.ts` turns the function's output into the shape the existing store expects (days, hours in the viewer's time zone, busy blocks from the calendar, members). Joining and leaving call `join_group` and `leave_group`; if the database says no (it filled up, say) the button goes back and the header says why. The safety line "Everyone is verified" now reads "18 and over only", because nothing verifies people yet.
 - **Start a group:** "Start your own group" on the page (name, kind, up to three interests, start and length, a public place near you, size up to 10, newcomer-friendly, a line about it) calls `create_group`. With no places set up nearby it says so. Places are added by you through `supabase/seed-groups.sql`.
 - **Not built yet:** the real group page (round 4: "Open my group" still goes to the sample page), the teen bands, groups the app forms from the waitlist, and block and report buttons on the page.
+
+## Discover, round 4 (the real group page) - built
+
+- **Who can open it:** only people in the group. `group_page(group)` returns nothing for anyone else, and the page then sends them to Discover, so a link alone shows nothing. It also gives the street address (hidden until you are in), the place, the members and the poll.
+- **Members are stand-ins:** each member is shown by a per-group `handle` (a column on `meetup_members`), not their account id. Block, report and "add as friend" take that handle (`block_group_member`, `report_group_member`, `friend_request_group_member`), and the database works out the person. Blocked people are hidden from the blocker's list but still counted in the headcount. Starter organizers are shown as one line, "<label>: N organizers are going".
+- **Going:** joining counts as going (`meetup_members.going` defaults to true). `set_group_going` lets someone say "can't make it" or clear it. The status line compares yeses with the group's minimum: "Needs N more people", "N more yeses to lock it in", or "Locked in".
+- **The question for the group:** the person who started the group asks one question with two to four different answers (`create_group_poll`; a new question replaces the old one). Members vote once each and can change or take back the vote (`vote_group_poll`). Nobody else can create one.
+- **Calendar:** groups you are in show on the calendar grid automatically (kind "group") and open the group page; "Add to my calendar" downloads a calendar file (`/app/groups/<id>/calendar.ics`, members only). The plans' calendar files now share the same builder (`src/utils/ics.ts`).
+- **Plans page:** the "groups" view lists the groups you are in (`my_groups`), with a real status ("Needs 1 more yes", "Confirmed"), people, and an open question you have not answered.
+- **Chat:** the page says "Group chat is coming soon" instead of showing a chat box that saves nothing. Group chat is the next round.

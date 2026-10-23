@@ -1,53 +1,33 @@
-import { groupIds, sampleGroup } from "@/data/group.ts";
-import type { GroupDetail } from "@/data/group.ts";
+import { actions } from "astro:actions";
+
+type Simple = { ok: true } | { ok: false; error: string };
+
+const failed = { ok: false as const, error: "Something went wrong. Please try again." };
+
+const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | typeof failed =>
+  error || data === undefined ? failed : data;
 
 /**
- * Everything one group's page reads and writes. Backed by sample data today.
- * The Supabase version reads `meetup_groups`, `meetup_members` and the latest
- * `group_messages`, subscribes to `group_messages` with Realtime so chat is
- * live, and writes through RPCs that check membership (see SUPABASE.md).
- * Leaving, the calendar pin and friend requests reuse `discover-repo` and
- * `plans-repo`.
+ * What one group's page writes. The page reads on the server with `readGroupPage`
+ * (src/lib/group-db.ts). Members are named by a stand-in `handle`, never by account id,
+ * and every call is checked in the database against who is in the group.
  */
-export interface GroupRepo {
-  getGroup(id: string): Promise<GroupDetail | null>;
-  /** Ids of every group, for static page generation. */
-  listGroupIds(): Promise<string[]>;
-  /** The viewer's answer to the group's plan; `null` clears it. */
-  setGoing(groupId: string, going: boolean | null): Promise<void>;
-  /** Votes for a poll option, or clears the vote with `null`. */
-  vote(groupId: string, optionId: string | null): Promise<void>;
-  /** Posts a message. The text is trimmed and capped server-side. */
-  sendMessage(groupId: string, text: string): Promise<void>;
-  /** Hides a member from the viewer everywhere. Writes `blocks`. */
-  blockMember(memberId: string): Promise<void>;
-  /** Files a report. Writes `reports` and never tells the reported person. */
-  reportMember(memberId: string, reasonId: string): Promise<void>;
-}
+export const setGoing = async (groupId: string, going: boolean | null) =>
+  unwrap(await actions.groups.setGoing({ groupId, going })) as Simple;
 
-const mockRepo: GroupRepo = {
-  async getGroup(id) {
-    return sampleGroup(id);
-  },
-  async listGroupIds() {
-    return groupIds;
-  },
-  async setGoing() {},
-  async vote() {},
-  async sendMessage() {},
-  async blockMember() {},
-  async reportMember() {},
-};
+export const vote = async (pollId: string, optionId: string | null) =>
+  unwrap(await actions.groups.vote({ pollId, optionId })) as Simple;
 
-export const groupRepo: GroupRepo = mockRepo;
+export const createPoll = async (groupId: string, question: string, options: string[]) =>
+  unwrap(await actions.groups.createPoll({ groupId, question, options })) as Simple;
 
-/** The browser calls these; swap their bodies for Astro Action calls later. */
-export const setGoing = (groupId: string, going: boolean | null) =>
-  groupRepo.setGoing(groupId, going);
-export const vote = (groupId: string, optionId: string | null) =>
-  groupRepo.vote(groupId, optionId);
-export const sendMessage = (groupId: string, text: string) =>
-  groupRepo.sendMessage(groupId, text);
-export const blockMember = (memberId: string) => groupRepo.blockMember(memberId);
-export const reportMember = (memberId: string, reasonId: string) =>
-  groupRepo.reportMember(memberId, reasonId);
+export const blockMember = async (groupId: string, handle: string) =>
+  unwrap(await actions.groups.block({ groupId, handle })) as Simple;
+
+export type ReportReason = "unsafe" | "harassment" | "spam" | "fake" | "underage" | "other";
+
+export const reportMember = async (groupId: string, handle: string, reason: ReportReason) =>
+  unwrap(await actions.groups.report({ groupId, handle, reason })) as Simple;
+
+export const friendMember = async (groupId: string, handle: string) =>
+  unwrap(await actions.groups.friend({ groupId, handle })) as { ok: true; status: string } | { ok: false; error: string };

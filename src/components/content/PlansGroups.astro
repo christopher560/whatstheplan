@@ -55,7 +55,7 @@ const {
                     {group.category}
                   </Pill>
                   <Pill size="tiny" variant="filled" color={statusLabels[group.status].color}>
-                    {statusLabels[group.status].label}
+                    {group.statusLabel ?? statusLabels[group.status].label}
                   </Pill>
                 </div>
                 <h3 class="plans-groups_name text-style-h4">{group.title}</h3>
@@ -70,22 +70,24 @@ const {
                 <div class="plans-groups_crew">
                   <AvatarStack
                     size="small"
-                    people={[...group.members, "You"].map((name) => ({
-                      initial: name,
-                      color: personColor(name),
+                    people={[...group.members, "You"].map((name, index) => ({
+                      initial: name.replace(/^@/, ""),
+                      color: group.memberColors?.[index] ?? personColor(name),
                     }))}
                   />
                   <p class="plans-groups_who text-style-small">
                     {group.members.length + 1} people · You + {group.members.join(", ")}
                   </p>
                 </div>
-                <div class="plans-groups_chat">
-                  <PathIcon d="M4 5h16v11H9l-5 4V5z" variant="small" />
-                  <p class="plans-groups_last text-style-small">{group.last}</p>
-                  {group.unread > 0 && (
-                    <span class="plans-groups_unread text-style-small">{group.unread}</span>
-                  )}
-                </div>
+                {group.last && (
+                  <div class="plans-groups_chat">
+                    <PathIcon d="M4 5h16v11H9l-5 4V5z" variant="small" />
+                    <p class="plans-groups_last text-style-small">{group.last}</p>
+                    {group.unread > 0 && (
+                      <span class="plans-groups_unread text-style-small">{group.unread}</span>
+                    )}
+                  </div>
+                )}
                 {group.vote && (
                   <p class="plans-groups_vote">
                     <span class="plans-groups_dot" />
@@ -96,7 +98,7 @@ const {
                   <ActionButton element="link" href={`${groupHref}/${group.id}`} color="ink">
                     Open group
                   </ActionButton>
-                  <ActionButton color="white" data-add>
+                  <ActionButton element="link" href={`${groupHref}/${group.id}/calendar.ics`} color="white" download>
                     Add to calendar
                   </ActionButton>
                 </div>

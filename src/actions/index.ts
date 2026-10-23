@@ -561,6 +561,92 @@ export const server = {
     }),
   },
 
+  groups: {
+    /** The viewer's answer to the group's plan: yes, can't make it, or null to clear it. */
+    setGoing: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid(), going: z.boolean().nullable() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("set_group_going", { p_group: input.groupId, p_going: input.going });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    vote: defineAction({
+      accept: "json",
+      input: z.object({ pollId: z.uuid(), optionId: z.uuid().nullable() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("vote_group_poll", { p_poll: input.pollId, p_option: input.optionId });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    /** The person who started the group asks it a question. A new question replaces the old one. */
+    createPoll: defineAction({
+      accept: "json",
+      input: z.object({
+        groupId: z.uuid(),
+        question: z.string().trim().min(1).max(80),
+        options: z.array(z.string().trim().min(1).max(40)).min(2).max(4),
+      }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("create_group_poll", {
+          p_group: input.groupId,
+          p_question: input.question,
+          p_options: input.options,
+        });
+        return error ? { ok: false, error: error.message === "Bad options" ? "Give two to four different answers." : generic } : { ok: true };
+      },
+    }),
+
+    block: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid(), handle: z.uuid() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("block_group_member", { p_group: input.groupId, p_handle: input.handle });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    report: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid(), handle: z.uuid(), reason: z.enum(["unsafe", "harassment", "spam", "fake", "underage", "other"]) }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("report_group_member", {
+          p_group: input.groupId,
+          p_handle: input.handle,
+          p_reason: input.reason,
+          p_details: "",
+        });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    friend: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid(), handle: z.uuid() }),
+      handler: async (input, context): Promise<{ ok: true; status: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("friend_request_group_member", {
+          p_group: input.groupId,
+          p_handle: input.handle,
+        });
+        return error || typeof data !== "string" ? { ok: false, error: generic } : { ok: true, status: data };
+      },
+    }),
+  },
+
   discover: {
     /** Takes a spot in a group. The database holds the group while it counts, so the last spot goes to one person. */
     join: defineAction({

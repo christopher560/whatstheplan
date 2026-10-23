@@ -14,9 +14,11 @@ interface Props {
   members?: GroupMember[];
   /** The viewer, listed first. */
   viewer?: { name: string; color: AccentColor };
+  /** People running a starter group. They are not accounts, so they have no menu. */
+  organizers?: { label: string; count: number };
 }
 
-const { render = true, members = [], viewer } = Astro.props;
+const { render = true, members = [], viewer, organizers } = Astro.props;
 
 const icons = {
   addFriend: "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 3-5 6-5s6 2 6 5M18 8v6M15 11h6",
@@ -43,6 +45,18 @@ const icons = {
             </div>
           </div>
         </li>
+        {organizers && (
+          <li class="group-members_item">
+            <div class="group-members_row">
+              <div class="group-members_text">
+                <p class="group-members_name text-style-main">{organizers.label}</p>
+                <p class="group-members_sub text-style-small">
+                  {organizers.count} {organizers.count === 1 ? "organizer is" : "organizers are"} going
+                </p>
+              </div>
+            </div>
+          </li>
+        )}
         {members.map((member) => (
           <li class="group-members_item" data-member={member.id}>
             <div class="group-members_row">

@@ -82,6 +82,10 @@ export interface HubGroup {
   unread: number;
   /** Open vote, empty when there is none. */
   vote: string;
+  /** Overrides the standard text for `status`, with the real numbers. */
+  statusLabel?: string;
+  /** Avatar colors for `members`, in the same order. */
+  memberColors?: AccentColor[];
 }
 
 /** A group that already met, with the people the viewer can add as friends. */

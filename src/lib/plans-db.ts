@@ -7,6 +7,10 @@ import type { HubGoing, HubHosted, HubInvite, InviteReply, PlansHub } from "@/da
 import type { FeedItem, PlanDetail, Reply } from "@/data/plan-detail.ts";
 import { nearestAccent } from "@/utils/avatar-accent.ts";
 import { slotLabel } from "@/utils/slot-time.ts";
+import { groupCategories } from "@/data/discover.ts";
+import type { GroupCategoryId } from "@/data/discover.ts";
+import { countdown, safeZone, whenLabel } from "@/lib/group-db.ts";
+import type { HubGroup } from "@/data/plans-hub.ts";
 
 type PlanRow = {
   id: string;
@@ -94,8 +98,8 @@ const loadPlans = async (supabase: SupabaseClient) => {
 };
 
 /** Plans the signed-in person hosts or was invited to. */
-export const readHub = async (supabase: SupabaseClient, userId: string): Promise<PlansHub> => {
-  const { plans, byPlan, slotsByPlan, pinned } = await loadPlans(supabase);
+export const readHub = async (supabase: SupabaseClient, userId: string, zoneName?: string): Promise<PlansHub> => {
+  const [{ plans, byPlan, slotsByPlan, pinned }, mine] = await Promise.all([loadPlans(supabase), supabase.rpc("my_groups")]);
   const hosting: HubHosted[] = [];
   const invites: HubInvite[] = [];
   const replies: Record<string, InviteReply> = {};
@@ -141,7 +145,48 @@ export const readHub = async (supabase: SupabaseClient, userId: string): Promise
   });
 
   const going: HubGoing[] = [];
-  return { replies, invites, hosting, going, groups: [], past: [] };
+
+  /* Discover groups the person is in. */
+  const zone = safeZone(zoneName);
+  const now = new Date();
+  const groups: HubGroup[] = ((mine.data ?? []) as {
+    id: string;
+    title: string;
+    category: GroupCategoryId;
+    startsAt: string;
+    place: string;
+    minPeople: number;
+    total: number;
+    going: number;
+    people: { name: string; color: string | null }[];
+    vote: string | null;
+  }[]).map((group) => {
+    const category = groupCategories.find((item) => item.id === group.category)!;
+    const status = group.total < group.minPeople ? "form" : group.going >= group.minPeople ? "ok" : "wait";
+    const start = new Date(group.startsAt);
+    return {
+      id: group.id,
+      category: category.label,
+      color: category.color,
+      title: group.title,
+      when: whenLabel(start, zone, now),
+      place: group.place,
+      countdown: countdown(start, now),
+      members: group.people.map((person) => person.name),
+      memberColors: group.people.map((person) => nearestAccent(person.color)),
+      status,
+      statusLabel:
+        status === "form"
+          ? `Forming. Needs ${group.minPeople - group.total} more`
+          : status === "wait"
+            ? `Needs ${group.minPeople - group.going} more ${group.minPeople - group.going === 1 ? "yes" : "yeses"}`
+            : "Confirmed",
+      last: "",
+      unread: 0,
+      vote: group.vote ? `Vote: ${group.vote}` : "",
+    };
+  });
+  return { replies, invites, hosting, going, groups, past: [] };
 };
 
 /** Invites the signed-in person has not answered, for the sidebar badge. */
@@ -284,12 +329,43 @@ export const readCalendarPlans = async (
   userId: string,
   zone: string,
 ): Promise<CalendarPlan[]> => {
-  const [plans, slots, mine, pins] = await Promise.all([
+  const [plans, slots, mine, pins, groups] = await Promise.all([
     supabase.from("plans").select("*"),
     supabase.from("plan_slots").select("id, plan_id, starts_at, position"),
     supabase.from("plan_members").select("plan_id, is_host, reply").eq("user_id", userId),
     supabase.from("calendar_pins").select("plan_id"),
+    /* Groups the person is in: the database only lets them read their own. */
+    supabase
+      .from("meetup_groups")
+      .select("id, title, starts_at, ends_at, status, places(name)")
+      .neq("status", "cancelled")
+      .gt("ends_at", new Date().toISOString()),
   ]);
+  const fromGroups: CalendarPlan[] = ((groups.data ?? []) as unknown as {
+    id: string;
+    title: string;
+    starts_at: string;
+    ends_at: string;
+    places: { name: string } | { name: string }[] | null;
+  }[]).map((group) => {
+    const start = clockIn(group.starts_at, zone);
+    const end = clockIn(group.ends_at, zone);
+    const from = Math.min(Math.max(start.hour, 8), 22);
+    const venue = Array.isArray(group.places) ? group.places[0]?.name : group.places?.name;
+    return {
+      id: group.id,
+      date: start.date,
+      from,
+      to: end.date === start.date ? Math.min(Math.max(end.hour, from + 1), 24) : 24,
+      short: group.title.length > 7 ? `${group.title.slice(0, 6)}.` : group.title,
+      title: group.title,
+      when: new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: zone }).format(
+        new Date(group.starts_at),
+      ),
+      place: venue ?? "Public place",
+      kind: "group" as const,
+    };
+  });
   const slotsOf = new Map<string, SlotRow[]>();
   ((slots.data ?? []) as SlotRow[]).forEach((slot) => {
     slotsOf.set(slot.plan_id, [...(slotsOf.get(slot.plan_id) ?? []), slot]);
@@ -297,7 +373,7 @@ export const readCalendarPlans = async (
   const memberOf = new Map((mine.data ?? []).map((row) => [row.plan_id as string, row]));
   const pinned = new Set((pins.data ?? []).map((row) => row.plan_id as string));
 
-  return ((plans.data ?? []) as PlanRow[]).flatMap((plan) => {
+  const fromPlans = ((plans.data ?? []) as PlanRow[]).flatMap((plan): CalendarPlan[] => {
     const member = memberOf.get(plan.id);
     const options = slotsOf.get(plan.id) ?? [];
     /* The locked time, or the host's pick until one is locked. */
@@ -337,4 +413,5 @@ export const readCalendarPlans = async (
       },
     ];
   });
+  return [...fromPlans, ...fromGroups];
 };

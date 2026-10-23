@@ -2,27 +2,36 @@
 import DashboardLayout from "@/layouts/DashbaordLayout.astro";
 import DashboardSection from "@/components/wrapper/DashboardSection.astro";
 import DashboardColumns from "@/components/wrapper/DashboardColumns.astro";
+import Panel from "@/components/wrapper/Panel.astro";
 import GroupState from "@/components/content/GroupState.astro";
 import GroupLeft from "@/components/content/GroupLeft.astro";
 import GroupBody from "@/components/content/GroupBody.astro";
 import GroupHeader from "@/components/content/GroupHeader.astro";
 import GroupPlan from "@/components/content/GroupPlan.astro";
 import GroupPoll from "@/components/content/GroupPoll.astro";
-import GroupChat from "@/components/content/GroupChat.astro";
 import GroupMembers from "@/components/content/GroupMembers.astro";
 import GroupLeave from "@/components/content/GroupLeave.astro";
 import GroupToast from "@/components/content/GroupToast.astro";
-import { groupRepo } from "@/lib/group-repo.ts";
-import { viewer } from "@/data/dashboard.ts";
+import { z } from "astro/zod";
+import { readGroupPage } from "@/lib/group-db.ts";
+import { nearestAccent } from "@/utils/avatar-accent.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
-
 const { id } = Astro.params;
-const group = await groupRepo.getGroup(id!);
-if (!group) return Astro.redirect("/app/plans");
-const you = { name: viewer.name, color: viewer.color };
+/* Only people in the group can open it, so a link on its own shows nothing. */
+const group = z.uuid().safeParse(id).success
+  ? await readGroupPage(Astro.locals.supabase, id!, Astro.cookies.get("tz")?.value)
+  : null;
+if (!group) return Astro.redirect("/app/discover");
+
+const profile = Astro.locals.profile;
+const you = {
+  name: profile?.first_name || (profile?.username ? `@${profile.username}` : "You"),
+  color: nearestAccent(profile?.avatar_color),
+};
+Astro.response.headers.set("Cache-Control", "private, no-store");
 ---
 
 <DashboardLayout title={group.title}>
@@ -34,10 +43,16 @@ const you = { name: viewer.name, color: viewer.color };
       <GroupHeader group={group} />
       <DashboardColumns>
         <GroupPlan group={group} viewer={you} />
-        <GroupPoll poll={group.poll} />
-        <GroupChat viewerName={you.name} />
+        <GroupPoll poll={group.poll} isHost={group.isHost} />
+        <Panel aria-labelledby="group-chat-soon">
+          <h2 id="group-chat-soon" class="text-style-h4">Group chat is coming soon</h2>
+          <p class="text-style-main">
+            Until then, the plan above, the question for the group, and the member list are all here. Chat is the next
+            thing we are building.
+          </p>
+        </Panel>
         <Fragment slot="rail">
-          <GroupMembers members={group.members} viewer={you} />
+          <GroupMembers members={group.members} viewer={you} organizers={group.organizers} />
           <GroupLeave />
           <GroupToast />
         </Fragment>

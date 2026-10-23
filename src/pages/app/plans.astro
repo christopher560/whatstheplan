@@ -14,7 +14,7 @@ import { readHub } from "@/lib/plans-db.ts";
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
-const hub = await readHub(Astro.locals.supabase, Astro.locals.user!.id);
+const hub = await readHub(Astro.locals.supabase, Astro.locals.user!.id, Astro.cookies.get("tz")?.value);
 ---
 
 <DashboardLayout title="Your plans">

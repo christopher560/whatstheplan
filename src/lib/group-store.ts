@@ -2,13 +2,14 @@ import type { AccentColor } from "@/types.ts";
 import type { GroupDetail, GroupMember } from "@/data/group.ts";
 import {
   blockMember,
+  createPoll,
+  friendMember,
   reportMember,
-  sendMessage,
   setGoing,
   vote as saveVote,
 } from "@/lib/group-repo.ts";
+import type { ReportReason } from "@/lib/group-repo.ts";
 import { joinGroup, leaveGroup } from "@/lib/discover-repo.ts";
-import { setFriendRequest, setOnCalendar } from "@/lib/plans-repo.ts";
 
 /**
  * Shared state for one group's page. Each component subscribes to the part it
@@ -62,7 +63,7 @@ export const getPage = (): GroupPage => {
     state = {
       going: page.group.going,
       onCalendar: page.group.onCalendar,
-      vote: null,
+      vote: page.group.poll?.mine ?? null,
       sent: [],
       blocked: {},
       reported: {},
@@ -105,8 +106,9 @@ export type StatusTone = "locked" | "waiting" | "forming";
 /** Headcounts and the status line, worked out from who has said yes. */
 export const status = () => {
   const g = group();
-  const total = g.members.length + 1;
-  const going = g.members.filter((member) => member.going).length + (get().going ? 1 : 0);
+  /* The database counts everyone else, including people the viewer blocked and starter organizers. */
+  const total = (g.counts?.total ?? g.members.length) + 1;
+  const going = (g.counts?.going ?? g.members.filter((member) => member.going).length) + (get().going ? 1 : 0);
   const open = g.capacity - total;
   const needed = g.minimum - going;
   const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
@@ -124,22 +126,34 @@ export const status = () => {
   return { total, going, open, tone, label };
 };
 
-export const setAnswer = (answer: boolean) => {
-  const next = get().going === answer ? null : answer;
-  update({ going: next });
-  void setGoing(group().id, next);
-};
+/** Puts the toast up when the database said no, and the page back as it was. */
+const sorry = (message: string, undo: Partial<GroupViewState>) => update({ ...undo, toast: message });
 
-export const toggleCalendar = () => {
-  const added = !get().onCalendar;
-  update({ onCalendar: added });
-  void setOnCalendar(group().id, added);
+export const setAnswer = (answer: boolean) => {
+  const before = get().going;
+  const next = before === answer ? null : answer;
+  update({ going: next });
+  void setGoing(group().id, next).then((result) => {
+    if (!result.ok) sorry("That didn't save. Please try again.", { going: before });
+  });
 };
 
 export const castVote = (optionId: string) => {
-  const next = get().vote === optionId ? null : optionId;
+  const poll = group().poll;
+  if (!poll?.id) return;
+  const before = get().vote;
+  const next = before === optionId ? null : optionId;
   update({ vote: next });
-  void saveVote(group().id, next);
+  void saveVote(poll.id, next).then((result) => {
+    if (!result.ok) sorry("That vote didn't save. Please try again.", { vote: before });
+  });
+};
+
+/** The person who started the group asks it a question. The page reloads to show it. */
+export const askGroup = async (question: string, options: string[]) => {
+  const result = await createPoll(group().id, question, options);
+  if (result.ok) location.reload();
+  return result;
 };
 
 export const send = (text: string) => {
@@ -148,7 +162,7 @@ export const send = (text: string) => {
   update({
     sent: [...get().sent, { id: `sent-${get().sent.length}`, text: clean, time: "Just now" }],
   });
-  void sendMessage(group().id, clean);
+  /* Chat is the next round: nothing is saved yet, and the page does not show the chat box. */
   return true;
 };
 
@@ -162,9 +176,11 @@ export const block = (memberId: string) => {
   update({
     blocked: { ...get().blocked, [memberId]: true },
     menu: null,
-    toast: `${member?.name ?? "They"} is blocked. You will not see their messages.`,
+    toast: `${member?.name ?? "They"} is blocked. You will not see them again.`,
   });
-  void blockMember(memberId);
+  void blockMember(group().id, memberId).then((result) => {
+    if (!result.ok) sorry("That didn't save. Please try again.", { blocked: { ...get().blocked, [memberId]: false } });
+  });
 };
 
 export const report = (memberId: string, reasonId: string) => {
@@ -174,32 +190,39 @@ export const report = (memberId: string, reasonId: string) => {
     reported: { ...get().reported, [memberId]: true },
     toast: `Thanks. We will take a look. ${member?.name ?? "They"} does not know who reported.`,
   });
-  void reportMember(memberId, reasonId);
+  void reportMember(group().id, memberId, reasonId as ReportReason).then((result) => {
+    if (!result.ok) sorry("That didn't send. Please try again.", { reported: { ...get().reported, [memberId]: false } });
+  });
 };
 
+/** A friend request to someone in the group. It cannot be taken back from here. */
 export const toggleFriend = (memberId: string) => {
   const member = memberById(memberId);
-  if (!member) return;
-  const sent = !get().friends[memberId];
+  if (!member || get().friends[memberId]) return;
   update({
-    friends: { ...get().friends, [memberId]: sent },
-    toast: sent
-      ? `Friend request sent to ${member.name}. They will see you in their list if they accept.`
-      : "",
+    friends: { ...get().friends, [memberId]: true },
+    toast: `Friend request sent to ${member.name}. They will see you in their list if they accept.`,
   });
-  void setFriendRequest(member.name, sent);
+  void friendMember(group().id, memberId).then((result) => {
+    if (!result.ok) sorry("That didn't send. Please try again.", { friends: { ...get().friends, [memberId]: false } });
+  });
 };
 
 export const askLeave = (ask: boolean) => update({ leaveAsk: ask });
 
 export const confirmLeave = () => {
   update({ left: true, leaveAsk: false, toast: "" });
-  void leaveGroup(group().id);
+  void leaveGroup(group().id).then((result) => {
+    if (!result.ok) sorry("That didn't save. Please try again.", { left: false });
+  });
 };
 
+/** Taking the spot back can fail if someone else took it, and then the page says so. */
 export const undoLeave = () => {
   update({ left: false });
-  void joinGroup(group().id);
+  void joinGroup(group().id).then((result) => {
+    if (!result.ok) sorry(result.error, { left: true });
+  });
 };
 
 export const dismissToast = () => update({ toast: "" });
