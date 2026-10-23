@@ -9,7 +9,11 @@ export default defineConfig({
   site: SITE_URL,
   // Pages are static unless they say `export const prerender = false`. The app
   // pages do, because they depend on who is signed in.
-  adapter: vercel(),
+  adapter: vercel({
+    webAnalytics: {
+      enabled: true,
+    },
+  }),
   env: {
     schema: {
       PUBLIC_SUPABASE_URL: envField.string({ context: "client", access: "public" }),
