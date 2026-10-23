@@ -72,7 +72,7 @@ const times = ["Morn", "Aft", "Eve"];
               <span class="overlap-card_swatch" aria-hidden="true" />
               <span class="text-style-small">
                 <strong>
-                  {friend.grid.flat().filter(Boolean).length} shared windows.
+                  {friend.grid.flat().filter(Boolean).length} shared {friend.grid.flat().filter(Boolean).length === 1 ? "window" : "windows"}.
                 </strong>{" "}
                 {friend.best}
               </span>
@@ -82,10 +82,12 @@ const times = ["Morn", "Aft", "Eve"];
 
         <Pill
           class="width-full"
-          element="button"
+          element="link"
           size="main"
           variant="filled"
           color="purple"
+          href={`/app/dashboard?with=${friends[0].id}&from=friend#builder`}
+          data-plan-link
         >
           Plan something with <span data-friend-name>{friends[0].name}</span>
         </Pill>
@@ -99,6 +101,7 @@ const times = ["Morn", "Aft", "Eve"];
     const pills = root.querySelectorAll<HTMLElement>("[data-friend]");
     const panels = root.querySelectorAll<HTMLElement>("[data-panel]");
     const names = root.querySelectorAll<HTMLElement>("[data-friend-name]");
+    const planLink = root.querySelector<HTMLAnchorElement>("[data-plan-link]");
 
     pills.forEach((pill) =>
       pill.addEventListener("click", () => {
@@ -108,6 +111,7 @@ const times = ["Morn", "Aft", "Eve"];
         panels.forEach((panel) => {
           panel.hidden = panel.dataset.panel !== pill.dataset.friend;
         });
+        if (planLink) planLink.href = `/app/dashboard?with=${pill.dataset.friend}&from=friend#builder`;
         names.forEach((name) => {
           name.textContent = pill.dataset.name!;
         });

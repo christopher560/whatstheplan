@@ -466,6 +466,13 @@ answered), plans you host (with how many replied), and plans you are going to.
 
 ---
 
+**The home page.** Everything on it comes from your own account: friends free
+tonight, your plans (bigger bubble = closer to locked in), invites you have not
+answered (your answer is saved and the sidebar badge updates), when you and each
+friend are both free this week, and your monthly hangout budget (you set the number;
+"planned" adds up your plans for the month). A new account sees an almost empty page
+with the plan builder at the top.
+
 ## 8. Security: what keeps people's data safe
 
 These protections are shared by every feature above.
@@ -503,7 +510,6 @@ These protections are shared by every feature above.
 | Email nudges and reminders | The Nudge and auto-nudge buttons do nothing yet. Emails would go through Resend; texts need a paid text-message service. |
 | Teen Discover | 13 to 15 and 16 to 17 meeting only their own band. Waits for an age check (school email or parent consent) and a legal review. |
 | Groups the app forms | The app grouping people from a waitlist who share interests and free hours. |
-| Idea stash, and real data for the dashboard home | The home page still shows some sample cards. |
 
 ---
 

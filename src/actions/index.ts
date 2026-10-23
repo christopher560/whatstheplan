@@ -811,6 +811,18 @@ export const server = {
       },
     }),
 
+    /** The monthly hangout budget the person set for themselves, in dollars. */
+    setMonthlyBudget: defineAction({
+      accept: "json",
+      input: z.object({ dollars: z.number().int().min(0).max(5000) }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("set_monthly_budget", { p_dollars: input.dollars });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
     /** Whether a username is free. Someone's own current username counts as free. */
     checkUsername: defineAction({
       accept: "json",

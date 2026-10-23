@@ -2,13 +2,11 @@
 import Panel from "@/components/wrapper/Panel.astro";
 import Pill from "@/components/item/Pill.astro";
 import Avatar from "@/components/item/Avatar.astro";
-import Button from "@/components/Button.astro";
 import ActionButton from "@/components/item/ActionButton.astro";
 import Icon from "@/components/media/Icon.astro";
 import Input from "@/components/form/Input.astro";
 import icon_close from "@/assets/icons/close.svg";
 import icon_plus from "@/assets/icons/icon_plus.svg";
-import icon_lock from "@/assets/icons/icon_lock.svg";
 import icon_check from "@/assets/icons/icon_check.svg";
 import icon_type_hangout from "@/assets/icons/icon_type_hangout.svg";
 import icon_type_casual from "@/assets/icons/icon_type_casual.svg";
@@ -20,15 +18,11 @@ import type { AccentColor } from "@/types.ts";
 interface Props {
   /** Set to `false` to omit the component. */
   render?: boolean;
-  /** Group comfort limit per person, in dollars. */
-  comfort?: number;
-  /** Where the full idea list lives. */
-  ideasHref?: string;
   /** Friends the person can invite. */
   friends?: { id: string; name: string; color: AccentColor }[];
 }
 
-const { render = true, comfort = 15, ideasHref = "/app/plans", friends = [] } = Astro.props;
+const { render = true, friends = [] } = Astro.props;
 
 const stepLabels = ["Type", "Vibe", "Budget", "Friends", "Send"];
 
@@ -180,8 +174,6 @@ const descriptionChips = [
 
 const start = { type: "hangout", vibe: "cozy", budget: 1, who: [] as string[] };
 const startType = types.find((type) => type.id === start.type)!;
-const comfortHome = `Within your group's $${comfort} comfort zone.`;
-const comfortOver = `Above your group's $${comfort} comfort zone.`;
 ---
 
 {
@@ -195,8 +187,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       <div
         class="plan-builder_wrap"
         data-plan-builder
-        data-comfort-home={comfortHome}
-        data-comfort-over={comfortOver}
         data-budgets={JSON.stringify(budgets)}
         data-types={JSON.stringify(
           Object.fromEntries(types.map((type) => [type.id, type.label])),
@@ -335,12 +325,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
                 ))
               }
             </div>
-            <div class="plan-builder_note" data-comfort>
-              <Icon src={icon_lock} variant="small" />
-              <p class="plan-builder_note_text text-style-small" data-comfort-text>
-                {comfortHome}
-              </p>
-            </div>
           </div>
 
           <div class="plan-builder_panel" data-step-panel="3" hidden>
@@ -440,9 +424,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
                   )),
                 )
               }
-              <Button element="link" variant="link" href={ideasHref}>
-                See all in Idea stash
-              </Button>
             </div>
             <div class="plan-builder_details">
               <Input
@@ -597,8 +578,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       const nextText = next.querySelector<HTMLElement>(".action-button_text")!;
       const copy = root.querySelector<HTMLButtonElement>("[data-copy]")!;
       const copyText = copy.querySelector<HTMLElement>(".pill_text")!;
-      const note = root.querySelector<HTMLElement>("[data-comfort]")!;
-      const noteText = root.querySelector<HTMLElement>("[data-comfort-text]")!;
       const typeNote = root.querySelector<HTMLElement>("[data-type-note]")!;
       const summary = root.querySelector<HTMLElement>("[data-summary]")!;
       const slug = root.querySelector<HTMLElement>("[data-slug]")!;
@@ -820,12 +799,6 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
           (button) => button.dataset.type === state.type,
         );
         typeNote.textContent = activeType?.dataset.note ?? "";
-
-        const over = state.budget > 1;
-        note.classList.toggle("over", over);
-        noteText.textContent = over
-          ? root.dataset.comfortOver!
-          : root.dataset.comfortHome!;
 
         const budget = budgets[state.budget];
         const low = state.budget === 0 ? -1 : budgets[state.budget - 1].max;

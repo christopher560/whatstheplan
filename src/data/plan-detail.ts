@@ -40,9 +40,9 @@ export interface PlanDetail {
   /** Short link used by the invite page, `whatstheplan.app/p/{slug}`. */
   slug: string;
   description: string;
-  /** Cost per person in dollars, and the group's comfort limit. */
+  /** Cost per person in dollars, and the group's comfort limit (null until enough people have answered). */
   perPerson: number;
-  comfort: number;
+  comfort: number | null;
   friends: PlanFriend[];
   slots: PlanSlot[];
   /** Locked time slot id, or null. */

@@ -49,7 +49,6 @@ const answers = [
                       <Pill
                         class="flex-grow"
                         element="button"
-                        pressed={answer.id === "in"}
                         data-answer={answer.id}
                       >
                         {answer.label}
@@ -98,10 +97,10 @@ const answers = [
                   {invite.deadline}
                 </p>
                 <div class="invite-list_answers formal">
-                  <Pill element="button" variant="filled" color="purple">
+                  <Pill element="button" variant="filled" color="purple" data-answer="in">
                     Accept
                   </Pill>
-                  <Pill element="button">Decline</Pill>
+                  <Pill element="button" data-answer="out">Decline</Pill>
                 </div>
               </div>
             </Panel>
@@ -113,14 +112,33 @@ const answers = [
 }
 
 <script>
+  import { answerInvite } from "@/lib/plans-repo.ts";
+  import type { InviteReply } from "@/data/plans-hub.ts";
+
+  /** Tells the sidebar how many invites are still open. */
+  const announce = () =>
+    window.dispatchEvent(
+      new CustomEvent("plans:pending", { detail: document.querySelectorAll("[data-rsvp]:not([data-answered])").length }),
+    );
+
   document.querySelectorAll<HTMLElement>("[data-rsvp]").forEach((card) => {
     const pills = card.querySelectorAll<HTMLElement>("[data-answer]");
     pills.forEach((pill) =>
-      pill.addEventListener("click", () =>
-        pills.forEach((other) =>
-          other.setAttribute("aria-pressed", String(other === pill)),
-        ),
-      ),
+      pill.addEventListener("click", async () => {
+        const id = card.dataset.inviteId;
+        if (!id) return;
+        const answer = pill.dataset.answer as InviteReply | "maybe";
+        const before = [...pills].find((other) => other.getAttribute("aria-pressed") === "true");
+        pills.forEach((other) => other.setAttribute("aria-pressed", String(other === pill)));
+        card.dataset.answered = "";
+        announce();
+        const result = await answerInvite(id, answer as InviteReply);
+        if (!result.ok) {
+          pills.forEach((other) => other.setAttribute("aria-pressed", String(other === before)));
+          if (!before) delete card.dataset.answered;
+          announce();
+        }
+      }),
     );
   });
 </script>

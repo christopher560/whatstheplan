@@ -14,11 +14,9 @@ interface Props {
   going?: HubGoing[];
   /** Invites; each one appears here once the viewer answers "I'm in". */
   invites?: HubInvite[];
-  /** Where "Open your idea stash" goes. */
-  ideasHref?: string;
 }
 
-const { render = true, going = [], invites = [], ideasHref = "/app/ideas" } = Astro.props;
+const { render = true, going = [], invites = [] } = Astro.props;
 
 const cards = [
   ...going.map((plan) => ({ ...plan, planId: undefined as string | undefined, pinned: false, hasTime: false, fromInvite: false })),
@@ -106,10 +104,6 @@ const cards = [
         </p>
       </section>
 
-      <p class="plans-going_ideas text-style-small">
-        <span>Not sure what to plan?</span>
-        <a href={ideasHref}>Open your idea stash</a>
-      </p>
     </div>
   )
 }

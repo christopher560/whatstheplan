@@ -8,6 +8,9 @@ export type InviteReply = "in" | "out";
 export interface HubInvite {
   /** Primary key of the `plan_members` row. */
   id: string;
+  stage?: 0 | 1 | 2;
+  startsAt?: string;
+  amount?: number;
   category: PlanCategory;
   from: string;
   title: string;
@@ -35,6 +38,12 @@ export interface HubInvite {
 export interface HubHosted {
   /** Primary key of the `plans` row, also the plan page id. */
   id: string;
+  /** 0 idea, 1 voting, 2 locked in. */
+  stage?: 0 | 1 | 2;
+  /** When it starts (the locked time, or the host's pick), as an ISO time. */
+  startsAt?: string;
+  /** A typical spend per person, in dollars. */
+  amount?: number;
   category: PlanCategory;
   title: string;
   when: string;

@@ -100,11 +100,13 @@ const leftLine =
         </div>
 
         <ul class="budget-card_legend">
-          <li class="budget-card_row">
-            <span class="budget-card_swatch spent"></span>
-            <span class="budget-card_label text-style-small">Spent so far</span>
-            <strong class="text-style-small">${spent}</strong>
-          </li>
+          {spent > 0 && (
+            <li class="budget-card_row">
+              <span class="budget-card_swatch spent"></span>
+              <span class="budget-card_label text-style-small">Spent so far</span>
+              <strong class="text-style-small">${spent}</strong>
+            </li>
+          )}
           <li class="budget-card_row">
             <span class="budget-card_swatch planned"></span>
             <span class="budget-card_label text-style-small">{plannedLabel}</span>
@@ -140,7 +142,10 @@ const leftLine =
 }
 
 <script>
+  import { saveMonthlyBudget } from "@/lib/account-repo.ts";
+
   document.querySelectorAll<HTMLElement>("[data-budget-card]").forEach((root) => {
+    let timer = 0;
     const spent = Number(root.dataset.spent);
     const planned = Number(root.dataset.planned);
     let total = Number(root.dataset.total);
@@ -173,8 +178,11 @@ const leftLine =
 
     root.querySelectorAll<HTMLElement>("[data-step]").forEach((button) =>
       button.addEventListener("click", () => {
-        total = Math.max(10, total + Number(button.dataset.step));
+        total = Math.min(5000, Math.max(10, total + Number(button.dataset.step)));
         render();
+        /* Save once they stop tapping. */
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => void saveMonthlyBudget(total), 600);
       }),
     );
   });

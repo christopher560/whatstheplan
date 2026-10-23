@@ -766,3 +766,15 @@ Database only: nothing on the Discover page uses it until round 3.
 
 - Found while testing a second adult account whose interests matched nothing (sports, volunteering, dance) in a town 8 miles from the test groups: both groups scored about 40, under the bar of 50, so the page showed nothing even though groups existed.
 - **Fix:** if no group in reach scores above the bar, the page drops the bar and shows the closest groups with a line saying "Nothing matches your interests yet, so these are the groups closest to you. A good chance to try something new." The quiz does the same as a last step. As soon as one group matches, the bar applies again and the others are counted as "not shown". The scores are unchanged and the bar is still the `discover_min_score` setting.
+
+## Dashboard home - built (no sample data left)
+
+- **One reader:** `readHome` (`src/lib/home-db.ts`) builds the whole page from the person's own plans, friends and calendar. A new account gets empty lists and the page hides any card it cannot fill.
+- **Header:** the friends who are free tonight (from the hours friends share on their calendars) and how many plans are cooking (plans you host plus invites you have not answered).
+- **Plans with your people:** plans you host, then plans you were invited to and have not turned down. Bubble size follows how close it is to locked in (locked is biggest; otherwise how many have replied). The detail button opens the plan page (host) or the invite (guest).
+- **Invites for you:** only unanswered invites. "I'm in", "Maybe" and "Can't" (or Accept and Decline for formal plans) save through `answer_plan`; none starts selected, and the sidebar badge updates.
+- **Who's free tonight:** friends whose shared hours show free or maybe tonight, with a button that opens the plan builder with them already picked. The "I'm free tonight" switch was removed: it changed nothing.
+- **You + a friend are both free:** the three friends who share the most free time with you this week, in morning, afternoon and evening blocks, with the best window named. The button opens the builder with that friend picked.
+- **Hangout budget:** the monthly number you set (`profiles.monthly_budget`, default $100 until you change it; saved by `set_monthly_budget`) and what your plans this month add up to (a typical spend for each plan's budget step). Spending is not tracked, so there is no "spent" line; the group comfort block was removed.
+- **Group comfort on the plan page** is now real: `plan_comfort` returns the lowest comfortable spend among invitees, only to the host and only once two or more people have answered, so one person's number is never shown alone. Before that the card says so.
+- **Idea stash:** not being built. Its links and "cheaper swaps from your idea stash" text were removed from the plan builder, the Plans page and the plan page.

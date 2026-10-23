@@ -48,3 +48,7 @@ export const removeLocation = async () => unwrap(await actions.account.clearLoca
 
 /** How far around their spot Discover looks, in miles. */
 export const saveRadius = async (miles: 5 | 10 | 25) => unwrap(await actions.account.setRadius({ miles })) as Simple;
+
+/** Saves the monthly hangout budget, in dollars. */
+export const saveMonthlyBudget = async (dollars: number) =>
+  unwrap(await actions.account.setMonthlyBudget({ dollars })) as Simple;

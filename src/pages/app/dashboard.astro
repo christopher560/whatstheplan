@@ -9,33 +9,35 @@ import InviteList from "@/components/content/InviteList.astro";
 import BudgetCard from "@/components/content/BudgetCard.astro";
 import FreeTonightCard from "@/components/content/FreeTonightCard.astro";
 import OverlapCard from "@/components/content/OverlapCard.astro";
-import { dashboardRepo } from "@/lib/dashboard-repo.ts";
 import { readBuilderFriends } from "@/lib/plans-db.ts";
+import { readHome } from "@/lib/home-db.ts";
+import { nowFor } from "@/utils/now.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
-const { user, freeNow, plans, invites, budget, tonight, overlap } =
-  await dashboardRepo.getHome();
-const friends = await readBuilderFriends(Astro.locals.supabase);
+const profile = Astro.locals.profile;
+const name = profile?.first_name || (profile?.username ? `@${profile.username}` : "there");
+const [home, friends] = await Promise.all([
+  readHome(Astro.locals.supabase, Astro.locals.user!.id, name, Astro.cookies.get("tz")?.value, nowFor(Astro.cookies)),
+  readBuilderFriends(Astro.locals.supabase),
+]);
+const { freeNow, plans, invites, budget, tonight, overlap } = home;
+/* Friends free tonight can be sent straight to the plan builder. */
+const tonightWithIds = tonight.map((entry) => ({ ...entry, id: friends.find((friend) => friend.name === entry.name)?.id }));
 ---
 
 <DashboardLayout title="Dashboard">
   <!-- Home -->
   <DashboardSection paddingTop="small" paddingBottom="small">
     <DashboardColumns>
-      <DashboardHeader
-        name={Astro.locals.profile?.first_name ||
-          (Astro.locals.profile?.username ? `@${Astro.locals.profile.username}` : user.name)}
-        people={freeNow.people}
-        summary={freeNow.summary}
-      />
-      <PlanBuilder comfort={budget.comfort} friends={friends} />
+      <DashboardHeader name={name} people={freeNow.people} summary={freeNow.summary} />
+      <PlanBuilder friends={friends} />
       <PlanBubbles plans={plans} />
       <InviteList invites={invites} />
       <Fragment slot="rail">
         <BudgetCard {...budget} />
-        <FreeTonightCard friends={tonight} />
+        <FreeTonightCard friends={tonightWithIds} />
         <OverlapCard friends={overlap} />
       </Fragment>
     </DashboardColumns>

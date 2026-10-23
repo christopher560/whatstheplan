@@ -1,19 +1,17 @@
 ---
 import Panel from "@/components/wrapper/Panel.astro";
-import Pill from "@/components/item/Pill.astro";
 import type { PlanDetail } from "@/data/plan-detail.ts";
 
 interface Props {
   /** Set to `false` to omit the component. */
   render?: boolean;
   plan?: PlanDetail;
-  /** Where the cheaper swaps link to. */
-  ideasHref?: string;
 }
 
-const { render = true, plan, ideasHref = "/app/plans" } = Astro.props;
+const { render = true, plan } = Astro.props;
 
-const over = plan ? plan.perPerson > plan.comfort : false;
+const known = plan ? plan.comfort !== null : false;
+const over = plan && plan.comfort !== null ? plan.perPerson > plan.comfort : false;
 ---
 
 {
@@ -28,31 +26,18 @@ const over = plan ? plan.perPerson > plan.comfort : false;
             {plan.perPerson === 0 ? "Free" : `$${plan.perPerson}`}
           </p>
           <p class="plan-budget_vs text-style-small">
-            per person vs the group's ${plan.comfort} comfort zone
+            {known ? `per person vs the group's $${plan.comfort} comfort zone` : "per person, about"}
           </p>
         </div>
         <p class="plan-budget_text text-style-small">
           {
-            over
-              ? "This is above what the group is comfortable with, so someone may quietly skip. Friends only ever see the group's number, never each person's."
-              : "This is inside what the group is comfortable with. Friends only ever see the group's number, never each person's."
+            !known
+              ? "Once two or more people answer the budget question on your invite, the group's comfort zone shows here. You only ever see the group's lowest number, never one person's."
+              : over
+                ? "This is above what the group is comfortable with, so someone may quietly skip. You only see the group's number, never each person's."
+                : "This is inside what the group is comfortable with. You only see the group's number, never each person's."
           }
         </p>
-        {over && (
-          <>
-            <p class="plan-budget_label text-style-small">
-              Cheaper swaps from your idea stash
-            </p>
-            <div class="plan-budget_swaps">
-              {plan.swaps.map((swap) => (
-                <Pill element="link" href={ideasHref}>
-                  {swap.label}
-                  <span slot="after" class="plan-budget_cost">{swap.cost}</span>
-                </Pill>
-              ))}
-            </div>
-          </>
-        )}
       </div>
     </Panel>
   )

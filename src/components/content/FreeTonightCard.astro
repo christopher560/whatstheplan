@@ -8,7 +8,7 @@ interface Props {
   /** Set to `false` to omit the component. */
   render?: boolean;
   /** Friends who are free tonight. */
-  friends?: { name: string; note: string; color: AccentColor }[];
+  friends?: { id?: string; name: string; note: string; color: AccentColor }[];
 }
 
 const { render = true, friends = [] } = Astro.props;
@@ -20,26 +20,14 @@ const { render = true, friends = [] } = Astro.props;
       <div
         class="free-tonight_wrap"
         data-free-tonight
-        data-hint-on="Friends who are free can see that you are too."
-        data-hint-off="You're hidden tonight."
       >
         <div class="free-tonight_head">
           <h2 id="free-tonight-title" class="free-tonight_title text-style-h5">
             Who's free tonight
           </h2>
-          <button
-            type="button"
-            class="free-tonight_switch"
-            role="switch"
-            aria-checked="true"
-            aria-label="I'm free tonight"
-            data-switch
-          >
-            <span class="free-tonight_knob"></span>
-          </button>
         </div>
         <p class="free-tonight_hint text-style-small" data-hint>
-          Friends who are free can see that you are too.
+          Worked out from the free hours your friends share on their calendars.
         </p>
         <ul class="free-tonight_list" data-list>
           {friends.map((friend) => (
@@ -53,37 +41,23 @@ const { render = true, friends = [] } = Astro.props;
             </li>
           ))}
         </ul>
-        <Pill
-          class="width-full"
-          element="button"
-          size="main"
-          variant="filled"
-          color="green"
-          data-ping
-        >
-          Ping everyone who's free
-        </Pill>
+        {friends.some((friend) => friend.id) && (
+          <Pill
+            class="width-full"
+            element="link"
+            size="main"
+            variant="filled"
+            color="green"
+            href={`/app/dashboard?with=${friends.filter((friend) => friend.id).map((friend) => friend.id).join(",")}&from=friend#builder`}
+          >
+            Plan something with them
+          </Pill>
+        )}
       </div>
     </Panel>
   )
 }
 
-<script>
-  document.querySelectorAll<HTMLElement>("[data-free-tonight]").forEach((root) => {
-    const toggle = root.querySelector<HTMLElement>("[data-switch]")!;
-    const hint = root.querySelector<HTMLElement>("[data-hint]")!;
-    const list = root.querySelector<HTMLElement>("[data-list]")!;
-    const ping = root.querySelector<HTMLButtonElement>("[data-ping]")!;
-
-    toggle.addEventListener("click", () => {
-      const on = toggle.getAttribute("aria-checked") !== "true";
-      toggle.setAttribute("aria-checked", String(on));
-      hint.textContent = on ? root.dataset.hintOn! : root.dataset.hintOff!;
-      list.hidden = !on;
-      ping.disabled = !on;
-    });
-  });
-</script>
 
 <style is:global>
   @layer components {

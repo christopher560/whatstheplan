@@ -111,7 +111,7 @@ const nameStyle = (rank: number) =>
                   <p class="plan-bubbles_amount text-style-h4">{plan.cost}</p>
                   <p class="plan-bubbles_unit text-style-tiny">per person</p>
                 </div>
-                <ActionButton color="ink" class="width-full">{plan.action}</ActionButton>
+                <ActionButton element="link" href={plan.href ?? "/app/plans"} color="ink" class="width-full">{plan.action}</ActionButton>
               </div>
             </div>
           </Panel>

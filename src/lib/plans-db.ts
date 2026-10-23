@@ -107,7 +107,16 @@ export const readHub = async (supabase: SupabaseClient, userId: string, zoneName
   plans.forEach((plan) => {
     const people = byPlan.get(plan.id) ?? [];
     const category = categoryOf(plan.kind);
-    const base = { category, title: plan.title, ...sentence(plan, slotsByPlan.get(plan.id) ?? []) };
+    const planSlots = slotsByPlan.get(plan.id) ?? [];
+    const startSlot = planSlots.find((slot) => slot.id === plan.locked_slot_id) ?? planSlots.find((slot) => slot.position === 0) ?? planSlots[0];
+    const base = {
+      category,
+      title: plan.title,
+      stage: plan.stage,
+      startsAt: startSlot?.starts_at,
+      amount: budgetAmount[plan.budget_tier] ?? 0,
+      ...sentence(plan, planSlots),
+    };
 
     if (plan.owner_id === userId) {
       const guests = people.filter((person) => !person.is_host);
@@ -223,12 +232,13 @@ export const readPlan = async (
   if (!plan) return null;
   const row = plan as PlanRow;
 
-  const [people, feed, slotRows, voteRows, states] = await Promise.all([
+  const [people, feed, slotRows, voteRows, states, comfortRow] = await Promise.all([
     supabase.rpc("my_plan_people"),
     supabase.rpc("plan_feed", { p_plan: planId }),
     supabase.from("plan_slots").select("id, plan_id, starts_at").eq("plan_id", planId).order("starts_at"),
     supabase.rpc("plan_votes", { p_plan: planId }),
     supabase.rpc("plan_member_friend_states", { p_plan: planId }),
+    supabase.rpc("plan_comfort", { p_plan: planId }),
   ]);
   const stateOf = new Map(((states.data ?? []) as { member_id: string; state: PlanFriendState }[]).map((row) => [row.member_id, row.state]));
   const votesBy = new Map<string, string[]>();
@@ -260,7 +270,7 @@ export const readPlan = async (
     slug: row.slug,
     description: row.description,
     perPerson: budgetAmount[row.budget_tier] ?? 0,
-    comfort: 15,
+    comfort: typeof comfortRow.data === "number" ? comfortRow.data : null,
     friends: members
       .filter((person) => !person.is_host)
       .map((person) => ({

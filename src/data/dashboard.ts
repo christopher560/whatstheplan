@@ -25,6 +25,8 @@ export interface Plan {
   cost: string;
   action: string;
   people: Person[];
+  /** Where "action" goes. */
+  href?: string;
 }
 
 export type Invite =
