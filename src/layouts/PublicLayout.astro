@@ -8,6 +8,7 @@ import PathIcon from "@/components/media/PathIcon.astro";
 import Pill from "@/components/item/Pill.astro";
 import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
 import { inviteIcons } from "@/data/invite.ts";
+import Analytics from '@vercel/analytics/astro';
 
 interface Props {
   title?: string;
@@ -22,6 +23,7 @@ const { title = "You're invited", note = "No account needed" } = Astro.props;
 <html lang="en">
   <head>
     <BaseHead title={title} noindex />
+    <Analytics />
   </head>
 
   <body>

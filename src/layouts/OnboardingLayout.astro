@@ -5,6 +5,7 @@ import BaseHead from "@/components/utility/BaseHead.astro";
 import SkipLink from "@/components/global/SkipLink.astro";
 import Icon from "@/components/media/Icon.astro";
 import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
+import Analytics from '@vercel/analytics/astro';
 
 interface Props {
   title?: string;
@@ -17,6 +18,7 @@ const { title = "Set up your profile" } = Astro.props;
 <html lang="en">
   <head>
     <BaseHead title={title} noindex />
+    <Analytics />
   </head>
 
   <body>

@@ -10,6 +10,7 @@ import { countPending } from "@/lib/plans-db.ts";
 import { countFriendRequests } from "@/lib/friends-db.ts";
 import "../styles/dashboard.css";
 import "../styles/dashboard-base.css";
+import Analytics from '@vercel/analytics/astro';
 
 interface Props {
   title?: string;
@@ -45,6 +46,7 @@ if (Astro.locals.user) {
 <html lang="en">
   <head>
     <BaseHead title={title} />
+    <Analytics />
     <script is:inline>
       /* Tells the server the person's time zone, so "this week" and "tonight" are theirs. */
       document.cookie = "tz=" + Intl.DateTimeFormat().resolvedOptions().timeZone + ";path=/;max-age=31536000;samesite=lax";
