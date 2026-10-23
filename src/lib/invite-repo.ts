@@ -12,6 +12,10 @@ export interface GuestReply {
   plusOne?: string;
   /** The secret from the guest's own link, when they are changing a reply they already gave. */
   token?: string;
+  /** The proposed times this person can do. */
+  slotIds?: string[];
+  /** A short note about times, for the host. */
+  timeNote?: string;
 }
 
 export type GuestReceipt = { ok: true; path: string } | { ok: false; error: string };
@@ -32,6 +36,21 @@ export const replyAsGuest = async (slug: string, reply: GuestReply): Promise<Gue
     comfortDollars: reply.comfortDollars,
     plusOne: reply.plusOne,
     token: reply.token,
+    slotIds: reply.slotIds,
+    timeNote: reply.timeNote,
   });
+  return error || !data ? failed : data;
+};
+
+
+/** Asks the plan's host to be friends. The status is the same one the Friends page gets. */
+export const addHost = async (slug: string): Promise<{ ok: true; status: string } | { ok: false; error: string }> => {
+  const { data, error } = await actions.inviteAccount.addHost({ slug });
+  return error || !data ? failed : data;
+};
+
+/** Attaches a guest's reply to the signed-in account. Gives back the plan's slug. */
+export const claimReply = async (token: string): Promise<{ ok: true; slug: string } | { ok: false; error: string }> => {
+  const { data, error } = await actions.inviteAccount.claimReply({ token });
   return error || !data ? failed : data;
 };

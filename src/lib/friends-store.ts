@@ -292,13 +292,19 @@ export const toggleFavorite = (id: string) => {
   void setFavorite(id, favorite);
 };
 
+/** Tells the sidebar and tab bar how many friend requests are still open. */
+const announceRequests = () =>
+  window.dispatchEvent(new CustomEvent("friends:pending", { detail: openRequests().length }));
+
 export const accept = (id: string) => {
   update({ accepted: { ...get().accepted, [id]: true } });
+  announceRequests();
   void acceptRequest(id);
 };
 
 export const decline = (id: string) => {
   update({ declined: { ...get().declined, [id]: true } });
+  announceRequests();
   void declineRequest(id);
 };
 

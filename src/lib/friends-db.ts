@@ -64,6 +64,16 @@ const mood = (weeks: string[][], shared: boolean, today: number, nowHour: number
   return { tone: "busy" as FriendTone, status: "Busy tonight", nextFree: "No free time shared yet." };
 };
 
+/** Friend requests other people sent that the signed-in person has not answered, for the sidebar badge. */
+export const countFriendRequests = async (supabase: SupabaseClient, userId: string) => {
+  const { count } = await supabase
+    .from("friendships")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending")
+    .eq("addressee_id", userId);
+  return count ?? 0;
+};
+
 /** The signed-in person's friends, with the hours each shares, ready for the pages. */
 export const loadPeople = async (supabase: SupabaseClient, now: Date) => {
   const monday = startOfWeek(now);

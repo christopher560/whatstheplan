@@ -164,6 +164,13 @@ const budgets = [
 ];
 
 const people = friends;
+/** Nearby times a host can offer on top of their own, as minutes from the start. */
+const leeway = [
+  { minutes: -60, label: "1 hour earlier" },
+  { minutes: 60, label: "1 hour later" },
+  { minutes: 120, label: "2 hours later" },
+  { minutes: 1440, label: "Next day, same time" },
+];
 const descriptionChips = [
   "Bring a snack",
   "Dress comfy",
@@ -476,6 +483,37 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
                 data-place
               />
             </div>
+            <div class="plan-builder_field" data-times>
+              <label class="plan-builder_label text-style-main" for="plan-start" data-start-label>
+                When does it start?
+              </label>
+              <input
+                id="plan-start"
+                class="field-control text-style-main"
+                type="datetime-local"
+                data-start
+              />
+              <p class="plan-builder_hint text-style-small" data-start-hint></p>
+              <div class="plan-builder_leeway" hidden data-leeway>
+                <p class="plan-builder_hint text-style-small">
+                  Fine with a nearby time too? Friends can pick any that work for them.
+                </p>
+                <div class="plan-builder_pills" role="group" aria-label="Nearby times">
+                  {
+                    leeway.map((option) => (
+                      <Pill element="button" size="main" data-alt={option.minutes}>
+                        {option.label}
+                      </Pill>
+                    ))
+                  }
+                </div>
+                <div class="plan-builder_times" data-time-list></div>
+                <Pill element="button" size="main" variant="dashed" data-time-add>
+                  <Icon slot="before" src={icon_plus} variant="small" />
+                  Add another time
+                </Pill>
+              </div>
+            </div>
             <p class="plan-builder_hint text-style-small" role="alert" hidden data-error></p>
             <div class="plan-builder_share" hidden data-share>
               <p class="plan-builder_link text-style-small" data-slug></p>
@@ -578,6 +616,100 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       const created = root.querySelector<HTMLElement>("[data-created]")!;
       const shareBox = root.querySelector<HTMLElement>("[data-share]")!;
       const errorBox = root.querySelector<HTMLElement>("[data-error]")!;
+      const timeList = root.querySelector<HTMLElement>("[data-time-list]")!;
+      const timeAdd = root.querySelector<HTMLButtonElement>("[data-time-add]")!;
+      const startInput = root.querySelector<HTMLInputElement>("[data-start]")!;
+      const startLabel = root.querySelector<HTMLElement>("[data-start-label]")!;
+      const startHint = root.querySelector<HTMLElement>("[data-start-hint]")!;
+      const leewayBox = root.querySelector<HTMLElement>("[data-leeway]")!;
+      const altPills = root.querySelectorAll<HTMLButtonElement>("[data-alt]");
+      const maxTimes = 5;
+      const pad2 = (n: number) => String(n).padStart(2, "0");
+
+      /* A local date-time field's value, like "2026-10-24T19:00". */
+      const localValue = (date: Date) =>
+        `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+      const soon = () => {
+        const date = new Date(Date.now() + 60 * 60 * 1000);
+        date.setMinutes(0, 0, 0);
+        return localValue(date);
+      };
+      const startDate = () => (state.start ? new Date(state.start) : null);
+      const shift = (minutes: number) => {
+        const base = startDate();
+        return base ? new Date(base.getTime() + minutes * 60_000) : null;
+      };
+      const clock = (date: Date) =>
+        date.toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+      const taken = () => 1 + state.alts.size + state.times.length;
+
+      const drawTimes = () => {
+        const has = !!state.start && !Number.isNaN(startDate()!.getTime());
+        leewayBox.hidden = !has;
+        startInput.min = soon();
+        startLabel.textContent =
+          state.type === "hangout" ? "When does it start? (optional)" : "When does it start?";
+        startHint.textContent = has
+          ? "This is your pick. Friends see it first and can say if it works."
+          : state.type === "hangout"
+            ? "Skip it to let friends say what works for them."
+            : "Friends see this as your pick, so they know what to say yes to.";
+        altPills.forEach((pill) => {
+          const minutes = Number(pill.dataset.alt);
+          const at = shift(minutes);
+          const on = state.alts.has(minutes);
+          pill.setAttribute("aria-pressed", String(on));
+          pill.disabled = !on && taken() >= maxTimes;
+          const text = pill.querySelector<HTMLElement>(".pill_text");
+          const base = pill.dataset.label ?? (pill.dataset.label = text?.textContent?.trim() ?? "");
+          if (text) text.textContent = at ? `${base} (${clock(at)})` : base;
+        });
+        timeList.replaceChildren(
+          ...state.times.map((value, index) => {
+            const row = document.createElement("div");
+            row.className = "plan-builder_time_row";
+            const input = document.createElement("input");
+            input.type = "datetime-local";
+            input.className = "field-control text-style-main";
+            input.value = value;
+            input.min = soon();
+            input.setAttribute("aria-label", `Another time ${index + 1}`);
+            input.addEventListener("input", () => {
+              state.times[index] = input.value;
+            });
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "plan-builder_time_remove text-style-small";
+            remove.textContent = "Remove";
+            remove.setAttribute("aria-label", `Remove time ${index + 1}`);
+            remove.addEventListener("click", () => {
+              state.times = state.times.filter((_, at) => at !== index);
+              drawTimes();
+            });
+            row.append(input, remove);
+            return row;
+          }),
+        );
+        timeAdd.hidden = taken() >= maxTimes;
+      };
+      startInput.addEventListener("input", () => {
+        state.start = startInput.value;
+        drawTimes();
+      });
+      altPills.forEach((pill) =>
+        pill.addEventListener("click", () => {
+          const minutes = Number(pill.dataset.alt);
+          if (state.alts.has(minutes)) state.alts.delete(minutes);
+          else if (taken() < maxTimes) state.alts.add(minutes);
+          drawTimes();
+        }),
+      );
+      timeAdd.addEventListener("click", () => {
+        const base = startDate();
+        state.times = [...state.times, base ? localValue(new Date(base.getTime() + 24 * 3_600_000)) : soon()];
+        drawTimes();
+        timeList.querySelector<HTMLInputElement>(".plan-builder_time_row:last-child input")?.focus();
+      });
       const noFriends = root.querySelector<HTMLElement>("[data-no-friends]")!;
       const repliesLink = root.querySelector<HTMLAnchorElement>("[data-replies]")!;
 
@@ -600,6 +732,9 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
         place: "",
         planId: "",
         link: "",
+        times: [] as string[],
+        start: "",
+        alts: new Set<number>(),
       };
 
       const knownIds = [...personPills].map((pill) => pill.dataset.person!);
@@ -737,6 +872,7 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       typeButtons.forEach((button) =>
         button.addEventListener("click", () => {
           state.type = button.dataset.type!;
+          drawTimes();
           render();
         }),
       );
@@ -769,6 +905,12 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
           state.step += 1;
           return render();
         }
+        if (state.type !== "hangout" && !state.start) {
+          errorBox.textContent = "Pick a start time. Friends need to know what they are saying yes to.";
+          errorBox.hidden = false;
+          startInput.focus();
+          return;
+        }
         next.disabled = true;
         errorBox.hidden = true;
         const result = await createPlan({
@@ -777,6 +919,22 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
           budgetTier: state.budget,
           friendIds: [...state.who],
           guestNames: state.others,
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          slots: [
+            ...new Set(
+              (() => {
+                const base = startDate();
+                if (!base || Number.isNaN(base.getTime())) return [];
+                return [
+                  base,
+                  ...[...state.alts].sort((a, b) => a - b).map((minutes) => new Date(base.getTime() + minutes * 60_000)),
+                  ...state.times.filter(Boolean).map((value) => new Date(value)),
+                ]
+                  .filter((date) => !Number.isNaN(date.getTime()))
+                  .map((date) => date.toISOString());
+              })(),
+            ),
+          ].slice(0, maxTimes),
           title: (state.title.trim() || titleInput.placeholder).slice(0, 40),
           description: state.description.trim(),
           place: state.place.trim(),
@@ -862,6 +1020,7 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
         copyText.textContent = "Copied";
       });
 
+      drawTimes();
       render();
     });
 </script>
@@ -872,6 +1031,37 @@ const comfortOver = `Above your group's $${comfort} comfort zone.`;
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
+    }
+
+    .plan-builder_leeway {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .plan-builder_times {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .plan-builder_time_row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+
+      & > input {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .plan-builder_time_remove {
+      flex: none;
+      padding: var(--space-1) var(--space-2);
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.25em;
     }
 
     .plan-builder_intro {

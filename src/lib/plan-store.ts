@@ -18,6 +18,8 @@ export interface PlanViewState {
   description: string;
   editing: boolean;
   sent: Record<string, boolean>;
+  /** People the host sent a friend request to from this page, by member id. */
+  friendReq: Record<string, boolean>;
   /** Bumps on each change, to replay swap animations. */
   tick: number;
 }
@@ -41,6 +43,7 @@ export const getPlan = (): PlanDetail => {
       description: plan.description,
       editing: false,
       sent: {},
+      friendReq: {},
       tick: 0,
     };
   }
@@ -119,7 +122,7 @@ export const toggleLock = (slotId: string) => {
       ? get().feed
       : addFeed(
           `locked in ${slotLabel(slotId).replace(" · ", " at ")}`,
-          "Everyone going was notified and it is on their calendars",
+          "Everyone with the link sees it and can add it to their calendar",
         ),
     tick: get().tick + 1,
   });
@@ -145,6 +148,15 @@ export const sendQuickUpdate = (message: string) => {
     tick: get().tick + 1,
   });
   void repo.sendUpdate(getPlan().id, message);
+};
+
+/** The host asks someone in the plan to be friends. The button reads "Request sent" at once. */
+export const requestFriend = (memberId: string) => {
+  if (get().friendReq[memberId]) return;
+  update({ friendReq: { ...get().friendReq, [memberId]: true } });
+  void repo.addMemberFriend(memberId).then((result) => {
+    if (!result.ok) update({ friendReq: { ...get().friendReq, [memberId]: false } });
+  });
 };
 
 /** A message the host typed. Unlike the quick ones it can be sent again with new words. */

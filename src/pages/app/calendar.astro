@@ -13,15 +13,18 @@ import ImportCard from "@/components/content/ImportCard.astro";
 import { readCalendar } from "@/lib/availability-db.ts";
 import { readCalendarFriends } from "@/lib/friends-db.ts";
 import { nowFor } from "@/utils/now.ts";
+import { readCalendarPlans } from "@/lib/plans-db.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
 const now = nowFor(Astro.cookies);
-const [calendar, friends] = await Promise.all([
+const [calendar, friends, plans] = await Promise.all([
   readCalendar(Astro.locals.supabase, Astro.locals.user!.id, now),
   readCalendarFriends(Astro.locals.supabase, now),
+  readCalendarPlans(Astro.locals.supabase, Astro.locals.user!.id, Astro.cookies.get("tz")?.value || "UTC"),
 ]);
+calendar.plans = plans;
 /* Start with up to two friends picked, so there is something to compare at once. */
 calendar.friends = friends;
 calendar.who = friends.slice(0, 2).map((friend) => friend.id);

@@ -24,9 +24,16 @@ const hasBudget = invite?.steps.includes("budget");
           <h2 class="invite-steps_heading text-style-h3" tabindex="-1" data-heading>
             When can you make it?
           </h2>
-          <p class="invite-steps_hint text-style-main">
-            Tap every time that works. We will lock in the one most people can do.
-          </p>
+          {invite.slots.length > 0 && (
+            <p class="invite-steps_hint text-style-main">
+              Tap every time that works. {invite.host.name} picks the final one.
+            </p>
+          )}
+          {invite.slots.length === 0 && (
+            <p class="invite-steps_hint text-style-main">
+              {invite.host.name} has not picked a time yet. Tell them what works for you below.
+            </p>
+          )}
           <div class="invite-steps_group column" role="group" aria-label="Times">
             {invite.slots.map((slot) => (
               <button
@@ -56,9 +63,28 @@ const hasBudget = invite?.steps.includes("budget");
                 <span class="invite-times_who text-style-small">{slot.who}</span>
               </button>
             ))}
-            <Pill element="button" size="main" class="invite-times_none" data-none>
-              None of these work for me
-            </Pill>
+            {invite.slots.length > 0 && (
+              <Pill element="button" size="main" class="invite-times_none" data-none>
+                None of these work for me
+              </Pill>
+            )}
+          </div>
+          <div class="invite-times_note">
+            <label class="invite-steps_label text-style-main" for="invite-time-note">
+              Would another time work better? (optional)
+            </label>
+            <input
+              id="invite-time-note"
+              class="field-control text-style-main"
+              type="text"
+              maxlength="120"
+              placeholder="Sunday afternoon is better for me"
+              autocomplete="off"
+              data-time-note
+            />
+            <p class="invite-reply_hint text-style-small">
+              {invite.host.name} sees this. It does not change the times above.
+            </p>
           </div>
         </div>
       )}
@@ -95,7 +121,10 @@ const hasBudget = invite?.steps.includes("budget");
     const none = root.querySelector<HTMLElement>("[data-none]");
     const budgets = root.querySelectorAll<HTMLElement>("[data-budget]");
     const note = root.querySelector<HTMLElement>("[data-budget-note]");
+    const timeNote = root.querySelector<HTMLInputElement>("[data-time-note]");
     const noteText = root.querySelector<HTMLElement>("[data-budget-text]");
+
+    timeNote?.addEventListener("input", () => update({ timeNote: timeNote.value }));
 
     root.addEventListener("click", (event) => {
       const target = event.target as HTMLElement;
@@ -138,6 +167,12 @@ const hasBudget = invite?.steps.includes("budget");
 
 <style is:global>
   @layer components {
+    .invite-times_note {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
     .invite-times_slot {
       display: flex;
       flex-direction: column;

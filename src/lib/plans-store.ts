@@ -76,7 +76,7 @@ export const answer = (id: string, reply: InviteReply) => {
 };
 
 /** Puts a plan or group on the calendar. The button only flashes, so nothing is kept here. */
-export const addToCalendar = (id: string) => void setOnCalendar(id, true);
+export const addToCalendar = (planId: string, added = true) => setOnCalendar(planId, added);
 
 export const toggleRequest = (name: string) => {
   const sent = !get().requested[name];

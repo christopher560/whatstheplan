@@ -353,6 +353,10 @@ export const server = {
         when: z.string().trim().max(60),
         friendIds: z.array(z.uuid()).max(30),
         guestNames: z.array(z.string().trim().min(1).max(24)).max(20),
+        /** The host's time zone, so every guest reads times the same way. */
+        tz: z.string().max(64),
+        /** Times to vote on, as ISO instants. */
+        slots: z.array(z.iso.datetime()).max(5),
       }),
       handler: async (input, context): Promise<{ ok: true; id: string; slug: string } | { ok: false; error: string }> => {
         const { user, supabase } = context.locals;
@@ -367,12 +371,19 @@ export const server = {
           p_when: input.when,
           p_friends: input.friendIds,
           p_guests: input.guestNames,
+          p_tz: input.tz,
+          p_slots: input.slots,
         });
         const made = Array.isArray(data) ? data[0] : data;
         if (error || !made?.id) {
           return {
             ok: false,
-            error: error?.message === "Too many plans" ? "You've made a lot of plans. Try again in a bit." : generic,
+            error:
+              error?.message === "Too many plans"
+                ? "You've made a lot of plans. Try again in a bit."
+                : error?.message === "Bad time"
+                  ? "One of those times is too far away or already past."
+                  : generic,
           };
         }
         return { ok: true, id: made.id, slug: made.slug };
@@ -387,6 +398,42 @@ export const server = {
         const { user, supabase } = context.locals;
         if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
         const { error } = await supabase.rpc("answer_plan", { p_member: input.memberId, p_reply: input.reply });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    /** Puts a plan on the person's in-app calendar, or takes it off. */
+    pin: defineAction({
+      accept: "json",
+      input: z.object({ planId: z.uuid(), on: z.boolean() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("set_plan_pin", { p_plan: input.planId, p_on: input.on });
+        return error ? { ok: false, error: generic } : { ok: true };
+      },
+    }),
+
+    /** The host asks someone in the plan (who has an account) to be friends. */
+    addMemberFriend: defineAction({
+      accept: "json",
+      input: z.object({ memberId: z.uuid() }),
+      handler: async (input, context): Promise<{ ok: true; status: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("add_plan_member_friend", { p_member: input.memberId });
+        return error || typeof data !== "string" ? { ok: false, error: generic } : { ok: true, status: data };
+      },
+    }),
+
+    /** Locks one of the proposed times in, or takes the lock off with null. */
+    lockSlot: defineAction({
+      accept: "json",
+      input: z.object({ planId: z.uuid(), slotId: z.uuid().nullable() }),
+      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { error } = await supabase.rpc("lock_plan_slot", { p_plan: input.planId, p_slot: input.slotId });
         return error ? { ok: false, error: generic } : { ok: true };
       },
     }),
@@ -440,6 +487,10 @@ export const server = {
         comfortDollars: z.number().int().min(0).max(9999).optional(),
         plusOne: z.string().trim().max(24).optional(),
         token: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+        /** The proposed times this person can do. Leave out to keep earlier votes. */
+        slotIds: z.array(z.uuid()).max(5).optional(),
+        /** A short note about times, for the host. */
+        timeNote: z.string().trim().max(120).optional(),
       }),
       handler: async (input, context): Promise<{ ok: true; path: string } | { ok: false; error: string }> => {
         const { user, supabase } = context.locals;
@@ -457,8 +508,11 @@ export const server = {
             p_reply: input.rsvp,
             p_comfort: input.comfortDollars ?? null,
             p_plus: input.plusOne ?? null,
+            p_slots: input.slotIds ?? null,
           });
-          return error ? { ok: false, error: reason(error.message) } : { ok: true, path: "/app/plans" };
+          if (error) return { ok: false, error: reason(error.message) };
+          if (input.timeNote) await supabase.rpc("member_note", { p_slug: input.slug, p_note: input.timeNote });
+          return { ok: true, path: "/app/plans" };
         }
 
         const { data, error } = await supabase.rpc("guest_reply", {
@@ -469,9 +523,37 @@ export const server = {
           p_comfort: input.comfortDollars ?? null,
           p_plus: input.plusOne ?? null,
           p_token: input.token ?? null,
+          p_slots: input.slotIds ?? null,
         });
         if (error || typeof data !== "string") return { ok: false, error: reason(error?.message) };
+        if (input.timeNote) await supabase.rpc("guest_note", { p_token: data, p_note: input.timeNote });
         return { ok: true, path: `/r/${data}` };
+      },
+    }),
+  },
+
+  inviteAccount: {
+    /** Someone in the plan asks its host to be friends. */
+    addHost: defineAction({
+      accept: "json",
+      input: z.object({ slug: z.string().regex(/^[a-z0-9-]{8,80}$/) }),
+      handler: async (input, context): Promise<{ ok: true; status: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("add_plan_host", { p_slug: input.slug });
+        return error || typeof data !== "string" ? { ok: false, error: generic } : { ok: true, status: data };
+      },
+    }),
+
+    /** A guest with an account attaches their reply to it. Returns the plan's slug. */
+    claimReply: defineAction({
+      accept: "json",
+      input: z.object({ token: z.string().regex(/^[0-9a-f]{64}$/) }),
+      handler: async (input, context): Promise<{ ok: true; slug: string } | { ok: false; error: string }> => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data, error } = await supabase.rpc("claim_guest_reply", { p_token: input.token });
+        return error || typeof data !== "string" ? { ok: false, error: generic } : { ok: true, slug: data };
       },
     }),
   },

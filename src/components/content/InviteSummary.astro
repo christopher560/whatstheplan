@@ -55,7 +55,7 @@ const { render = true, invite } = Astro.props;
         <AvatarStack
           size="main"
           data-crew
-          people={invite.crew.map((person) => ({ initial: person.name, color: person.color }))}
+          people={invite.crew.slice(0, 5).map((person) => ({ initial: person.name, color: person.color }))}
         />
         <p class="invite-summary_who text-style-small" data-who />
       </div>
@@ -212,6 +212,7 @@ const { render = true, invite } = Astro.props;
 
     .invite-summary_crew {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: var(--space-3);
       padding: var(--space-3);
@@ -221,7 +222,7 @@ const { render = true, invite } = Astro.props;
     }
 
     .invite-summary_who {
-      flex: 1;
+      flex: 1 1 8rem;
       min-width: 0;
     }
 

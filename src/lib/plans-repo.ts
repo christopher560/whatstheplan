@@ -27,6 +27,10 @@ export interface NewPlan {
   friendIds: string[];
   /** Names of people without the app; they reply through the link. */
   guestNames: string[];
+  /** The host's time zone name. */
+  tz: string;
+  /** Times to vote on, as ISO instants. */
+  slots: string[];
 }
 
 export const createPlan = async (plan: NewPlan) =>
@@ -36,8 +40,9 @@ export const createPlan = async (plan: NewPlan) =>
 export const answerInvite = async (inviteId: string, reply: InviteReply | null) =>
   unwrap(await actions.plans.answer({ memberId: inviteId, reply })) as Simple;
 
-/** Not saved yet: plans reach the calendar in a later round. */
-export const setOnCalendar = async (_planId: string, _added: boolean) => {};
+/** Puts a plan on the person's in-app calendar, or takes it off. */
+export const setOnCalendar = async (planId: string, added: boolean) =>
+  unwrap(await actions.plans.pin({ planId, on: added })) as Simple;
 
 /** Not saved yet: it comes with Discover groups. */
 export const setFriendRequest = async (_personName: string, _sent: boolean) => {};

@@ -56,7 +56,7 @@ const { render = true, plan } = Astro.props;
           ))}
         </div>
         <p class="plan-times_note text-style-small">
-          Locking a time notifies everyone and adds it to their calendars.
+          Locking a time shows it on every invite, with an add-to-calendar button, and puts the plan on your friends' calendars.
         </p>
       </div>
     </Panel>
@@ -90,7 +90,7 @@ const { render = true, plan } = Astro.props;
         slot.classList.toggle("dim", !!locked && !isLocked);
         slot.querySelector<HTMLElement>("[data-bar]")!.style.setProperty(
           "--_fill",
-          `${Math.round((voters.length / friends.length) * 100)}%`,
+          `${Math.round((voters.length / Math.max(friends.length, 1)) * 100)}%`,
         );
         slot.querySelector<HTMLElement>("[data-slot-count]")!.textContent =
           `${counts[index]} of ${friends.length}`;

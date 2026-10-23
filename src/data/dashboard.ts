@@ -63,7 +63,7 @@ export interface NavItem {
   label: string;
   href: string;
   /** Names the count in `ShellData.badges` shown on this item. */
-  badge?: "plans";
+  badge?: "plans" | "friends";
 }
 
 export const navItems: NavItem[] = [
@@ -71,7 +71,7 @@ export const navItems: NavItem[] = [
   { id: "discover", label: "Discover", href: "/app/discover" },
   { id: "calendar", label: "Calendar", href: "/app/calendar" },
   { id: "plans", label: "Plans", href: "/app/plans", badge: "plans" },
-  { id: "friends", label: "Friends", href: "/app/friends" },
+  { id: "friends", label: "Friends", href: "/app/friends", badge: "friends" },
 ];
 
 export const viewer = {

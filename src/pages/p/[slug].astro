@@ -10,7 +10,7 @@ const { slug } = Astro.params;
 const invite = /^[a-z0-9-]{8,80}$/.test(slug ?? "")
   ? await readInvite(Astro.locals.supabase, slug!, !!Astro.locals.user)
   : null;
-if (!invite) return Astro.rewrite("/404");
+if (!invite) return Astro.redirect("/404");
 /* The host does not reply to their own plan; they manage it. */
 /* A signed-in visitor replies as themselves, with their own name and color. */
 const profile = Astro.locals.profile;

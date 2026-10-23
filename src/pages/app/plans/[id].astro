@@ -1,7 +1,6 @@
 ---
 import DashboardLayout from "@/layouts/DashbaordLayout.astro";
 import DashboardSection from "@/components/wrapper/DashboardSection.astro";
-import DashboardColumns from "@/components/wrapper/DashboardColumns.astro";
 import Grid from "@/components/wrapper/Grid.astro";
 import PlanState from "@/components/content/PlanState.astro";
 import PlanHeader from "@/components/content/PlanHeader.astro";
@@ -31,12 +30,16 @@ if (!plan) return Astro.redirect("/app/plans");
     <PlanState plan={plan} />
     <PlanHeader plan={plan} />
     <PlanStage plan={plan} />
-    <DashboardColumns>
-      <PlanReplies plan={plan} />
-      <Fragment slot="rail">
-        <PlanTimes plan={plan} />
-      </Fragment>
-    </DashboardColumns>
+    <div class="plan-page_row">
+      <div class="plan-page_main">
+        <PlanReplies plan={plan} />
+      </div>
+      {plan.slots.length > 0 && (
+        <div class="plan-page_side">
+          <PlanTimes plan={plan} />
+        </div>
+      )}
+    </div>
     <Grid variant="autofit" minColumnWidth={20}>
       <PlanDescription plan={plan} />
       <PlanBudget plan={plan} />
@@ -44,3 +47,24 @@ if (!plan) return Astro.redirect("/app/plans");
     <PlanActivity plan={plan} />
   </DashboardSection>
 </DashboardLayout>
+
+<style is:global>
+  @layer components {
+    .plan-page_row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-5);
+      align-items: flex-start;
+    }
+
+    .plan-page_main {
+      flex: 1.3 1 26rem;
+      min-width: 0;
+    }
+
+    .plan-page_side {
+      flex: 1 1 21rem;
+      min-width: 0;
+    }
+  }
+</style>

@@ -49,12 +49,46 @@ const { render = true, invite } = Astro.props;
       </div>
 
       <div class="invite-done_buttons" data-actions>
-        <ActionButton color="white" size="large" data-calendar hidden>
-          Add to calendar
-        </ActionButton>
+        {invite.calendarHref && invite.signedIn && !invite.claimable && invite.planId ? (
+          <ActionButton color={invite.pinned ? "green" : "white"} size="large" aria-pressed={invite.pinned ? "true" : "false"} data-pin>
+            {invite.pinned ? "On your calendar" : "Add to my calendar"}
+          </ActionButton>
+        ) : invite.calendarHref ? (
+          <ActionButton element="link" href={invite.calendarHref} color="white" size="large" download>
+            {invite.calendarLabel ?? "Add to calendar"}
+          </ActionButton>
+        ) : null}
         <ActionButton color="yellow" size="large" data-copy>
           Copy my link
         </ActionButton>
+      </div>
+
+      <div class="invite-done_account" data-account>
+        {invite.claimable && (
+          <div class="invite-done_account_item">
+            <p class="text-style-small">This reply is saved as a guest. Attach it to your account to see it in your Plans.</p>
+            <ActionButton color="white" size="small" data-claim>
+              Link this reply to my account
+            </ActionButton>
+          </div>
+        )}
+        {invite.signedIn && invite.friend === "friends" && (
+          <p class="invite-done_account_item text-style-small">You and {invite.host.name} are friends.</p>
+        )}
+        {invite.signedIn && invite.friend && invite.friend !== "friends" && !invite.claimable && (
+          <div class="invite-done_account_item">
+            <ActionButton color="white" size="small" data-befriend disabled={invite.friend === "requested"}>
+              {invite.friend === "requested" ? "Request sent" : `Add ${invite.host.name} as a friend`}
+            </ActionButton>
+          </div>
+        )}
+        {!invite.signedIn && (
+          <p class="invite-done_account_item text-style-small">
+            Already have an account?{" "}
+            <a class="invite-done_login" href={`/login?next=${encodeURIComponent(`/p/${invite.slug}`)}`} data-login>Log in</a>{" "}
+            to add {invite.host.name} as a friend and see this plan in your Plans.
+          </p>
+        )}
       </div>
 
       <ActionButton color="white" size="small" class="invite-done_change" data-change>
@@ -66,6 +100,8 @@ const { render = true, invite } = Astro.props;
 
 <script>
   import { cleanName, currentStep, doneCopy, edit, get, getInvite, subscribe, summaryRows, update, winnerMissed } from "@/lib/invite-store.ts";
+  import { addHost, claimReply } from "@/lib/invite-repo.ts";
+  import { setOnCalendar } from "@/lib/plans-repo.ts";
   import { setIconPath } from "@/lib/ui.ts";
 
   const confettiColors = ["red", "yellow", "green", "blue", "pink", "purple"];
@@ -81,7 +117,6 @@ const { render = true, invite } = Astro.props;
     const linkBox = $("[data-link-box]");
     const url = $("[data-url]");
     const actions = $("[data-actions]");
-    const calendar = $("[data-calendar]");
     const copy = $("[data-copy]");
     const extras = $("[data-extras]");
     const winSub = $("[data-win-sub]");
@@ -115,7 +150,52 @@ const { render = true, invite } = Astro.props;
     root.addEventListener("click", (event) => {
       const target = event.target as HTMLElement;
       if (target.closest("[data-change]")) return edit();
-      if (target.closest("[data-calendar]")) return update({ calendar: !get().calendar });
+      const befriend = target.closest<HTMLButtonElement>("[data-befriend]");
+      if (befriend && !befriend.disabled) {
+        const label = befriend.querySelector<HTMLElement>(".action-button_text")!;
+        befriend.disabled = true;
+        void addHost(invite.slug).then((result) => {
+          const done: Record<string, string> = {
+            sent: "Request sent",
+            already_requested: "Request sent",
+            accepted: "You're friends now",
+            already_friends: "You're already friends",
+          };
+          const text = result.ok ? done[result.status] : undefined;
+          label.textContent = text ?? "Couldn't send. Try again later.";
+          if (!text) befriend.disabled = false;
+          else befriend.classList.replace("white", "green");
+        });
+        return;
+      }
+      const pin = target.closest<HTMLButtonElement>("[data-pin]");
+      if (pin && invite.planId) {
+        const on = pin.getAttribute("aria-pressed") !== "true";
+        const label = pin.querySelector<HTMLElement>(".action-button_text")!;
+        const show = (value: boolean) => {
+          pin.setAttribute("aria-pressed", String(value));
+          pin.classList.remove("white", "green");
+          pin.classList.add(value ? "green" : "white");
+          label.textContent = value ? "On your calendar" : "Add to my calendar";
+        };
+        show(on);
+        void setOnCalendar(invite.planId, on).then((result) => {
+          if (!result.ok) show(!on);
+        });
+        return;
+      }
+      const claim = target.closest<HTMLButtonElement>("[data-claim]");
+      if (claim && !claim.disabled && invite.token) {
+        claim.disabled = true;
+        void claimReply(invite.token).then((result) => {
+          if (result.ok) location.href = `/p/${result.slug}`;
+          else {
+            claim.disabled = false;
+            claim.querySelector<HTMLElement>(".action-button_text")!.textContent = "Couldn't link it. Try again.";
+          }
+        });
+        return;
+      }
       if (target.closest("[data-copy]")) {
         const s = get();
         void navigator.clipboard?.writeText(`${location.origin}${s.receipt}`).catch(() => {});
@@ -154,10 +234,13 @@ const { render = true, invite } = Astro.props;
       extras.hidden = !going;
       winSub.textContent = `${invite.winner.sub}${winnerMissed() ? ". Not one of your picks, change your reply if it does not work." : ""}`;
       linkBox.hidden = !going || !!invite.signedIn;
-      actions.hidden = !going || !!invite.signedIn;
+      actions.hidden = !going;
+      copy.hidden = !!invite.signedIn;
+      /* A guest who logs in comes back to their own page, so the reply carries over. */
+      const login = root.querySelector<HTMLAnchorElement>("[data-login]");
+      if (login && s.receipt) login.href = `/login?next=${encodeURIComponent(s.receipt)}`;
       winSub.hidden = !winSub.textContent;
       url.textContent = s.receipt ? `${location.origin}${s.receipt}` : "Saving your link…";
-      mark(calendar, s.calendar, "white", "Added to calendar", "Add to calendar");
       mark(copy, s.copied, "yellow", "Link copied", "Copy my link");
 
       if (!wasDone && s.rsvp === "in" && cleanName()) burst();
@@ -287,6 +370,27 @@ const { render = true, invite } = Astro.props;
       font-weight: var(--secondary-bold);
     }
 
+
+    .invite-done_account {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      align-items: center;
+      text-align: center;
+    }
+
+    .invite-done_account_item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .invite-done_login {
+      font-weight: var(--primary-bold);
+      text-decoration: underline;
+      text-underline-offset: 0.25em;
+    }
 
     .invite-done_summary {
       display: grid;

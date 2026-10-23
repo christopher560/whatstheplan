@@ -101,6 +101,15 @@ export interface Invite {
   winner: { time: string; sub: string; slotId?: string };
   /** What the host posted since sending the link, newest first. Maps to `plan_events`. */
   updates: { text: string; time: string }[];
+  /** Where the time downloads as a calendar file: the locked time, or the host's pick until then. */
+  calendarHref?: string;
+  calendarLabel?: string;
+  /** Whether the signed-in visitor and the host are friends, or a request is waiting. */
+  friend?: "none" | "friends" | "requested";
+  /** True on a guest's own page when a signed-in person could attach the reply to their account. */
+  claimable?: boolean;
+  /** Whether the signed-in visitor put this plan on their in-app calendar. */
+  pinned?: boolean;
   /** The `plans` row, for real invites. */
   planId?: string;
   /** The secret from the guest's own link, set on `/r/{token}`. */

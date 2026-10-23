@@ -23,6 +23,12 @@ export interface HubInvite {
   /** Avatar colors for `from` and `crew`, in the same order. */
   fromColor?: AccentColor;
   crewColors?: AccentColor[];
+  /** The plan's public slug, and whether it has a time to put on a calendar. */
+  slug?: string;
+  hasTime?: boolean;
+  /** The `plans` row, and whether the person put it on their in-app calendar. */
+  planId?: string;
+  pinned?: boolean;
 }
 
 /** A plan the viewer hosts. */

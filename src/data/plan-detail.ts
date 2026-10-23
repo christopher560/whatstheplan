@@ -11,6 +11,8 @@ export interface PlanFriend {
   reply: Reply;
   /** Time slot ids this friend can do. */
   votes: string[];
+  /** guest: no account; self: the host; none and requested: has an account but is not the host's friend. */
+  friend?: "guest" | "self" | "friends" | "requested" | "none";
 }
 
 export interface PlanSlot {

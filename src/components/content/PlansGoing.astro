@@ -21,7 +21,7 @@ interface Props {
 const { render = true, going = [], invites = [], ideasHref = "/app/ideas" } = Astro.props;
 
 const cards = [
-  ...going.map((plan) => ({ ...plan, fromInvite: false })),
+  ...going.map((plan) => ({ ...plan, planId: undefined as string | undefined, pinned: false, hasTime: false, fromInvite: false })),
   ...invites.map((invite) => ({
     id: invite.id,
     category: invite.category,
@@ -32,6 +32,9 @@ const cards = [
     cost: invite.cost,
     crew: invite.crew,
     crewColors: invite.crewColors,
+    planId: invite.planId,
+    pinned: invite.pinned,
+    hasTime: invite.hasTime,
     who: `You and ${invite.crew.length} others`,
     fromInvite: true,
   })),
@@ -55,6 +58,7 @@ const cards = [
               tag="article"
               class="plans-going_card"
               data-plan={plan.id}
+              data-plan-id={plan.planId}
               data-category={plan.category}
               data-from-invite={plan.fromInvite ? "" : undefined}
               hidden={plan.fromInvite}
@@ -82,9 +86,16 @@ const cards = [
                   />
                   <p class="plans-going_who text-style-small">{plan.who}</p>
                 </div>
-                <ActionButton color="white" class="plans-going_add" data-add>
-                  Add to calendar
-                </ActionButton>
+                {plan.hasTime && plan.planId && (
+                  <ActionButton
+                    color={plan.pinned ? "green" : "white"}
+                    class="plans-going_add"
+                    aria-pressed={plan.pinned ? "true" : "false"}
+                    data-add
+                  >
+                    {plan.pinned ? "On your calendar" : "Add to calendar"}
+                  </ActionButton>
+                )}
               </div>
             </Panel>
           ))}
@@ -112,7 +123,6 @@ const cards = [
     subscribe,
     addToCalendar,
   } from "@/lib/plans-store.ts";
-  import { flashButton } from "@/lib/ui.ts";
   import type { PlanCategory } from "@/data/plans.ts";
 
   document.querySelectorAll<HTMLElement>("[data-going]").forEach((root) => {
@@ -122,10 +132,20 @@ const cards = [
 
     root.addEventListener("click", (event) => {
       const button = (event.target as HTMLElement).closest<HTMLElement>("[data-add]");
-      const id = button?.closest<HTMLElement>("[data-plan]")?.dataset.plan;
+      const id = button?.closest<HTMLElement>("[data-plan]")?.dataset.planId;
       if (!button || !id) return;
-      addToCalendar(id);
-      flashButton(button, "Added to calendar");
+      const on = button.getAttribute("aria-pressed") !== "true";
+      const label = button.querySelector<HTMLElement>(".action-button_text")!;
+      const show = (value: boolean) => {
+        button.setAttribute("aria-pressed", String(value));
+        button.classList.remove("white", "green");
+        button.classList.add(value ? "green" : "white");
+        label.textContent = value ? "On your calendar" : "Add to calendar";
+      };
+      show(on);
+      void addToCalendar(id, on).then((result) => {
+        if (!result.ok) show(!on);
+      });
     });
 
     subscribe(() => {

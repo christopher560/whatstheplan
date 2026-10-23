@@ -30,6 +30,8 @@ export interface InviteReplyState {
   receipt: string;
   /** Why the last save failed, shown on the step before the end. */
   error: string;
+  /** A note about times for the host. */
+  timeNote: string;
 }
 
 let invite: Invite | null = null;
@@ -55,6 +57,7 @@ const initial = (source: Invite): InviteReplyState => ({
   copied: false,
   receipt: source.token ? `/r/${source.token}` : "",
   error: "",
+  timeNote: "",
 });
 
 export const getInvite = (): Invite => {
@@ -126,6 +129,8 @@ const submit = () => {
     comfortDollars: source.steps.includes("budget") && s.rsvp !== "out" ? budgetLimit() : undefined,
     plusOne: source.steps.includes("guests") && s.plus && s.rsvp !== "out" ? s.guest.trim() || "Guest" : undefined,
     token: source.token,
+    slotIds: source.slots.length ? (s.rsvp === "out" ? [] : s.slots) : undefined,
+    timeNote: s.rsvp !== "out" && s.timeNote.trim() ? s.timeNote.trim() : undefined,
   }).then((receipt) => {
     /* If saving failed, go back a step and say why instead of showing a false "You're in". */
     if (!receipt.ok) return update({ error: receipt.error, step: Math.max(0, sequence().length - 2) });
@@ -160,7 +165,7 @@ export const summaryRows = (): { label: string; value: string }[] => {
   ];
   if (s.rsvp === "out") return rows;
 
-  if (source.steps.includes("times")) {
+  if (source.steps.includes("times") && source.slots.length) {
     rows.push({
       label: "Times that work",
       value: s.none

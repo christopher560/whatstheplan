@@ -595,3 +595,30 @@ Real plans for the plan builder, the Plans page and the host's plan page.
 - Both pages send `Cache-Control: private, no-store` and are `noindex`. The link is the key, so share it only with the guest.
 - **Not built yet:** time slots to vote on, locking a time, reminders, "add to calendar", Realtime.
 - To limit abuse by IP, add a Vercel Firewall rate limit rule on `/_actions/invite.reply`.
+
+## Plans, round C (times, voting, locking, calendar) - built
+
+- **Tables:** `plan_slots` (a proposed instant, up to 5 per plan, none further than a year away), `slot_votes` (read only through `plan_votes(plan)`), plus `plans.tz` (the host's time zone, so every guest reads the same wall-clock time) and `plans.locked_slot_id`. Members can read `plan_slots`; nobody writes it directly.
+- **Functions:** `create_plan` takes the time zone and the times; `guest_reply` and `member_reply` take the slots the person can do (decline clears them; leaving them out keeps earlier votes; slots from another plan are ignored); `lock_plan_slot(plan, slot|null)` is host only, sets the stage to 2 (or 1 on unlock) and writes a feed event.
+- **App:** the plan builder has "Times to vote on" (date-time pickers, up to 5). The invite gets a Times step (after the name) with live vote counts; the host's plan page shows votes per time and locks one; the Plans list shows the locked time or "Voting on N times".
+- **Calendar:** `/p/<slug>/calendar.ics` returns the locked time as a calendar file (2 hours, with place and description); the invite's "Add to calendar" is that download. `/app/calendar` shows plans with a locked time on the grid (hosting, going, or an unanswered invite as "waiting"), on the viewer's own clock.
+- **Not built yet:** nudges and reminders (need Resend and an SMS provider), Realtime, group chat, Discover. Plans do not yet mark friends busy in their own availability.
+
+## Plans, round C2 (host's pick, leeway, notes) - built
+
+- **The host picks the start time first.** The plan builder asks "When does it start?" (required except for hangouts) and offers one-tap nearby times (1 hour earlier or later, 2 hours later, next day), plus extra custom times, five in all. The first time given is stored at `plan_slots.position = 0` and the host's vote for it is already in.
+- **The invite always has the Times step** for hangouts, casual meetups and events (formal and school plans get it when the host offered more than one time). The host's pick is tagged "<host>'s pick" and starts selected for a new guest; someone who already replied keeps their own choices. With no time set, the step says so and still takes a note.
+- **Time note:** `guest_note` and `member_note` add "left a note about times" to the host's feed (120 characters, once per identical note).
+- A plan with one time shows that time; with leeway it reads "<time>, or nearby" until the host locks one.
+
+## Plans, round C3 (friends from an invite, calendar) - built
+
+- **Add the host as a friend.** `add_plan_host(slug)` lets someone who is in the plan send the host a friend request (it reuses `send_friend_request`, so the same limits and results apply); a stranger with only the link gets `not_found`. `public_invite` tells a signed-in visitor whether they and the host are `friends`, `requested` or `none`. The invite's last step shows the button, or "Log in" for guests (it comes back to their own link).
+- **Guests with an account.** `claim_guest_reply(token)` attaches the guest row (reply, votes, feed entries) to the signed-in account, or merges it into the account's own row if it is already in the plan, and kills the old token. The guest page shows "Link this reply to my account" when someone is signed in.
+- **Add to calendar** always works once a time exists: the locked time, or the host's pick marked `STATUS:TENTATIVE` ("Time not locked in yet"). The same file is the button on the Plans page's "You're going to" cards.
+
+## Plans, round C4 (in-app calendar, host adds friends) - built
+
+- **Add to calendar for accounts** puts the plan on their in-app calendar: `calendar_pins (user_id, plan_id)` (read own; written only by `set_plan_pin`, members only). The button on the invite's last step and on the Plans page's "You're going to" cards toggles it ("On your calendar" in green). Guests without an account still get the `.ics` file.
+- **The grid** (`readCalendarPlans`) shows plans the person hosts, plans with a locked time, and plans they pinned, at the locked time or the host's pick. "Can't make it" plans stay off.
+- **Host adds friends.** The host's "Who said what" list shows "Add friend" next to anyone in the plan who has an account and is not already a friend (`plan_member_friend_states`, `add_plan_member_friend`, which reuses `send_friend_request`). Guests are labelled "Guest, no account", accounts that joined from the link "Joined from your link". The old made-up "Opened the link 2 h ago" is gone.

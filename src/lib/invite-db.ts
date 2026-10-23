@@ -4,6 +4,7 @@ import { inviteIcons, inviteOptions } from "@/data/invite.ts";
 import type { Invite, InviteKind, Rsvp } from "@/data/invite.ts";
 import { budgetLabels } from "@/lib/plans-db.ts";
 import { nearestAccent } from "@/utils/avatar-accent.ts";
+import { slotClock, slotDay, slotLabel } from "@/utils/slot-time.ts";
 
 type Json = {
   plan: {
@@ -15,11 +16,16 @@ type Json = {
     place: string;
     when: string;
     budget: number;
+    tz: string;
+    locked: string | null;
   };
   host: { name: string; color: string | null } | null;
   invited: number;
   going: { name: string; color: string | null; mine: boolean }[];
+  slots: { id: string; at: string; pos: number; votes: number; voters: string[]; mine: boolean }[];
   updates: { text: string; at: string }[];
+  friend?: "none" | "friends" | "requested";
+  pinned?: boolean;
   me: {
     name: string;
     color: string | null;
@@ -72,8 +78,30 @@ const toInvite = (json: Json, extra: { token?: string; signedIn: boolean }): Inv
   const base = kinds[plan.kind];
   const host = { name: json.host?.name ?? "A friend", color: nearestAccent(json.host?.color) };
   const cost = plan.budget === 0 ? "Free" : `${budgetLabels[plan.budget]} each`;
-  const when = plan.when || "Time still to decide";
-  const steps = extra.signedIn ? base.steps.filter((step) => step !== "name") : base.steps;
+  const locked = json.slots.find((slot) => slot.id === plan.locked);
+  const pick = json.slots.find((slot) => slot.pos === 0);
+  const when = locked
+    ? slotLabel(locked.at, plan.tz).replace(" · ", " at ")
+    : json.slots.length > 1
+      ? `${slotLabel(pick?.at ?? json.slots[0].at, plan.tz).replace(" · ", " at ")}, or nearby`
+      : json.slots.length === 1
+        ? slotLabel(json.slots[0].at, plan.tz).replace(" · ", " at ")
+        : plan.when || "Time still to decide";
+  /* Friends vote on times for hangouts, casual meetups and events, so that step is always there.
+   * Formal and school plans have it only when the host offered some leeway. */
+  const votes = ["hangout", "casual", "event"].includes(plan.kind) || json.slots.length > 1;
+  const alreadyReplied = !!json.me?.reply;
+  const withTimes = votes
+    ? base.steps.flatMap((step) => (step === "name" ? [step, "times" as const] : [step]))
+    : base.steps;
+  const steps = extra.signedIn ? withTimes.filter((step) => step !== "name") : withTimes;
+  const top = Math.max(0, ...json.slots.map((slot) => slot.votes));
+  const names = (list: string[]) =>
+    list.length === 0
+      ? "No votes yet"
+      : list.length <= 3
+        ? `${list.join(", ").replace(/, ([^,]*)$/, " and $1")} can do it`
+        : `${list.slice(0, 2).join(", ")} and ${list.length - 2} more can do it`;
   const budgetIndex = (limit: number | null) => {
     if (limit === null) return undefined;
     const index = inviteOptions.budget.findIndex((option) => Number(option.id) === limit);
@@ -97,14 +125,43 @@ const toInvite = (json: Json, extra: { token?: string; signedIn: boolean }): Inv
     crew: json.going
       .filter((person) => !person.mine)
       .map((person) => ({ name: person.name, color: nearestAccent(person.color) })),
-    invited: json.invited,
+    /* A visitor who has not replied yet is not counted by the database, but is one of the people asked. */
+    invited: json.invited + (json.me ? 0 : 1),
     note: plan.description || `Let ${host.name} know if you can make it.`,
     steps,
     replyTitle: base.kind === "formal" ? "Will you join us?" : "Are you in?",
     replies: replyChoices(base.kind),
     perPerson: perPerson[plan.budget] ?? 0,
-    slots: [],
-    winner: { time: when, sub: "" },
+    slots: json.slots.map((slot) => ({
+      id: slot.id,
+      day: slotDay(slot.at, plan.tz),
+      time: slotClock(slot.at, plan.tz),
+      tag:
+        slot.id === plan.locked
+          ? "Locked in"
+          : slot.pos === 0
+            ? `${host.name}'s pick`
+            : slot.votes > 0 && slot.votes === top
+              ? "Most votes"
+              : "",
+      /* The visitor's own vote is added by the page, so it is left out of this count. */
+      free: slot.votes - (slot.mine ? 1 : 0),
+      who: names(slot.voters),
+      /* Someone new starts on the host's pick; someone who already replied keeps their own choices. */
+      preset: alreadyReplied ? slot.mine : slot.pos === 0,
+    })),
+    winner: locked
+      ? {
+          time: slotLabel(locked.at, plan.tz),
+          sub: `${locked.votes} of ${json.invited} could make it`,
+          slotId: locked.id,
+        }
+      : { time: when, sub: "" },
+    calendarHref: locked || pick || json.slots[0] ? `/p/${plan.slug}/calendar.ics` : undefined,
+    calendarLabel: locked ? "Add to calendar" : "Add to calendar (tentative)",
+    friend: extra.signedIn ? (json.friend ?? "none") : undefined,
+    claimable: extra.signedIn && !!extra.token,
+    pinned: extra.signedIn ? !!json.pinned : undefined,
     updates: json.updates.map((update) => ({ text: update.text, time: ago(update.at) })),
     planId: plan.id,
     token: extra.token,
@@ -133,7 +190,11 @@ export const readInvite = async (
 };
 
 /** A guest's own page, found by the secret in their link. */
-export const readReceipt = async (supabase: SupabaseClient, token: string): Promise<Invite | null> => {
+export const readReceipt = async (
+  supabase: SupabaseClient,
+  token: string,
+  signedIn = false,
+): Promise<Invite | null> => {
   const { data } = await supabase.rpc("guest_receipt", { p_token: token });
-  return data ? toInvite(data as Json, { token, signedIn: false }) : null;
+  return data ? toInvite(data as Json, { token, signedIn }) : null;
 };

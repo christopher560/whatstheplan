@@ -89,13 +89,15 @@ const isActive = (href: string) =>
 }
 
 <script>
-  /** Pages tell the shell when a count changes, e.g. `plans:pending` from Plans. */
-  window.addEventListener("plans:pending", (event) => {
-    const count = (event as CustomEvent<number>).detail;
-    document.querySelectorAll<HTMLElement>('[data-badge="plans"]').forEach((badge) => {
-      badge.hidden = count === 0;
-      badge.textContent = String(count);
-      badge.setAttribute("aria-label", `${count} new`);
+  /** Pages tell the shell when a count changes, e.g. `plans:pending` from Plans or `friends:pending` from Friends. */
+  (["plans", "friends"] as const).forEach((name) => {
+    window.addEventListener(`${name}:pending`, (event) => {
+      const count = (event as CustomEvent<number>).detail;
+      document.querySelectorAll<HTMLElement>(`[data-badge="${name}"]`).forEach((badge) => {
+        badge.hidden = count === 0;
+        badge.textContent = String(count);
+        badge.setAttribute("aria-label", `${count} new`);
+      });
     });
   });
 </script>

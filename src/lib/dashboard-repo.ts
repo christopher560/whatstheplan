@@ -17,7 +17,7 @@ export interface ShellData {
   nav: NavItem[];
   viewer: { name: string; color: AccentColor; friendCount: number };
   /** Things waiting on the person: open invites and plans needing an answer. */
-  badges: { plans: number };
+  badges: { plans: number; friends: number };
 }
 
 export type Rsvp = "in" | "maybe" | "out";
@@ -40,7 +40,7 @@ const mockRepo: DashboardRepo = {
     return {
       nav: mock.navItems,
       viewer: mock.viewer,
-      badges: { plans: mock.invites.length },
+      badges: { plans: mock.invites.length, friends: 0 },
     };
   },
   async getHome() {

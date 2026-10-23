@@ -51,6 +51,15 @@ const tiles = [
                 <p class="plan-replies_detail text-style-small" data-detail />
               </div>
               <Pill size="tiny" data-status>No reply yet</Pill>
+              <Pill
+                element="button"
+                size="main"
+                class="plan-replies_add"
+                hidden={friend.friend !== "none" && friend.friend !== "requested"}
+                data-add-friend
+              >
+                Add friend
+              </Pill>
             </div>
           ))}
         </div>
@@ -84,6 +93,7 @@ const tiles = [
     waitingFriends,
     nudgeWaiting,
     toggleAuto,
+    requestFriend,
   } from "@/lib/plan-store.ts";
 
   const statusText = { in: "I'm in", maybe: "Maybe", out: "Can't" } as const;
@@ -95,6 +105,11 @@ const tiles = [
     const auto = root.querySelector<HTMLInputElement>("input[name='auto_nudge']")!;
 
     nudge.addEventListener("click", nudgeWaiting);
+    root.addEventListener("click", (event) => {
+      const add = (event.target as HTMLElement).closest<HTMLElement>("[data-add-friend]");
+      const id = add?.closest<HTMLElement>("[data-friend]")?.dataset.friend;
+      if (id) requestFriend(id);
+    });
     auto.addEventListener("change", () => {
       if (auto.checked !== get().auto) toggleAuto();
     });
@@ -124,13 +139,27 @@ const tiles = [
         pill.classList.remove("filled", "dashed", "green", "yellow", "pink");
         if (reply) pill.classList.add("filled", statusColor[reply]);
         else pill.classList.add("dashed");
-        row.querySelector<HTMLElement>("[data-detail]")!.textContent = reply
-          ? votes.length
-            ? `Can do ${votes.map(shortSlot).join(", ")}`
-            : "No time picked"
-          : state.nudged
-            ? "Reminder sent just now"
-            : "Opened the link 2 h ago";
+        /* Where they came from: someone added by name, or an account that joined from the link. */
+        const origin =
+          friend.friend === "guest"
+            ? "Guest, no account · "
+            : friend.friend === "none" || friend.friend === "requested"
+              ? "Joined from your link · "
+              : "";
+        row.querySelector<HTMLElement>("[data-detail]")!.textContent =
+          origin +
+          (reply
+            ? votes.length
+              ? `Can do ${votes.map(shortSlot).join(", ")}`
+              : "No time picked"
+            : "Has not replied yet");
+
+        const add = row.querySelector<HTMLElement>("[data-add-friend]")!;
+        const asked = !!state.friendReq[friend.id] || friend.friend === "requested";
+        add.querySelector<HTMLElement>(".pill_text")!.textContent = asked ? "Request sent" : "Add friend";
+        add.classList.toggle("filled", asked);
+        add.classList.toggle("green", asked);
+        add.setAttribute("aria-pressed", String(asked));
       });
 
       const off = waiting.length === 0 || state.nudged;
@@ -244,6 +273,10 @@ const tiles = [
 
     .plan-replies_detail {
       color: var(--text-2);
+    }
+
+    .plan-replies_add {
+      flex: none;
     }
 
     .plan-replies_actions {
