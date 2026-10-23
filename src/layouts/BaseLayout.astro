@@ -25,6 +25,7 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
 <html lang="en" class:list={[theme !== "inherit" && `theme-${theme}`]}>
   <head>
     <BaseHead {...seo} />
+    <Analytics />
     <slot name="head" />
   </head>
   <body>
