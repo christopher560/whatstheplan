@@ -5,6 +5,11 @@ import { incomplete, profileSchema } from "@/lib/profile-schema.ts";
 import { profileRow } from "@/lib/profile-db.ts";
 import { cleanUsername, usernameProblem } from "@/utils/username.ts";
 import { accentHex } from "@/utils/avatar-accent.ts";
+import { countPending, readHub, readPlan } from "@/lib/plans-db.ts";
+import { countFriendRequests } from "@/lib/friends-db.ts";
+import { readGroupPage } from "@/lib/group-db.ts";
+import { readDiscover } from "@/lib/discover-db.ts";
+import { nowFor } from "@/utils/now.ts";
 
 /** What the auth pages get back. Expected problems are returned, not thrown. */
 type Result =
@@ -557,6 +562,76 @@ export const server = {
         if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
         const { data, error } = await supabase.rpc("claim_guest_reply", { p_token: input.token });
         return error || typeof data !== "string" ? { ok: false, error: generic } : { ok: true, slug: data };
+      },
+    }),
+  },
+
+  /** Fresh data for open pages. Each call returns what the page would show if it were loaded now. */
+  live: {
+    /** A tiny fingerprint of a page's data. The page fetches the full data only when this changes. */
+    pulse: defineAction({
+      accept: "json",
+      input: z.object({ kind: z.enum(["plan", "group", "discover", "plans", "chat"]), id: z.uuid().optional() }),
+      handler: async (input, context) => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const { data } = await supabase.rpc("live_pulse", { p_kind: input.kind, p_id: input.id ?? null });
+        return { pulse: typeof data === "string" ? data : null };
+      },
+    }),
+
+    badges: defineAction({
+      accept: "json",
+      handler: async (_input, context) => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const [plans, friends] = await Promise.all([countPending(supabase, user.id), countFriendRequests(supabase, user.id)]);
+        return { plans, friends };
+      },
+    }),
+
+    plan: defineAction({
+      accept: "json",
+      input: z.object({ planId: z.uuid() }),
+      handler: async (input, context) => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        return { plan: await readPlan(supabase, user.id, input.planId) };
+      },
+    }),
+
+    group: defineAction({
+      accept: "json",
+      input: z.object({ groupId: z.uuid() }),
+      handler: async (input, context) => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        return { group: await readGroupPage(supabase, input.groupId, context.cookies.get("tz")?.value, false) };
+      },
+    }),
+
+    discover: defineAction({
+      accept: "json",
+      handler: async (_input, context) => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const result = await readDiscover(supabase, user.id, context.cookies.get("tz")?.value, nowFor(context.cookies));
+        return result.status === "ok" ? { data: result.data } : { data: null };
+      },
+    }),
+
+    /** Only the parts of the Plans page that need a refresh to show: who is on it and the group lines. */
+    plans: defineAction({
+      accept: "json",
+      handler: async (_input, context) => {
+        const { user, supabase } = context.locals;
+        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+        const hub = await readHub(supabase, user.id, context.cookies.get("tz")?.value);
+        return {
+          hosting: hub.hosting.map((plan) => [plan.id, plan.replied, plan.invited, plan.stage]),
+          invites: hub.invites.map((invite) => [invite.id, invite.who, invite.stage]),
+          groups: hub.groups.map((group) => [group.id, group.statusLabel, group.members.length, group.last, group.unread, group.vote]),
+        };
       },
     }),
   },

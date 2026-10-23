@@ -170,6 +170,27 @@ export const sendCustomUpdate = (text: string) => {
   void repo.sendUpdate(getPlan().id, message);
 };
 
+/**
+ * Takes the latest plan from the server. Replies, votes, the feed and the locked time update in place.
+ * A new person or time cannot be drawn in place, so that returns "reload".
+ */
+export const applyLive = (next: PlanDetail): "ok" | "reload" => {
+  const current = getPlan();
+  const ids = (list: { id: string }[]) => list.map((item) => item.id).sort().join(",");
+  if (ids(current.friends) !== ids(next.friends) || ids(current.slots) !== ids(next.slots)) return "reload";
+  /* Change the object the components already hold, so none of them is left looking at an old copy. */
+  Object.assign(current, { friends: next.friends, stage: next.stage, comfort: next.comfort, perPerson: next.perPerson });
+  update({
+    replies: Object.fromEntries(next.friends.map((friend) => [friend.id, friend.reply])),
+    votes: Object.fromEntries(next.friends.map((friend) => [friend.id, friend.votes])),
+    feed: next.feed,
+    locked: next.lockedSlot,
+    description: get().editing ? get().description : next.description,
+    tick: get().tick + 1,
+  });
+  return "ok";
+};
+
 export const applyReply = (friendId: string, reply: Reply, votes: string[]) => {
   const friend = getPlan().friends.find((item) => item.id === friendId);
   if (!friend) return;

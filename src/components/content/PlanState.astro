@@ -19,3 +19,21 @@ const { plan } = Astro.props;
     />
   )
 }
+
+<script>
+  import { poll, reloadWhenIdle } from "@/lib/live.ts";
+  import { livePlan, livePulse } from "@/lib/live-repo.ts";
+  import { applyLive, getPlan } from "@/lib/plan-store.ts";
+
+  /* The host's plan page: replies, votes and the feed arrive while it is open. */
+  if (document.getElementById("plan-data")) {
+    const id = getPlan().id;
+    poll({
+      pulse: () => livePulse("plan", id),
+      load: () => livePlan(id),
+      apply: (plan) => {
+        if (applyLive(plan) === "reload") reloadWhenIdle();
+      },
+    });
+  }
+</script>

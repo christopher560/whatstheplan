@@ -101,6 +101,16 @@ export const subscribe = (listener: () => void) => {
   listener();
 };
 
+/** Takes the latest feed from the server: spots, people and new groups show at once. */
+export const applyLive = (next: DiscoverData) => {
+  /* Change the object the components already hold, so none of them is left looking at an old copy. */
+  Object.assign(getData(), next);
+  /* Keep what the viewer just tapped; add anything the server says they joined. */
+  const joined = { ...get().joined };
+  (next.joined ?? []).forEach((id) => (joined[id] = true));
+  update({ joined });
+};
+
 /* ---------- time labels ---------- */
 
 export const hourLabel = (hour: number) => {

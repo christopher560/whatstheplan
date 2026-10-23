@@ -473,6 +473,26 @@ friend are both free this week, and your monthly hangout budget (you set the num
 "planned" adds up your plans for the month). A new account sees an almost empty page
 with the plan builder at the top.
 
+### How "live" works
+
+Pages that need to feel live (the plan page, group page, Discover, the Plans page, chat
+and the red number badges) use two steps, to keep data use small:
+
+1. **A tiny question.** About every 10 seconds (every 4 for chat), an open page asks
+   the server for a short fingerprint of what it shows. It is a few dozen characters.
+2. **The full data, only if it changed.** If the fingerprint is different from last
+   time, the page fetches the new data. Otherwise nothing more is downloaded.
+
+It is also patient. The longer nothing changes, the slower it asks (up to every 30
+seconds), it stops while the tab is hidden, and it stops completely after 15 minutes
+without you touching the page; touching the page, or coming back to the tab, wakes it
+up and speeds it up again. Replies, votes, spot counts and badges update in place. When
+something new appears that the page cannot draw in place (a brand new person, a new
+invite), the page refreshes itself, but only after you have stopped typing for a few
+seconds, so nothing you wrote is lost. We do not use a push connection, because that
+would mean letting page scripts read your sign-in token, which we deliberately do not
+allow. The guests' invite pages, the calendar and the Friends page still update on reload.
+
 ## 8. Security: what keeps people's data safe
 
 These protections are shared by every feature above.
@@ -506,7 +526,6 @@ These protections are shared by every feature above.
 
 | Not built | What it will do |
 | --- | --- |
-| Live updates | Replies, votes and spots appear without reloading. (Chat already refreshes every few seconds.) |
 | Email nudges and reminders | The Nudge and auto-nudge buttons do nothing yet. Emails would go through Resend; texts need a paid text-message service. |
 | Teen Discover | 13 to 15 and 16 to 17 meeting only their own band. Waits for an age check (school email or parent consent) and a legal review. |
 | Groups the app forms | The app grouping people from a waitlist who share interests and free hours. |

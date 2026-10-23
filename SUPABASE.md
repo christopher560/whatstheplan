@@ -23,7 +23,7 @@ named in the "built" sections.
 | Discover, round 3: ranking function, the Discover page, start a group | built |
 | Discover, round 4: the real group page (members, plan, poll; chat comes next) | built |
 | Group chat (text only, refreshes every few seconds) | built |
-| Live updates for everything else (Realtime) | after that |
+| Live updates (frequent checks) on plan page, group page, Discover, Plans page, badges | built |
 | Email nudges, reminders and "locked in" emails | after group chat |
 | Teen Discover with an age check | later, needs a decision on verification and legal review |
 
@@ -778,3 +778,16 @@ Database only: nothing on the Discover page uses it until round 3.
 - **Hangout budget:** the monthly number you set (`profiles.monthly_budget`, default $100 until you change it; saved by `set_monthly_budget`) and what your plans this month add up to (a typical spend for each plan's budget step). Spending is not tracked, so there is no "spent" line; the group comfort block was removed.
 - **Group comfort on the plan page** is now real: `plan_comfort` returns the lowest comfortable spend among invitees, only to the host and only once two or more people have answered, so one person's number is never shown alone. Before that the card says so.
 - **Idea stash:** not being built. Its links and "cheaper swaps from your idea stash" text were removed from the plan builder, the Plans page and the plan page.
+
+## Live updates - built (cheap checks, not push)
+
+- **Why not Realtime:** the session cookie is httpOnly, so page scripts cannot read the token a Supabase Realtime connection needs. Opening that up would undo a security protection, so the decision (owner's choice) was patient checking, the same way chat works.
+- **Two-step checking** (`src/lib/live.ts`): an open page first asks `live_pulse(kind, id)`, which returns a 32-character fingerprint of what the page shows (a hash of the replies, votes, members, feed and so on, and for chat just the newest line number). Only when the fingerprint changes does the page fetch the full data (`live.plan`, `live.group`, `live.discover`, `live.plans`, or the chat lines). Every kind first checks the caller belongs, and answers null otherwise. Because most checks find nothing new, almost no data moves.
+- **Patient:** pages check every 10 seconds; chat every 4. The longer nothing changes the slower it goes (2x after about a minute of quiet, 3x after two, so 30 seconds, and chat 12), and any touch, scroll, key press or returning to the tab snaps it back to the fast rate. Checking pauses while the tab is hidden and stops after 15 minutes without anyone touching the page, resuming on the next touch. After errors it backs off up to 60 seconds. The sidebar badges check every 30 seconds.
+- **Plan page (host):** replies, votes, the locked time and the feed update in place. A person or time that was not on the page needs the page rebuilt, so it refreshes itself once the host has stopped typing (`reloadWhenIdle`: no touch for 4 seconds and nothing typed in a field).
+- **Group page:** who is going and the question's votes update in place; someone joining or leaving, or a new question, refreshes the page when idle. Chat appends new lines as they arrive.
+- **Discover:** the whole feed updates in place (spots open, people, new groups), without disturbing a quiz in progress; the hour is part of its fingerprint so "starting soon" labels stay right.
+- **Plans page:** a new invite, a new reply count, a new group or a new chat line refreshes the page once the person is idle.
+- **Sidebar and tab bar badges:** the numbers for Plans and Friends stay current on every page.
+- **Not live:** the invite pages for guests (`/p`, `/r`), the calendar and the Friends page. They still update on reload.
+- **Cost to know:** a check with nothing new is a very small request and answer (a few hundred bytes of data plus normal headers) and one cheap database query, roughly 6 an open-tab minute at the fastest rate and about 2 once quiet. If usage grows, raise the base interval in the `poll` calls.

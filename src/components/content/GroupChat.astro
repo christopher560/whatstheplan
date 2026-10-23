@@ -66,7 +66,9 @@ const { render = true, viewerName = "" } = Astro.props;
 }
 
 <script>
-  import { get, loadNew, send, status, subscribe, viewer } from "@/lib/group-store.ts";
+  import { get, group, loadNew, send, status, subscribe, viewer } from "@/lib/group-store.ts";
+  import { poll } from "@/lib/live.ts";
+  import { livePulse } from "@/lib/live-repo.ts";
   import { cloneFirst, setAccent } from "@/lib/ui.ts";
   import { nearestAccent } from "@/utils/avatar-accent.ts";
 
@@ -101,12 +103,16 @@ const { render = true, viewerName = "" } = Astro.props;
       draft.focus();
     });
 
-    /* New lines arrive by asking every few seconds while the page is in view. */
-    const poll = () => {
-      if (document.visibilityState === "visible") void loadNew();
-    };
-    window.setInterval(poll, 4000);
-    document.addEventListener("visibilitychange", poll);
+    /* New lines arrive by asking a tiny question every few seconds, and fetching only when there is a new line. */
+    poll({
+      interval: 4000,
+      pulse: () => livePulse("chat", group().id),
+      load: async () => {
+        await loadNew();
+        return true;
+      },
+      apply: () => {},
+    });
 
     subscribe(() => {
       const s = get();

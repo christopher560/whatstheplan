@@ -89,6 +89,21 @@ const isActive = (href: string) =>
 }
 
 <script>
+  import { poll } from "@/lib/live.ts";
+  import { liveBadges } from "@/lib/live-repo.ts";
+
+  /* The numbers on Plans and Friends stay current while any page is open. */
+  if (document.querySelector("[data-badge]")) {
+    poll({
+      load: liveBadges,
+      interval: 30_000,
+      apply: (counts) => {
+        window.dispatchEvent(new CustomEvent("plans:pending", { detail: counts.plans }));
+        window.dispatchEvent(new CustomEvent("friends:pending", { detail: counts.friends }));
+      },
+    });
+  }
+
   /** Pages tell the shell when a count changes, e.g. `plans:pending` from Plans or `friends:pending` from Friends. */
   (["plans", "friends"] as const).forEach((name) => {
     window.addEventListener(`${name}:pending`, (event) => {

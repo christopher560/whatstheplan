@@ -79,11 +79,12 @@ export const readGroupPage = async (
   supabase: SupabaseClient,
   groupId: string,
   zoneName: string | undefined,
+  withChat = true,
 ): Promise<GroupDetail | null> => {
   const [page, lines] = await Promise.all([
     supabase.rpc("group_page", { p_group: groupId }),
-    /* Reading the chat also marks it as read for this person. */
-    supabase.rpc("group_messages", { p_group: groupId, p_after: 0 }),
+    /* Reading the chat also marks it as read for this person, so live checks skip it (chat has its own). */
+    withChat ? supabase.rpc("group_messages", { p_group: groupId, p_after: 0 }) : Promise.resolve({ data: [] }),
   ]);
   const json = page.data as PageJson | null;
   if (!json) return null;

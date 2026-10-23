@@ -239,6 +239,29 @@ export const toggleFriend = (memberId: string) => {
   });
 };
 
+/**
+ * Takes the latest group from the server. Who is going and the poll votes update in place.
+ * A person joining or leaving, or a new question, cannot be drawn in place, so that returns "reload".
+ */
+export const applyLive = (next: GroupDetail): "ok" | "reload" => {
+  const current = group();
+  const ids = (list: { id: string }[]) => list.map((item) => item.id).sort().join(",");
+  const options = (poll?: GroupDetail["poll"]) => `${poll?.id ?? ""}:${ids(poll?.options ?? [])}`;
+  if (ids(current.members) !== ids(next.members) || options(current.poll) !== options(next.poll)) return "reload";
+  /* Change the objects the components already hold, so none of them is left looking at an old copy. */
+  next.members.forEach((member) => {
+    const mine = current.members.find((item) => item.id === member.id);
+    if (mine) Object.assign(mine, { going: member.going, note: member.note });
+  });
+  next.poll?.options.forEach((option) => {
+    const mine = current.poll?.options.find((item) => item.id === option.id);
+    if (mine) mine.voters = option.voters;
+  });
+  Object.assign(current, { counts: next.counts, capacity: next.capacity, minimum: next.minimum });
+  update({});
+  return "ok";
+};
+
 export const askLeave = (ask: boolean) => update({ leaveAsk: ask });
 
 export const confirmLeave = () => {

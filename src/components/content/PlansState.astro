@@ -19,3 +19,13 @@ const { hub } = Astro.props;
     />
   )
 }
+
+<script>
+  import { poll, reloadWhenIdle } from "@/lib/live.ts";
+  import { livePlans, livePulse } from "@/lib/live-repo.ts";
+
+  /* The Plans page cannot redraw a new invite or reply count in place, so it refreshes once the person is idle. */
+  if (document.getElementById("plans-data")) {
+    poll({ pulse: () => livePulse("plans"), load: livePlans, apply: reloadWhenIdle });
+  }
+</script>

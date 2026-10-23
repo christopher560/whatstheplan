@@ -19,3 +19,15 @@ const { data } = Astro.props;
     />
   )
 }
+
+<script>
+  import { poll } from "@/lib/live.ts";
+  import { liveDiscover, livePulse } from "@/lib/live-repo.ts";
+  import { applyLive, getData } from "@/lib/discover-store.ts";
+
+  /* The Discover feed: spots, people and new groups arrive while it is open. */
+  if (document.getElementById("discover-data")) {
+    getData();
+    poll({ pulse: () => livePulse("discover"), load: liveDiscover, apply: applyLive });
+  }
+</script>

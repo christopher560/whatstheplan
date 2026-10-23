@@ -19,3 +19,21 @@ const { page } = Astro.props;
     />
   )
 }
+
+<script>
+  import { poll, reloadWhenIdle } from "@/lib/live.ts";
+  import { liveGroup, livePulse } from "@/lib/live-repo.ts";
+  import { applyLive, group } from "@/lib/group-store.ts";
+
+  /* A group page: who is going and the poll votes arrive while it is open (chat has its own checks). */
+  if (document.getElementById("group-data")) {
+    const id = group().id;
+    poll({
+      pulse: () => livePulse("group", id),
+      load: () => liveGroup(id),
+      apply: (next) => {
+        if (applyLive(next) === "reload") reloadWhenIdle();
+      },
+    });
+  }
+</script>
