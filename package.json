@@ -32,5 +32,8 @@
     "version": "0.0.5",
     "commit": "0e32ded964de80d62636346c2e0e3fb3a701beda",
     "scaffolded": "2026-10-14"
+  },
+  "overrides": {
+    "zod": "^4.6.6"
   }
 }

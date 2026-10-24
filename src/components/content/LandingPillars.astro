@@ -1,0 +1,675 @@
+---
+import Avatar from "@/components/item/Avatar.astro";
+import Pill from "@/components/item/Pill.astro";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+/* Each person's free stretches across Saturday, as a left offset and width in percent, with the beat each draws in on. */
+const free: { initial: string; color: AccentColor; bars: [number, number, number][] }[] = [
+  { initial: "M", color: "red", bars: [[6, 22, 0.3], [50, 30, 0.48]] },
+  { initial: "D", color: "blue", bars: [[18, 22, 0.66], [52, 20, 0.84]] },
+  { initial: "S", color: "green", bars: [[2, 20, 1.02], [46, 46, 1.2]] },
+  { initial: "P", color: "pink", bars: [[28, 20, 1.38], [54, 16, 1.56]] },
+];
+
+const planChips = ["Free-time overlap", "One invite link", "Budget and chat"];
+const discoverChips = ["Matched by interests", "Near you", "Leave or block anytime"];
+const interests = ["Hiking", "Coffee", "Photos"];
+---
+
+{
+  render && (
+    <section class="landing-pillars_wrap" id="pillars" aria-labelledby="landing-pillars-title">
+      <div class="landing-pillars_head">
+        <span class="landing-pillars_tag text-style-tiny scroll-reveal">Two problems, one app</span>
+        <h2 id="landing-pillars-title" class="landing-pillars_title scroll-reveal">
+          Plan with friends. Meet new ones.
+        </h2>
+        <p class="landing-pillars_lead text-style-large scroll-reveal">
+          Whether you have a crew or you’re looking for one, it all ends the same way: a plan that actually happens.
+        </p>
+      </div>
+
+      <div class="landing-pillars_layout">
+        <article class="landing-pillars_card plan scroll-reveal">
+          <span class="landing-pillars_blob" aria-hidden="true" />
+          <div class="landing-pillars_kicker">
+            <span class="landing-pillars_badge plan">
+              <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path class="landing-pillars_paper" d="M6 18a8 8 0 0 1 8-8h20a8 8 0 0 1 8 8v18a8 8 0 0 1-8 8H14a8 8 0 0 1-8-8z" stroke-width="3" />
+                <path class="landing-pillars_accent" d="M6 18a8 8 0 0 1 8-8h20a8 8 0 0 1 8 8v3H6z" stroke-width="3" stroke-linejoin="round" />
+                <path d="M16 5v9M32 5v9" fill="none" stroke-width="3.5" stroke-linecap="round" />
+                <path d="M15 32l6 6 12-12" fill="none" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="text-style-tiny">Plan</span>
+          </div>
+          <h3 class="landing-pillars_card_title">Plans with the people you already know.</h3>
+          <p class="landing-pillars_card_text text-style-main">
+            See who’s free, send one link, and watch the replies come in.
+          </p>
+
+          <div class="landing-pillars_viz">
+            <div class="landing-pillars_viz_head">
+              <span class="landing-pillars_label text-style-tiny">Saturday, everyone</span>
+              <Pill size="tiny" variant="filled" color="green">
+                1 slot fits all
+              </Pill>
+            </div>
+            <div class="landing-pillars_tracks">
+              {free.map((person) => (
+                <div class="landing-pillars_track">
+                  <Avatar initial={person.initial} color={person.color} size="small" />
+                  <div class="landing-pillars_lane">
+                    {person.bars.map(([left, width, delay]) => (
+                      <span
+                        class={`landing-pillars_bar ${person.color}`}
+                        style={`--_left: ${left}%; --_width: ${width}%; --_delay: ${delay}s;`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <span class="landing-pillars_band" />
+            </div>
+            <div class="landing-pillars_hours text-style-small">
+              <span>Noon</span>
+              <span>4pm</span>
+              <span>8pm</span>
+              <span>Late</span>
+            </div>
+            <div class="landing-pillars_link">
+              <span class="landing-pillars_url text-style-small">whatstheplan.social/p/tacos</span>
+              <span class="text-style-small landing-pillars_count">4 of 4 in</span>
+            </div>
+            <div class="landing-pillars_meter">
+              <div class="landing-pillars_fill" />
+            </div>
+          </div>
+
+          <div class="landing-pillars_chips">
+            {planChips.map((chip) => (
+              <span class="landing-pillars_chip text-style-small">{chip}</span>
+            ))}
+          </div>
+        </article>
+
+        <article class="landing-pillars_card discover scroll-reveal">
+          <span class="landing-pillars_blob" aria-hidden="true" />
+          <div class="landing-pillars_kicker">
+            <span class="landing-pillars_badge discover">
+              <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path class="landing-pillars_paper" d="M24 45S8 31 8 20a16 16 0 0 1 32 0c0 11-16 25-16 25z" stroke-width="3" stroke-linejoin="round" />
+                <circle class="landing-pillars_accent" cx="24" cy="20" r="6.5" stroke-width="3" />
+              </svg>
+            </span>
+            <span class="text-style-tiny">Discover</span>
+          </div>
+          <h3 class="landing-pillars_card_title">Find people who like what you like.</h3>
+          <p class="landing-pillars_card_text text-style-main">
+            Pick your days and interests. We match you into a group near you.
+          </p>
+
+          <div class="landing-pillars_viz">
+            <svg
+              class="landing-pillars_map"
+              viewBox="0 0 320 150"
+              preserveAspectRatio="xMidYMid slice"
+              aria-hidden="true"
+            >
+              <path d="M-10 118C60 96 100 134 170 106S280 70 335 92" stroke="#A9D8FF" stroke-width="22" fill="none" stroke-linecap="round" />
+              <path d="M200 -10C230 20 270 30 335 18V-10z" fill="#CDF5E6" />
+              <path d="M-10 30C30 24 50 52 20 74S-10 70-10 70z" fill="#CDF5E6" />
+              <path d="M40 -5C58 40 88 70 104 160" stroke="#fff" stroke-width="7" fill="none" />
+              <path d="M150 -5C158 40 176 80 190 160" stroke="#fff" stroke-width="7" fill="none" />
+              <path d="M-5 56C80 50 160 66 325 54" stroke="#fff" stroke-width="7" fill="none" />
+              <g fill="none" stroke="#1D1740" stroke-opacity=".28" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1 6">
+                <path d="M46 28C84 34 108 54 150 68" />
+                <path d="M274 36C238 42 196 56 160 68" />
+                <path d="M60 122C96 112 126 92 148 76" />
+                <path d="M262 118C228 108 192 92 168 76" />
+              </g>
+              <g stroke="#1D1740" stroke-width="2.5">
+                <circle cx="46" cy="28" r="11" fill="#FFD23F" />
+                <circle cx="274" cy="36" r="11" fill="#62BCFF" />
+                <circle cx="60" cy="122" r="11" fill="#FF94C6" />
+                <circle cx="262" cy="118" r="11" fill="#52DDB0" />
+              </g>
+              <g class="landing-pillars_initials" text-anchor="middle" font-size="11" font-weight="700" fill="#1D1740">
+                <text x="46" y="33">A</text>
+                <text x="274" y="41">K</text>
+                <text x="60" y="127">R</text>
+                <text x="262" y="123">T</text>
+              </g>
+              <g class="landing-pillars_pin">
+                <path d="M160 86S147 74 147 64a13 13 0 0 1 26 0c0 10-13 22-13 22z" fill="#FF8A2B" stroke="#1D1740" stroke-width="2.5" stroke-linejoin="round" />
+                <circle cx="160" cy="64" r="4.5" fill="#fff" stroke="#1D1740" stroke-width="2" />
+              </g>
+            </svg>
+            <div class="landing-pillars_hike">
+              <div>
+                <p class="landing-pillars_hike_title">Sunset hike</p>
+                <p class="landing-pillars_hike_when text-style-small">Sun · 5:30 pm · 1.2 mi away</p>
+              </div>
+              <Pill size="tiny" variant="filled" color="pink">
+                92% fit
+              </Pill>
+            </div>
+            <div class="landing-pillars_viz_foot">
+              <span class="landing-pillars_interests">
+                {interests.map((interest) => (
+                  <Pill size="tiny" class="landing-pillars_interest">
+                    {interest}
+                  </Pill>
+                ))}
+              </span>
+              <span class="landing-pillars_going text-style-small">
+                <span class="landing-pillars_looking">Looking…</span>
+                <span class="landing-pillars_found">5 of 6 going</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="landing-pillars_chips">
+            {discoverChips.map((chip) => (
+              <span class="landing-pillars_chip text-style-small">{chip}</span>
+            ))}
+          </div>
+        </article>
+      </div>
+    </section>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .landing-pillars_wrap {
+      width: var(--site-width);
+      max-width: 72.5rem;
+      margin-inline: auto;
+      padding-block: var(--space-8);
+    }
+
+    .landing-pillars_head {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-block-end: var(--space-6);
+      text-align: center;
+    }
+
+    .landing-pillars_tag {
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+    }
+
+    .landing-pillars_title {
+      max-width: 47.5rem;
+      margin-block-start: var(--space-3);
+      font-family: var(--secondary-family);
+      font-size: clamp(2.125rem, 5.4vw, 4rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-small);
+      text-wrap: balance;
+    }
+
+    .landing-pillars_lead {
+      max-width: 32.5rem;
+      margin-block-start: var(--space-4);
+      color: var(--text-2);
+      line-height: var(--line-height-huge);
+    }
+
+    .landing-pillars_layout {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+
+      @media (width >= 64rem) {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0 var(--space-4);
+      }
+    }
+
+    .landing-pillars_card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: clamp(1.5rem, 4vw, 2.75rem);
+      overflow: hidden;
+      border: var(--border-width) solid var(--border);
+      border-radius: 2.25rem;
+
+      @media (width >= 64rem) {
+        display: grid;
+        grid-row: span 5;
+        grid-template-rows: subgrid;
+      }
+      &.plan {
+        background-color: color-mix(in srgb, var(--colors-vivid-yellow) 30%, transparent);
+      }
+      &.discover {
+        background-color: color-mix(in srgb, var(--colors-vivid-purple) 22%, transparent);
+      }
+      @media (width < 64rem) {
+        border-radius: var(--radius-xlarge);
+      }
+    }
+
+    .landing-pillars_blob {
+      position: absolute;
+      right: -4.375rem;
+      bottom: -3.75rem;
+      width: 18.75rem;
+      height: 18.75rem;
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
+      opacity: 0.45;
+    }
+
+    .landing-pillars_card.plan .landing-pillars_blob {
+      background-color: var(--colors-vivid-orange);
+    }
+    .landing-pillars_card.discover .landing-pillars_blob {
+      background-color: var(--colors-vivid-pink);
+    }
+
+    .landing-pillars_kicker {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .landing-pillars_badge {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-main);
+      height: var(--avatar-main);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+      box-shadow: var(--shadow-offset-small);
+
+      &.plan {
+        rotate: -5deg;
+      }
+      &.discover {
+        rotate: 5deg;
+      }
+
+      & svg {
+        width: 1.75rem;
+        height: 1.75rem;
+        stroke: var(--border-strong);
+      }
+    }
+
+    .landing-pillars_paper {
+      fill: var(--background-3);
+    }
+    .landing-pillars_accent {
+      fill: var(--colors-vivid-orange);
+    }
+
+    .landing-pillars_card_title {
+      position: relative;
+      max-width: 20ch;
+      margin-block: var(--space-4) var(--space-3);
+      font-family: var(--secondary-family);
+      font-size: clamp(1.75rem, 3.4vw, 2.625rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: 1.03;
+    }
+
+    .landing-pillars_card_text {
+      position: relative;
+      max-width: 26.25rem;
+      line-height: var(--line-height-huge);
+    }
+
+    .landing-pillars_viz {
+      position: relative;
+      margin-block-start: var(--space-5);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border);
+      border-radius: var(--radius-large);
+      background-color: color-mix(in srgb, var(--background-3) 85%, transparent);
+    }
+
+    .landing-pillars_viz_head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      margin-block-end: var(--space-3);
+    }
+
+    .landing-pillars_label {
+      color: var(--text-2);
+    }
+
+    .landing-pillars_tracks {
+      --_label: 2.625rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .landing-pillars_track {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .landing-pillars_lane {
+      position: relative;
+      flex: 1;
+      height: 1.375rem;
+    }
+
+    .landing-pillars_bar {
+      position: absolute;
+      top: 0.125rem;
+      left: var(--_left);
+      width: var(--_width);
+      height: 1.125rem;
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: 0.5625rem;
+      background-color: var(--colors-vivid-blue);
+      transform-origin: left center;
+      animation: landing-pillars-draw 9s ease-in-out infinite;
+      animation-delay: var(--_delay);
+
+      &.red {
+        background-color: var(--colors-vivid-red);
+      }
+      &.green {
+        background-color: var(--colors-vivid-green);
+      }
+      &.pink {
+        background-color: var(--colors-vivid-pink);
+      }
+    }
+
+    .landing-pillars_band {
+      position: absolute;
+      top: calc(var(--space-1) * -1);
+      bottom: calc(var(--space-1) * -1);
+      left: calc(var(--_label) + (100% - var(--_label)) * 0.54);
+      width: calc((100% - var(--_label)) * 0.16);
+      border: var(--border-width-thick) dashed var(--border-strong);
+      border-radius: var(--radius-small);
+      background-color: color-mix(in srgb, var(--colors-vivid-yellow) 45%, transparent);
+      animation: landing-pillars-band 9s ease-in-out infinite;
+    }
+
+    .landing-pillars_hours {
+      display: flex;
+      justify-content: space-between;
+      margin: var(--space-2) 0 0 2.625rem;
+      color: var(--text-2);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+    }
+
+    .landing-pillars_link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-block-start: var(--space-3);
+    }
+
+    .landing-pillars_url {
+      flex: 1;
+      min-width: 0;
+      padding: var(--space-1) var(--space-3);
+      overflow: hidden;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-secondary-blue);
+      font-weight: var(--primary-bold);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .landing-pillars_count {
+      font-weight: var(--primary-bold);
+      white-space: nowrap;
+    }
+
+    .landing-pillars_meter {
+      height: 0.625rem;
+      margin-block-start: var(--space-2);
+      overflow: hidden;
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: 0.3125rem;
+      background-color: var(--background-3);
+    }
+
+    .landing-pillars_fill {
+      width: 0;
+      height: 100%;
+      background-color: var(--colors-vivid-green);
+      animation: landing-pillars-fill 9s ease-in-out infinite;
+    }
+
+    .landing-pillars_chips {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-block-start: var(--space-4);
+    }
+
+    .landing-pillars_chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.875rem;
+      padding-inline: var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+      white-space: nowrap;
+    }
+
+    .landing-pillars_map {
+      display: block;
+      width: 100%;
+      height: 9.375rem;
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: #dff1ff;
+    }
+
+    .landing-pillars_initials {
+      font-family: var(--primary-family);
+    }
+
+    .landing-pillars_pin {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+      animation: landing-pillars-pulse 3.6s ease-in-out infinite;
+    }
+
+    .landing-pillars_hike {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      margin-block-start: var(--space-3);
+    }
+
+    .landing-pillars_hike > div {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .landing-pillars_hike_title {
+      font-family: var(--secondary-family);
+      font-size: var(--h5);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-medium);
+    }
+
+    .landing-pillars_hike_when {
+      color: var(--text-2);
+      font-weight: var(--primary-medium);
+    }
+
+    .landing-pillars_viz_foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      margin-block-start: var(--space-3);
+    }
+
+    .landing-pillars_interests {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .landing-pillars_going {
+      position: relative;
+      display: inline-block;
+      min-width: 6rem;
+      font-weight: var(--primary-bold);
+      text-align: right;
+    }
+
+    .landing-pillars_looking {
+      animation: landing-pillars-looking 9s ease-in-out infinite;
+    }
+
+    .landing-pillars_found {
+      position: absolute;
+      top: 0;
+      right: 0;
+      animation: landing-pillars-found 9s ease-in-out infinite;
+    }
+
+    @keyframes landing-pillars-draw {
+      0% {
+        transform: scaleX(0);
+      }
+      12%,
+      88% {
+        transform: scaleX(1);
+      }
+      96%,
+      100% {
+        transform: scaleX(0);
+      }
+    }
+
+    @keyframes landing-pillars-band {
+      0%,
+      30% {
+        opacity: 0;
+      }
+      40%,
+      88% {
+        opacity: 1;
+      }
+      96%,
+      100% {
+        opacity: 0;
+      }
+    }
+
+    @keyframes landing-pillars-fill {
+      0%,
+      6% {
+        width: 0;
+      }
+      40%,
+      88% {
+        width: 100%;
+      }
+      96%,
+      100% {
+        width: 0;
+      }
+    }
+
+    @keyframes landing-pillars-looking {
+      0%,
+      14% {
+        opacity: 1;
+      }
+      22%,
+      92% {
+        opacity: 0;
+      }
+      98%,
+      100% {
+        opacity: 1;
+      }
+    }
+
+    @keyframes landing-pillars-found {
+      0%,
+      14% {
+        opacity: 0;
+      }
+      22%,
+      88% {
+        opacity: 1;
+      }
+      96%,
+      100% {
+        opacity: 0;
+      }
+    }
+
+    @keyframes landing-pillars-pulse {
+      0%,
+      100% {
+        scale: 1;
+      }
+      50% {
+        scale: 1.08;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .landing-pillars_bar,
+      .landing-pillars_band,
+      .landing-pillars_pin,
+      .landing-pillars_looking {
+        animation: none;
+      }
+      .landing-pillars_band,
+      .landing-pillars_found {
+        opacity: 1;
+        animation: none;
+      }
+      .landing-pillars_fill {
+        width: 100%;
+        animation: none;
+      }
+      .landing-pillars_looking {
+        opacity: 0;
+      }
+    }
+  }
+</style>

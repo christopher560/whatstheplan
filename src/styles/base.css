@@ -27,6 +27,33 @@
   --colors-secondary-purple: #E9DDFB;
   --colors-secondary-pink: #FBE0EA;
 
+  /* Gradients */
+  --gradient-brand-glow:
+    radial-gradient(60% 85% at 4% 100%, var(--brand-500) 0%, transparent 70%),
+    radial-gradient(55% 80% at 100% 0%, var(--brand-600) 0%, transparent 70%),
+    radial-gradient(45% 60% at 70% 110%, color-mix(in srgb, var(--colors-primary-pink) 60%, transparent) 0%, transparent 70%),
+    linear-gradient(135deg, var(--colors-secondary-orange), var(--colors-secondary-yellow));
+  --gradient-sunrise:
+    radial-gradient(60% 85% at 6% 100%, var(--colors-vivid-pink) 0%, transparent 70%),
+    radial-gradient(55% 75% at 100% 0%, color-mix(in srgb, var(--colors-vivid-yellow) 80%, transparent) 0%, transparent 70%),
+    radial-gradient(50% 60% at 62% 112%, color-mix(in srgb, var(--colors-vivid-orange) 60%, transparent) 0%, transparent 70%),
+    linear-gradient(135deg, var(--colors-secondary-pink), var(--colors-secondary-orange));
+  --gradient-lagoon:
+    radial-gradient(55% 80% at 0% 62%, color-mix(in srgb, var(--colors-vivid-purple) 55%, transparent) 0%, transparent 70%),
+    radial-gradient(50% 70% at 100% 0%, var(--colors-primary-blue) 0%, transparent 72%),
+    radial-gradient(60% 70% at 92% 108%, var(--colors-vivid-green) 0%, transparent 70%),
+    linear-gradient(160deg, var(--colors-secondary-blue), var(--colors-vivid-blue));
+  --gradient-meadow:
+    radial-gradient(55% 80% at 4% 0%, color-mix(in srgb, var(--colors-vivid-yellow) 75%, transparent) 0%, transparent 70%),
+    radial-gradient(60% 80% at 100% 100%, color-mix(in srgb, var(--colors-vivid-blue) 70%, transparent) 0%, transparent 72%),
+    radial-gradient(45% 65% at 48% 60%, color-mix(in srgb, var(--colors-vivid-green) 55%, transparent) 0%, transparent 70%),
+    linear-gradient(145deg, var(--colors-secondary-green), var(--colors-secondary-yellow));
+  --gradient-bloom:
+    radial-gradient(60% 80% at 0% 100%, var(--colors-primary-purple) 0%, transparent 72%),
+    radial-gradient(55% 75% at 100% 10%, color-mix(in srgb, var(--colors-vivid-orange) 70%, transparent) 0%, transparent 70%),
+    radial-gradient(50% 70% at 55% 0%, var(--colors-vivid-pink) 0%, transparent 72%),
+    linear-gradient(120deg, var(--colors-secondary-purple), var(--colors-secondary-pink));
+
   /* Typography primitives */
   --primary-family: var(--font-plus-jakarta-sans, system-ui, sans-serif);
   --primary-regular: 400;

@@ -1,42 +1,29 @@
 ---
-import Layout from "@/layouts/BaseLayout.astro";
-import Section from "@/components/wrapper/Section.astro";
-import Heading from "@/components/typography/Heading.astro";
-import Eyebrow from "@/components/typography/Eyebrow.astro";
-import Img from "@/components/media/Img.astro";
-import lumos_background from "@/assets/graphics/lumos-background.svg";
-import Icon from "@/components/media/Icon.astro";
-import logo_icon from "@/assets/logo/logo-icon.svg";
-import ContentWrapper from "@/components/wrapper/ContentWrapper.astro";
+import LandingLayout from "@/layouts/LandingLayout.astro";
+import LandingNav from "@/components/content/LandingNav.astro";
+import LandingHero from "@/components/content/LandingHero.astro";
+import LandingTour from "@/components/section/LandingTour.astro";
+import LandingPillars from "@/components/content/LandingPillars.astro";
+import LandingFeatures from "@/components/content/LandingFeatures.astro";
+import LandingOccasions from "@/components/content/LandingOccasions.astro";
+import LandingFaq from "@/components/content/LandingFaq.astro";
+import LandingClosing from "@/components/content/LandingClosing.astro";
 ---
 
-<Layout theme="light">
-  <Section
-    paddingBottom="even"
-    containerClass="flex-grow"
-    paddingTop="even"
-    class="flex-grow"
-    style="min-height: calc(100svh - var(--nav-height));"
-    theme="light"
-  >
-    <ContentWrapper
-      class="flex-grow theme-brand"
-      variant="card"
-      mediaOpacity={100}
-    >
-      <Icon src={logo_icon} variant="large" />
-      <Heading variant="display" tag="h1" class="margin-block-8"
-        >Style Guide</Heading
-      >
-      <Eyebrow variant="tag">v0.0.5</Eyebrow>
-      <Img
-        slot="column2"
-        src={lumos_background}
-        width={1920}
-        height={1080}
-        loading="eager"
-        fetchPriority="high"
-      />
-    </ContentWrapper>
-  </Section>
-</Layout>
+<LandingLayout>
+  <LandingNav slot="nav" />
+  <!-- Hero -->
+  <LandingHero />
+  <!-- How it works -->
+  <LandingTour />
+  <!-- Plan and Discover -->
+  <LandingPillars />
+  <!-- Features -->
+  <LandingFeatures />
+  <!-- Occasions -->
+  <LandingOccasions />
+  <!-- FAQ -->
+  <LandingFaq />
+  <!-- Closing call to action and footer -->
+  <LandingClosing />
+</LandingLayout>

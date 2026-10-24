@@ -1,0 +1,132 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Icon from "@/components/media/Icon.astro";
+import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
+import { SITE_NAME } from "@/consts.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const links = [
+  { label: "How it works", href: "#demo" },
+  { label: "Features", href: "#features" },
+  { label: "Log in", href: "/login" },
+];
+---
+
+{
+  render && (
+    <>
+      <div class="landing-closing_scallop" aria-hidden="true" />
+      <section class="landing-closing_wrap" aria-labelledby="landing-closing-title">
+        <h2 id="landing-closing-title" class="landing-closing_title scroll-reveal">
+          Your next plan is one link away.
+        </h2>
+        <ActionButton element="link" href="/signup" size="large" raised>
+          Start planning, it's free
+        </ActionButton>
+      </section>
+      <footer class="landing-closing_footer">
+        <a class="landing-closing_logo" href="#top" aria-label={SITE_NAME}>
+          <Icon src={brand_full_logo_cropped} variant="full-width" />
+        </a>
+        <nav class="landing-closing_links" aria-label="Footer">
+          {links.map((link) => (
+            <a class="landing-closing_link text-style-small" href={link.href}>
+              {link.label}
+            </a>
+          ))}
+        </nav>
+        <p class="landing-closing_copyright text-style-small">
+          &copy; {new Date().getFullYear()} {SITE_NAME}
+        </p>
+      </footer>
+    </>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .landing-closing_scallop {
+      height: 1.375rem;
+      margin-block-end: -0.0625rem;
+      background:
+        radial-gradient(
+            circle at 1.375rem 1.375rem,
+            var(--colors-secondary-yellow) 1.3125rem,
+            transparent 1.375rem
+          )
+          repeat-x;
+      background-size: 2.75rem 1.375rem;
+    }
+
+    .landing-closing_wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-5);
+      padding: clamp(2.5rem, 7vw, 5.5rem) var(--space-3);
+      background-color: var(--colors-secondary-yellow);
+      text-align: center;
+    }
+
+    .landing-closing_title {
+      max-width: 45rem;
+      font-family: var(--secondary-family);
+      font-size: clamp(2.25rem, 6vw, 4.5rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-small);
+      text-wrap: balance;
+    }
+
+    .landing-closing_footer {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-3);
+      width: var(--site-width);
+      max-width: 72.5rem;
+      margin-inline: auto;
+      padding-block: var(--space-4) var(--space-6);
+      color: var(--text-2);
+
+      @media (width >= 64rem) {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+
+    .landing-closing_logo {
+      display: block;
+      width: 7.5rem;
+    }
+
+    .landing-closing_links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .landing-closing_link {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--control-height-small);
+      padding-inline: var(--space-3);
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+      text-decoration: none;
+
+      @media (hover: hover) {
+        &:hover {
+          color: var(--text);
+        }
+      }
+    }
+  }
+</style>

@@ -8,15 +8,11 @@ import PasswordCard from "@/components/content/PasswordCard.astro";
 import DeleteAccountCard from "@/components/content/DeleteAccountCard.astro";
 import LogOutButton from "@/components/item/LogOutButton.astro";
 import { readProfile } from "@/lib/profile-db.ts";
-import { onboardingRepo } from "@/lib/onboarding-repo.ts";
 
 /* Depends on who is signed in, so it renders on each request. */
 export const prerender = false;
 
-const [saved, areas] = await Promise.all([
-  readProfile(Astro.locals.supabase, Astro.locals.user!.id),
-  onboardingRepo.getAreas(),
-]);
+const saved = await readProfile(Astro.locals.supabase, Astro.locals.user!.id);
 if (!saved) return Astro.redirect("/app/onboarding");
 const { data: username } = await Astro.locals.supabase.rpc("ensure_my_username");
 const { profile } = saved;
@@ -37,7 +33,7 @@ const miles = ({ 8: 5, 16: 10, 40: 25 } as const)[(place?.discover_radius_km ?? 
     gap="5"
     containerClass="max-width-small"
   >
-    <AccountProfile profile={profile} areas={areas}>
+    <AccountProfile profile={profile}>
       <UsernameCard slot="after-basics" username={username ?? ""} host={Astro.url.host} />
     </AccountProfile>
     <LocationCard

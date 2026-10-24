@@ -1,0 +1,100 @@
+---
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const occasions = [
+  { label: "Taco night", fill: "var(--colors-vivid-green)" },
+  { label: "Study group", fill: "var(--colors-secondary-blue)" },
+  { label: "Wedding", fill: "var(--colors-secondary-purple)" },
+  { label: "Game night", fill: "var(--colors-vivid-yellow)" },
+  { label: "Sunset hike", fill: "var(--colors-secondary-orange)" },
+  { label: "Birthday", fill: "var(--colors-vivid-pink)" },
+  { label: "Brunch", fill: "var(--colors-secondary-yellow)" },
+  { label: "Open mic", fill: "var(--colors-secondary-green)" },
+  { label: "Road trip", fill: "var(--colors-secondary-blue)" },
+  { label: "Movie night", fill: "var(--colors-secondary-orange)" },
+];
+---
+
+{
+  render && (
+    <section class="landing-occasions_wrap" id="plans" aria-labelledby="landing-occasions-title">
+      <h2 id="landing-occasions-title" class="landing-occasions_title">
+        Hangouts. Study groups. Weddings.
+      </h2>
+      <div class="landing-occasions_viewport" aria-hidden="true">
+        <div class="landing-occasions_track">
+          {[...occasions, ...occasions].map((occasion) => (
+            <span class="landing-occasions_item" style={`--_fill: ${occasion.fill};`}>
+              {occasion.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .landing-occasions_wrap {
+      padding-block-start: var(--space-5);
+      padding-block-end: var(--space-8);
+    }
+
+    .landing-occasions_title {
+      width: var(--site-width);
+      max-width: 72.5rem;
+      margin: 0 auto var(--space-4);
+      font-family: var(--secondary-family);
+      font-size: clamp(1.875rem, 4.5vw, 3rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-small);
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .landing-occasions_viewport {
+      overflow: hidden;
+    }
+
+    .landing-occasions_track {
+      display: flex;
+      gap: var(--space-2);
+      width: max-content;
+      animation: landing-occasions-scroll 40s linear infinite;
+    }
+
+    .landing-occasions_item {
+      display: inline-flex;
+      align-items: center;
+      min-height: 3.5rem;
+      padding-inline: var(--space-5);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--_fill);
+      font-family: var(--secondary-family);
+      font-size: var(--h5);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      white-space: nowrap;
+    }
+
+    @keyframes landing-occasions-scroll {
+      to {
+        translate: -50% 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .landing-occasions_track {
+        animation: none;
+      }
+    }
+  }
+</style>

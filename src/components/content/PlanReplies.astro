@@ -2,8 +2,6 @@
 import Panel from "@/components/wrapper/Panel.astro";
 import Pill from "@/components/item/Pill.astro";
 import Avatar from "@/components/item/Avatar.astro";
-import ActionButton from "@/components/item/ActionButton.astro";
-import Choice from "@/components/form/Choice.astro";
 import type { PlanDetail } from "@/data/plan-detail.ts";
 
 interface Props {
@@ -64,20 +62,7 @@ const tiles = [
           ))}
         </div>
 
-        <div class="plan-replies_actions">
-          <ActionButton color="yellow" size="large" raised class="width-full" data-nudge>
-            Nudge
-          </ActionButton>
-          <div class="plan-replies_auto">
-            <Choice
-              variant="toggle"
-              label="Auto-nudge anyone who has not replied after 24 hours"
-              name="auto_nudge"
-              role="switch"
-              checked={plan.autoNudge}
-            />
-          </div>
-        </div>
+        <p class="plan-replies_waiting text-style-main" data-waiting />
       </div>
     </Panel>
   )
@@ -91,8 +76,6 @@ const tiles = [
     counts,
     shortSlot,
     waitingFriends,
-    nudgeWaiting,
-    toggleAuto,
     requestFriend,
   } from "@/lib/plan-store.ts";
 
@@ -100,18 +83,12 @@ const tiles = [
   const statusColor = { in: "green", maybe: "yellow", out: "pink" } as const;
 
   document.querySelectorAll<HTMLElement>("[data-replies]").forEach((root) => {
-    const nudge = root.querySelector<HTMLButtonElement>("[data-nudge]")!;
-    const nudgeText = nudge.querySelector<HTMLElement>(".action-button_text")!;
-    const auto = root.querySelector<HTMLInputElement>("input[name='auto_nudge']")!;
+    const waitingLine = root.querySelector<HTMLElement>("[data-waiting]")!;
 
-    nudge.addEventListener("click", nudgeWaiting);
     root.addEventListener("click", (event) => {
       const add = (event.target as HTMLElement).closest<HTMLElement>("[data-add-friend]");
       const id = add?.closest<HTMLElement>("[data-friend]")?.dataset.friend;
       if (id) requestFriend(id);
-    });
-    auto.addEventListener("change", () => {
-      if (auto.checked !== get().auto) toggleAuto();
     });
 
     subscribe(() => {
@@ -131,11 +108,7 @@ const tiles = [
         const reply = state.replies[friend.id];
         const votes = state.votes[friend.id] ?? [];
         const pill = row.querySelector<HTMLElement>("[data-status]")!;
-        pill.querySelector<HTMLElement>(".pill_text")!.textContent = reply
-          ? statusText[reply]
-          : state.nudged
-            ? "Nudged"
-            : "No reply yet";
+        pill.querySelector<HTMLElement>(".pill_text")!.textContent = reply ? statusText[reply] : "No reply yet";
         pill.classList.remove("filled", "dashed", "green", "yellow", "pink");
         if (reply) pill.classList.add("filled", statusColor[reply]);
         else pill.classList.add("dashed");
@@ -162,15 +135,11 @@ const tiles = [
         add.setAttribute("aria-pressed", String(asked));
       });
 
-      const off = waiting.length === 0 || state.nudged;
-      nudge.disabled = off;
-      nudgeText.textContent =
-        waiting.length === 0
-          ? "Everyone has replied"
-          : `${state.nudged ? "Nudged" : "Nudge"} ${waiting.map((f) => f.name).join(" and ")}`;
-      nudge.classList.remove("yellow", "green");
-      nudge.classList.add(off ? "green" : "yellow");
-      auto.checked = state.auto;
+      const names = waiting.map((friend) => friend.name);
+      waitingLine.textContent =
+        names.length === 0
+          ? "Everyone has replied."
+          : `Still waiting on ${names.length <= 2 ? names.join(" and ") : `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`}.`;
     });
   });
 </script>
@@ -279,10 +248,8 @@ const tiles = [
       flex: none;
     }
 
-    .plan-replies_actions {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-3);
+    .plan-replies_waiting {
+      font-weight: var(--primary-bold);
     }
 
     @keyframes plan-replies-swap {

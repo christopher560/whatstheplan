@@ -283,7 +283,6 @@ export const readPlan = async (
       })),
     slots: slots.map((slot) => ({ id: slot.id, label: slotLabel(slot.starts_at, row.tz) })),
     lockedSlot: row.locked_slot_id,
-    autoNudge: row.auto_nudge,
     feed: items,
     swaps: [],
   };

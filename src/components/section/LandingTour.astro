@@ -1,0 +1,1619 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import Pill from "@/components/item/Pill.astro";
+import PathIcon from "@/components/media/PathIcon.astro";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const flows = [
+  {
+    label: "Plan in 5 taps",
+    tag: "Plan",
+    d: "M12 5v14M5 12h14",
+    title: "Plan anything in 5 taps",
+    text: "Pick what, vibe, who, when and budget. Your invite writes itself.",
+  },
+  {
+    label: "Find the time",
+    tag: "Calendar",
+    d: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
+    title: "See when everyone is free",
+    text: "Lay calendars on top of each other and tap the best slot.",
+  },
+  {
+    label: "Send one link",
+    tag: "Invite",
+    d: "M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1",
+    title: "One link, live replies",
+    text: "Friends reply right from the link. You watch it fill in.",
+  },
+  {
+    label: "Meet new people",
+    tag: "Discover",
+    d: "M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z",
+    title: "Meet people near you",
+    text: "Join groups matched to your interests and your calendar.",
+  },
+  {
+    label: "Lock it in",
+    tag: "Plans",
+    d: "M4 5h16v11H9l-5 4V5z",
+    title: "Lock it in",
+    text: "Who, what, where and when, plus a chat for the plan.",
+  },
+];
+
+const gradients = ["brand-glow", "sunrise", "lagoon", "meadow", "bloom"];
+
+const people: { initial: string; name: string; color: AccentColor }[] = [
+  { initial: "M", name: "Maya", color: "red" },
+  { initial: "D", name: "Dev", color: "blue" },
+  { initial: "S", name: "Sam", color: "green" },
+  { initial: "P", name: "Priya", color: "pink" },
+];
+
+const steps: { key: string; label: string; options: string[]; colors?: AccentColor[] }[] = [
+  { key: "type", label: "What", options: ["Hangout", "School", "Formal"] },
+  { key: "vibe", label: "Vibe", options: ["Food", "Chill", "Active"] },
+  { key: "who", label: "Who", options: people.map((p) => p.name), colors: people.map((p) => p.color) },
+  { key: "when", label: "When", options: ["Sat 7pm", "Sun 2pm", "Fri 8pm"] },
+  { key: "budget", label: "Budget", options: ["Free", "$15", "$40"] },
+];
+
+const compare: { name: string; color: AccentColor }[] = [
+  { name: "You", color: "yellow" },
+  { name: "Maya", color: "red" },
+  { name: "Dev", color: "blue" },
+  { name: "Sam", color: "green" },
+];
+const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const periods = ["Morning", "Afternoon", "Evening"];
+
+const discover = [
+  { tag: "Hike · 1.2 mi", title: "Sunset hike", fit: "92% fit", big: true },
+  { tag: "Games · 0.8 mi", title: "Board game cafe", fit: "88% fit", big: false },
+  { tag: "Music · 2 mi", title: "Open mic night", fit: "81% fit", big: false },
+];
+
+const facts = ["Who", "What", "Where", "When"];
+---
+
+{
+  render && (
+    <section
+      class="landing-tour_wrap"
+      id="demo"
+      aria-labelledby="landing-tour-title"
+      data-tour
+    >
+      <div class="landing-tour_stick">
+        <div class="landing-tour_box">
+          {gradients.map((name) => (
+            <span
+              class="landing-tour_layer"
+              style={`background: var(--gradient-${name});`}
+              aria-hidden="true"
+              data-layer
+            />
+          ))}
+
+          <div class="landing-tour_tabs" role="group" aria-label="Product tour">
+            {flows.map((flow, i) => (
+              <button
+                class="landing-tour_tab"
+                type="button"
+                aria-pressed={i === 0}
+                aria-label={flow.label}
+                data-flow={i}
+              >
+                <span class="landing-tour_bubble">
+                  <PathIcon d={flow.d} variant="large" />
+                </span>
+                <span class="landing-tour_tab_label text-style-small">{flow.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div class="landing-tour_card">
+            <div class="landing-tour_copy_wrap">
+              {flows.map((flow, i) => (
+                <div class="landing-tour_copy" hidden={i !== 0} data-text={i}>
+                  <Pill size="tiny" variant="filled" color="yellow">
+                    {flow.tag}
+                  </Pill>
+                  <h2
+                    class="landing-tour_copy_title text-style-h4"
+                    id={i === 0 ? "landing-tour-title" : undefined}
+                  >
+                    {flow.title}
+                  </h2>
+                  <p class="landing-tour_copy_text text-style-main">{flow.text}</p>
+                  <div class="landing-tour_dots" aria-hidden="true">
+                    {flows.map((_, j) => (
+                      <span class:list={["landing-tour_dot", j === i && "current"]} />
+                    ))}
+                    <span class="landing-tour_count text-style-small">
+                      {String(i + 1).padStart(2, "0")} / 05
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div class="landing-tour_screen">
+              <div class="landing-tour_pane" data-screen="0">
+                <div class="landing-tour_builder">
+                  <div class="landing-tour_steps">
+                    {steps.map((step, n) => (
+                      <div class="landing-tour_step">
+                        <span class="landing-tour_num">{n + 1}</span>
+                        <div class="landing-tour_step_body">
+                          <p class="landing-tour_label text-style-tiny">{step.label}</p>
+                          <div class="landing-tour_chips" data-row={step.key}>
+                            {step.options.map((option, i) => (
+                              <button
+                                class="landing-tour_chip text-style-small"
+                                type="button"
+                                aria-pressed="false"
+                                data-color={step.colors?.[i] ?? "yellow"}
+                                data-i={i}
+                              >
+                                {option}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div class="landing-tour_preview" data-preview>
+                    <div class="landing-tour_preview_top">
+                      <Pill size="tiny" data-type-label>
+                        Hangout
+                      </Pill>
+                      <span class="avatar-stack_wrap">
+                        {people.map((p, k) => (
+                          <Avatar initial={p.initial} color={p.color} size="small" data-who={k} />
+                        ))}
+                      </span>
+                    </div>
+                    <p class="landing-tour_plan_title" data-plan-title>
+                      Taco night
+                    </p>
+                    <dl class="landing-tour_facts">
+                      <dt class="text-style-tiny">When</dt>
+                      <dd class="text-style-small" data-when />
+                      <dt class="text-style-tiny">Who</dt>
+                      <dd class="text-style-small" data-who-count />
+                      <dt class="text-style-tiny">Cost</dt>
+                      <dd class="text-style-small" data-cost />
+                    </dl>
+                    <ActionButton raised data-send>
+                      Send invite
+                    </ActionButton>
+                  </div>
+                </div>
+              </div>
+
+              <div class="landing-tour_pane" data-screen="1" hidden>
+                <div class="landing-tour_compare">
+                  <div class="landing-tour_compare_row">
+                    <span class="landing-tour_label text-style-tiny">Compare with</span>
+                    {compare.map((c, k) => (
+                      <button
+                        class="landing-tour_chip text-style-small"
+                        type="button"
+                        aria-pressed="true"
+                        data-color={c.color}
+                        data-inc={k}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div class="landing-tour_heat">
+                    <span />
+                    {days.map((day) => (
+                      <span class="landing-tour_heat_day text-style-small">{day}</span>
+                    ))}
+                    {periods.map((period, r) => (
+                      <>
+                        <span class="landing-tour_heat_day text-style-small">{period.slice(0, 3)}</span>
+                        {days.map((day, c) => (
+                          <button
+                            class="landing-tour_cell"
+                            type="button"
+                            aria-pressed="false"
+                            aria-label={`${day} ${period.toLowerCase()}`}
+                            data-cell
+                            data-r={r}
+                            data-c={c}
+                          />
+                        ))}
+                      </>
+                    ))}
+                  </div>
+                  <div class="landing-tour_best" data-best>
+                    <div class="landing-tour_best_text">
+                      <p class="text-style-tiny" data-best-tag>Everyone is free</p>
+                      <p class="landing-tour_best_when" data-best-when>Sat evening</p>
+                      <p class="text-style-small" data-best-sub>4 of 4 free</p>
+                    </div>
+                    <ActionButton size="small" raised data-plan-it>
+                      Plan it
+                    </ActionButton>
+                  </div>
+                </div>
+              </div>
+
+              <div class="landing-tour_pane" data-screen="2" hidden>
+                <div class="landing-tour_two">
+                  <div class="landing-tour_invite">
+                    <p class="text-style-tiny">Your invite link</p>
+                    <p class="landing-tour_invite_title" data-plan-title>Taco night</p>
+                    <p class="landing-tour_url text-style-small">whatstheplan.social/p/tacos</p>
+                    <ActionButton color="yellow" raised data-copy>
+                      Copy link
+                    </ActionButton>
+                    <p class="text-style-small landing-tour_hint">Tap a reply to change it</p>
+                  </div>
+                  <div class="landing-tour_replies">
+                    <div class="landing-tour_replies_head">
+                      <span class="landing-tour_label text-style-tiny">Replies · live</span>
+                      <span class="text-style-small landing-tour_summary" data-summary />
+                    </div>
+                    <div class="landing-tour_segs">
+                      {people.map((_, k) => (
+                        <span class="landing-tour_seg" data-seg={k} data-state="0" />
+                      ))}
+                    </div>
+                    {people.map((p, k) => (
+                      <div class="landing-tour_reply_row">
+                        <Avatar initial={p.initial} color={p.color} size="small" />
+                        <span class="landing-tour_reply_name text-style-main">{p.name}</span>
+                        <button
+                          class="landing-tour_reply text-style-small"
+                          type="button"
+                          data-reply={k}
+                          data-state="0"
+                        >
+                          Waiting
+                        </button>
+                      </div>
+                    ))}
+                    <Pill variant="filled" color="green">
+                      Time that won: Sat 7pm
+                    </Pill>
+                  </div>
+                </div>
+              </div>
+
+              <div class="landing-tour_pane" data-screen="3" hidden>
+                <div class="landing-tour_discover">
+                  {discover.map((card, i) => (
+                    <div class:list={["landing-tour_dcard", card.big && "big"]}>
+                      {card.big && (
+                        <svg
+                          class="landing-tour_art"
+                          viewBox="0 0 120 110"
+                          preserveAspectRatio="xMidYMid slice"
+                          aria-hidden="true"
+                        >
+                          <defs>
+                            <linearGradient id="landing-sky" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0" stop-color="#B9A8FF" />
+                              <stop offset=".5" stop-color="#FFA9CC" />
+                              <stop offset="1" stop-color="#FFD28A" />
+                            </linearGradient>
+                            <linearGradient id="landing-ridge-a" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0" stop-color="#8F7BE6" />
+                              <stop offset="1" stop-color="#6F5BC9" />
+                            </linearGradient>
+                            <linearGradient id="landing-ridge-b" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0" stop-color="#5A4AB0" />
+                              <stop offset="1" stop-color="#3E3390" />
+                            </linearGradient>
+                          </defs>
+                          <rect x="-10" y="-10" width="140" height="130" fill="url(#landing-sky)" />
+                          <circle cx="64" cy="58" r="30" fill="#fff" fill-opacity=".22" />
+                          <circle cx="64" cy="58" r="21" fill="#fff" fill-opacity=".3" />
+                          <circle cx="64" cy="58" r="13" fill="#FFF1B8" />
+                          <circle cx="14" cy="16" r="1.3" fill="#fff" fill-opacity=".8" />
+                          <circle cx="98" cy="12" r="1.1" fill="#fff" fill-opacity=".8" />
+                          <circle cx="40" cy="8" r="1" fill="#fff" fill-opacity=".7" />
+                          <path d="M-10 78L20 54 38 68 58 50 84 74 104 60 130 78V120H-10z" fill="url(#landing-ridge-a)" />
+                          <path d="M-10 94C14 80 34 86 58 76S100 80 130 70V120H-10z" fill="url(#landing-ridge-b)" />
+                          <path d="M30 118C40 104 58 106 64 96S78 88 86 82" stroke="#FFF1B8" stroke-opacity=".75" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="1 5.5" fill="none" />
+                          <circle cx="40" cy="98" r="7" fill="#FFD23F" stroke="#fff" stroke-width="2" />
+                          <circle cx="54" cy="94" r="7" fill="#62BCFF" stroke="#fff" stroke-width="2" />
+                          <circle cx="68" cy="88" r="7" fill="#52DDB0" stroke="#fff" stroke-width="2" />
+                          <path d="M92 92l4-10 4 10zM101 94l3-8 3 8z" fill="#2F2670" />
+                        </svg>
+                      )}
+                      <div class="landing-tour_dcard_main">
+                        <div class="landing-tour_dcard_top">
+                          <span class="landing-tour_label text-style-tiny">{card.tag}</span>
+                          <Pill size="tiny">{card.fit}</Pill>
+                        </div>
+                        <p class="landing-tour_dcard_title">{card.title}</p>
+                        <div class="landing-tour_dcard_foot">
+                          <span class="landing-tour_going">
+                            <span class="avatar-stack_wrap" data-dpeople={i} />
+                            <span class="text-style-small" data-going={i} />
+                          </span>
+                          <ActionButton size="small" raised data-join={i}>
+                            Join
+                          </ActionButton>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <ActionButton color="white" size="small" data-open-chat hidden>
+                    Open the group chat
+                  </ActionButton>
+                </div>
+              </div>
+
+              <div class="landing-tour_pane" data-screen="4" hidden>
+                <div class="landing-tour_two group">
+                  <div class="landing-tour_group">
+                    <Pill size="tiny" variant="filled" color="green">
+                      Locked in
+                    </Pill>
+                    <p class="landing-tour_invite_title" data-plan-title>Taco night</p>
+                    <dl class="landing-tour_facts">
+                      {facts.map((fact) => (
+                        <>
+                          <dt class="text-style-tiny">{fact}</dt>
+                          {fact === "Who" ? (
+                            <dd><span class="avatar-stack_wrap" data-group-stack /></dd>
+                          ) : fact === "What" ? (
+                            <dd class="text-style-small">Dinner</dd>
+                          ) : fact === "Where" ? (
+                            <dd class="text-style-small">Lupe's Taqueria</dd>
+                          ) : (
+                            <dd class="text-style-small" data-when />
+                          )}
+                        </>
+                      ))}
+                    </dl>
+                    <ActionButton color="yellow" raised data-im-in>
+                      I’m in
+                    </ActionButton>
+                  </div>
+                  <div class="landing-tour_chat">
+                    <p class="landing-tour_label text-style-tiny">Group chat</p>
+                    <div class="landing-tour_messages" data-chat />
+                    <div class="landing-tour_quick" data-quick />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<script>
+  import { avatarElement } from "@/lib/ui.ts";
+  import type { AccentColor } from "@/types.ts";
+
+  type Demo = {
+    type: number;
+    vibe: number;
+    who: number[];
+    when: number;
+    budget: number;
+    sent: boolean;
+    inc: number[];
+    sel: [number, number];
+    copied: boolean;
+    reply: number[];
+    joined: number[];
+    imIn: boolean;
+    chat: [string, string][];
+    said: string[];
+  };
+
+  const root = document.querySelector<HTMLElement>("[data-tour]");
+
+  if (root) {
+    const fresh = (): Demo => ({
+      type: 0,
+      vibe: 0,
+      who: [1, 1, 1, 1],
+      when: 0,
+      budget: 1,
+      sent: false,
+      inc: [1, 1, 1, 1],
+      sel: [2, 5],
+      copied: false,
+      reply: [1, 1, 2, 0],
+      joined: [0, 0, 0],
+      imIn: false,
+      chat: [
+        ["M", "who is driving?"],
+        ["You", "me, 3 seats"],
+      ],
+      said: [],
+    });
+
+    const TYPES = ["Hangout", "School", "Formal"];
+    const VIBE_TITLES = ["Taco night", "Movie night", "Sunset hike"];
+    const WHENS = ["Sat 7pm", "Sun 2pm", "Fri 8pm"];
+    const BUDGETS = ["Free", "$15", "$40"];
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const PERIODS = ["Morning", "Afternoon", "Evening"];
+    const REPLY_LABELS = ["Waiting", "I’m in", "Can’t make it"];
+    const QUICK = ["on my way", "bring snacks", "running late"];
+    const COLORS: Record<string, AccentColor> = {
+      A: "yellow",
+      K: "blue",
+      R: "pink",
+      T: "green",
+      Y: "purple",
+      M: "red",
+      D: "blue",
+      S: "green",
+      P: "pink",
+    };
+    const PEOPLE = ["M", "D", "S", "P"];
+    const CREW = [
+      { crew: ["A", "K", "R", "T"], base: 5, max: 6 },
+      { crew: ["K", "R"], base: 3, max: 6 },
+      { crew: ["A", "T"], base: 4, max: 8 },
+    ];
+    /* Who is free: friend, then morning/afternoon/evening, then Mon to Sun. */
+    const AVAILABLE = [
+      [[1, 0, 1, 0, 1, 1, 1], [1, 1, 0, 1, 1, 0, 1], [0, 1, 1, 1, 1, 1, 1]],
+      [[0, 1, 1, 0, 1, 1, 0], [1, 1, 1, 0, 0, 1, 0], [1, 0, 1, 1, 1, 1, 0]],
+      [[1, 0, 1, 1, 0, 1, 1], [0, 1, 1, 1, 1, 0, 1], [1, 1, 0, 1, 0, 1, 1]],
+      [[1, 1, 0, 0, 1, 1, 1], [1, 0, 1, 1, 1, 1, 0], [0, 1, 1, 0, 1, 1, 1]],
+    ];
+
+    let flow = 0;
+    let d = fresh();
+    let timer = 0;
+    let lockUntil = 0;
+    let scripts: number[] = [];
+
+    const all = <T extends HTMLElement>(selector: string) =>
+      [...root.querySelectorAll<T>(selector)];
+    const one = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const text = (selector: string, value: string) =>
+      all(selector).forEach((el) => (el.textContent = value));
+    const stack = (el: Element, list: string[]) =>
+      el.replaceChildren(...list.map((l) => avatarElement(l, COLORS[l] ?? "yellow")));
+
+    const render = () => {
+      const planTitle =
+        d.type === 1 ? "Study group" : d.type === 2 ? "Dinner party" : (VIBE_TITLES[d.vibe] ?? "New plan");
+      const whenLabel = WHENS[d.when] ?? "Pick a time";
+      const nWho = d.who.reduce((a, b) => a + b, 0);
+
+      all("[data-layer]").forEach((layer, i) => layer.toggleAttribute("data-on", i <= flow));
+      all("[data-flow]").forEach((tab, i) => tab.setAttribute("aria-pressed", String(i === flow)));
+      all("[data-text]").forEach((panel, i) => (panel.hidden = i !== flow));
+      all("[data-screen]").forEach((pane, i) => (pane.hidden = i !== flow));
+
+      text("[data-plan-title]", planTitle);
+      text("[data-when]", whenLabel);
+
+      /* Screen 0: the builder */
+      const chosen: Record<string, number> = { type: d.type, vibe: d.vibe, when: d.when, budget: d.budget };
+      all("[data-row]").forEach((row) =>
+        row.querySelectorAll<HTMLElement>("[data-i]").forEach((chip) => {
+          const i = Number(chip.dataset.i);
+          const on = row.dataset.row === "who" ? d.who[i] === 1 : chosen[row.dataset.row!] === i;
+          chip.setAttribute("aria-pressed", String(on));
+        }),
+      );
+      one("[data-preview]").dataset.type = String(d.type);
+      one("[data-type-label] .pill_text").textContent = TYPES[d.type] ?? "New plan";
+      all("[data-who]").forEach((av) => av.toggleAttribute("data-off", !d.who[Number(av.dataset.who)]));
+      text("[data-who-count]", `${nWho} ${nWho === 1 ? "friend" : "friends"}`);
+      text("[data-cost]", d.budget < 0 ? "Set a budget" : d.budget === 0 ? "Free" : `${BUDGETS[d.budget]} each`);
+      const send = one("[data-send]");
+      send.classList.toggle("green", d.sent);
+      send.classList.toggle("raised", !d.sent);
+      send.querySelector(".action-button_text")!.textContent = d.sent ? "Sent ✓" : "Send invite";
+
+      /* Screen 1: find the time */
+      const ninc = Math.max(1, d.inc.reduce((a, b) => a + b, 0));
+      const count = (r: number, c: number) =>
+        r < 0 ? 0 : AVAILABLE.reduce((a, person, k) => a + (d.inc[k] ? person[r][c] : 0), 0);
+      all("[data-inc]").forEach((chip) =>
+        chip.setAttribute("aria-pressed", String(d.inc[Number(chip.dataset.inc)] === 1)),
+      );
+      all("[data-cell]").forEach((cell) => {
+        const r = Number(cell.dataset.r);
+        const c = Number(cell.dataset.c);
+        const n = count(r, c);
+        const selected = d.sel[0] === r && d.sel[1] === c;
+        cell.dataset.level = String(n === 0 ? 0 : n / ninc < 0.5 ? 1 : n / ninc < 1 ? 2 : 3);
+        cell.setAttribute("aria-pressed", String(selected));
+        cell.textContent = selected ? "✓" : "";
+      });
+      const free = count(d.sel[0], d.sel[1]);
+      const everyone = d.sel[0] >= 0 && free === ninc;
+      one("[data-best]").dataset.all = String(everyone);
+      text("[data-best-tag]", everyone ? "Everyone is free" : "Partly free");
+      text(
+        "[data-best-when]",
+        d.sel[0] < 0 ? "Pick a slot" : `${DAYS[d.sel[1]]} ${PERIODS[d.sel[0]].toLowerCase()}`,
+      );
+      text("[data-best-sub]", d.sel[0] < 0 ? "Tap any slot" : `${free} of ${ninc} free`);
+
+      /* Screen 2: link and replies */
+      const copy = one("button[data-copy]");
+      copy.classList.toggle("green", d.copied);
+      copy.classList.toggle("yellow", !d.copied);
+      copy.classList.toggle("raised", !d.copied);
+      copy.querySelector(".action-button_text")!.textContent = d.copied ? "Link copied ✓" : "Copy link";
+      all("[data-reply]").forEach((button) => {
+        const k = Number(button.dataset.reply);
+        button.dataset.state = String(d.reply[k]);
+        button.textContent = REPLY_LABELS[d.reply[k]];
+      });
+      all("[data-seg]").forEach((seg) => (seg.dataset.state = String(d.reply[Number(seg.dataset.seg)])));
+      const tally = (v: number) => d.reply.filter((r) => r === v).length;
+      text("[data-summary]", `${tally(1)} in · ${tally(2)} can’t · ${tally(0)} waiting`);
+
+      /* Screen 3: discover */
+      CREW.forEach((card, i) => {
+        const joined = d.joined[i] === 1;
+        stack(one(`[data-dpeople="${i}"]`), card.crew.concat(joined ? ["Y"] : []));
+        text(`[data-going="${i}"]`, `${card.base + d.joined[i]} of ${card.max} going`);
+        const join = one(`[data-join="${i}"]`);
+        join.classList.toggle("green", joined);
+        join.classList.toggle("raised", !joined);
+        join.querySelector(".action-button_text")!.textContent = joined ? "Joined ✓" : "Join";
+      });
+      one("[data-open-chat]").hidden = !d.joined.some((v) => v);
+
+      /* Screen 4: the group */
+      stack(one("[data-group-stack]"), PEOPLE.concat(d.imIn ? ["Y"] : []));
+      const imIn = one("[data-im-in]");
+      imIn.classList.toggle("green", d.imIn);
+      imIn.classList.toggle("raised", !d.imIn);
+      imIn.querySelector(".action-button_text")!.textContent = d.imIn ? "You’re in ✓" : "I’m in";
+      /* New lines are added in place so only they animate; going back to fewer lines starts the list over. */
+      const chat = one("[data-chat]");
+      if (d.chat.length < chat.children.length) chat.replaceChildren();
+      d.chat.slice(chat.children.length).forEach(([who, message]) => {
+        const bubble = document.createElement("p");
+        bubble.className = "landing-tour_msg text-style-small";
+        bubble.dataset.from = who === "You" ? "you" : "them";
+        bubble.textContent = message;
+        chat.append(bubble);
+      });
+      one("[data-quick]").replaceChildren(
+        ...QUICK.filter((q) => !d.said.includes(q)).map((q) => {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "landing-tour_chip text-style-small";
+          chip.dataset.quick = q;
+          chip.textContent = q;
+          return chip;
+        }),
+      );
+    };
+
+    /* What each stop on the tour plays by itself: a starting state, then timed changes. */
+    type Patch = Partial<Demo> | ((d: Demo) => Partial<Demo>);
+    const SCRIPTS: Record<number, [Partial<Demo>, [number, Patch][]]> = {
+      0: [
+        { type: -1, vibe: -1, who: [0, 0, 0, 0], when: -1, budget: -1 },
+        [
+          [700, { type: 0 }],
+          [1400, { vibe: 0 }],
+          [2000, { who: [1, 0, 0, 0] }],
+          [2400, { who: [1, 1, 0, 0] }],
+          [2800, { who: [1, 1, 1, 0] }],
+          [3200, { who: [1, 1, 1, 1] }],
+          [3900, { when: 0 }],
+          [4600, { budget: 1 }],
+          [5500, { sent: true }],
+        ],
+      ],
+      1: [
+        { inc: [1, 0, 0, 0], sel: [-1, -1] },
+        [
+          [800, { inc: [1, 1, 0, 0] }],
+          [1400, { inc: [1, 1, 1, 0] }],
+          [2000, { inc: [1, 1, 1, 1] }],
+          [2900, { sel: [0, 0] }],
+          [3500, { sel: [1, 3] }],
+          [4200, { sel: [2, 5] }],
+        ],
+      ],
+      2: [
+        { copied: false, reply: [0, 0, 0, 0] },
+        [
+          [900, { copied: true }],
+          [2000, { reply: [1, 0, 0, 0] }],
+          [2700, { reply: [1, 1, 0, 0] }],
+          [3400, { reply: [1, 1, 2, 0] }],
+          [4200, { reply: [1, 1, 2, 1] }],
+        ],
+      ],
+      3: [
+        { joined: [0, 0, 0] },
+        [
+          [2000, { joined: [1, 0, 0] }],
+          [3800, { joined: [1, 1, 0] }],
+        ],
+      ],
+      4: [
+        { imIn: false, chat: [["M", "who is driving?"]], said: [] },
+        [
+          [1000, (s) => ({ chat: [...s.chat, ["You", "me, 3 seats"]] })],
+          [2100, { imIn: true }],
+          [3000, (s) => ({ chat: [...s.chat, ["S", "I’ll bring chips"]] })],
+          [4000, (s) => ({ chat: [...s.chat, ["You", "on my way"]], said: ["on my way"] })],
+        ],
+      ],
+    };
+
+    const cancelScript = () => {
+      scripts.forEach(clearTimeout);
+      scripts = [];
+    };
+
+    const runScript = (i: number) => {
+      cancelScript();
+      const script = SCRIPTS[i];
+      d = { ...fresh(), ...script[0] };
+      render();
+      script[1].forEach(([ms, patch]) =>
+        scripts.push(
+          window.setTimeout(() => {
+            d = { ...d, ...(typeof patch === "function" ? patch(d) : patch) };
+            render();
+          }, ms),
+        ),
+      );
+    };
+
+    const enter = (i: number) => {
+      flow = i;
+      runScript(i);
+    };
+
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wide = matchMedia("(min-width: 64rem)");
+
+    const stop = () => {
+      window.clearInterval(timer);
+
+    };
+
+    /* A tap by the visitor ends the demo's own script and keeps what they chose. */
+    const set = (patch: Partial<Demo>) => {
+      cancelScript();
+      stop();
+      d = { ...d, ...patch };
+      render();
+    };
+
+    const go = (i: number) => {
+      stop();
+      enter(i);
+      if (!wide.matches) return;
+      const box = root.getBoundingClientRect();
+      const travel = box.height - window.innerHeight;
+      if (travel > 0 && -box.top / travel > 0.2) {
+        lockUntil = Date.now() + 1000;
+        const top = window.scrollY + box.top + (0.2 + ((i + 0.5) / 5) * 0.8) * travel;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
+    };
+
+    const toggle = (list: number[], i: number) => list.map((v, k) => (k === i ? (v ? 0 : 1) : v));
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const hit = (selector: string) => target.closest<HTMLElement>(selector);
+
+      const tab = hit("[data-flow]");
+      if (tab) return go(Number(tab.dataset.flow));
+
+      const chip = hit("[data-row] [data-i]");
+      if (chip) {
+        const i = Number(chip.dataset.i);
+        const key = chip.closest<HTMLElement>("[data-row]")!.dataset.row!;
+        return set(key === "who" ? { who: toggle(d.who, i) } : ({ [key]: i } as Partial<Demo>));
+      }
+      if (hit("[data-send]")) {
+        set({ sent: true });
+        scripts.push(window.setTimeout(() => enter(2), 900));
+        return;
+      }
+
+      const inc = hit("[data-inc]");
+      if (inc) {
+        const next = toggle(d.inc, Number(inc.dataset.inc));
+        return next.some(Boolean) ? set({ inc: next }) : undefined;
+      }
+      const cell = hit("[data-cell]");
+      if (cell) return set({ sel: [Number(cell.dataset.r), Number(cell.dataset.c)] });
+      if (hit("[data-plan-it]")) {
+        cancelScript();
+        stop();
+        flow = 0;
+        return render();
+      }
+
+      if (hit("button[data-copy]")) return set({ copied: true });
+      const reply = hit("[data-reply]");
+      if (reply) {
+        const k = Number(reply.dataset.reply);
+        return set({ reply: d.reply.map((v, i) => (i === k ? (v + 1) % 3 : v)) });
+      }
+
+      const join = hit("[data-join]");
+      if (join) return set({ joined: toggle(d.joined, Number(join.dataset.join)) });
+      if (hit("[data-open-chat]")) return go(4);
+
+      if (hit("[data-im-in]")) return set({ imIn: !d.imIn });
+      const quick = hit("[data-quick]");
+      if (quick?.dataset.quick) {
+        const said = quick.dataset.quick;
+        return set({ said: [...d.said, said], chat: [...d.chat, ["You", said] as [string, string]].slice(-5) });
+      }
+    });
+
+    /* Scrolling past the top of the tour grows the box to fill the screen, then steps through the tour. */
+    const GROW = 0.2;
+    const onScroll = () => {
+      if (!wide.matches) return root.style.setProperty("--p", "0");
+      const box = root.getBoundingClientRect();
+      const travel = box.height - window.innerHeight;
+      if (travel <= 0) return;
+      const progress = Math.min(1, Math.max(0, -box.top / travel));
+      root.style.setProperty("--p", Math.min(1, progress / GROW).toFixed(4));
+      if (progress > 0) stop();
+      if (progress > GROW && Date.now() > lockUntil) {
+        const stage = Math.min(4, Math.floor(((progress - GROW) / (1 - GROW)) * 5));
+        if (stage !== flow) enter(stage);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    onScroll();
+
+    runScript(0);
+    if (!reduced) timer = window.setInterval(() => enter((flow + 1) % 5), 8500);
+  }
+</script>
+
+<style is:global>
+  @property --reveal {
+    syntax: "<percentage>";
+    inherits: false;
+    initial-value: -45%;
+  }
+
+  @layer components {
+    .landing-tour_wrap {
+      position: relative;
+      padding-block: var(--space-3) var(--space-7);
+
+      & [hidden] {
+        display: none;
+      }
+
+      @media (width >= 64rem) {
+        height: 560vh;
+        padding-block: 0;
+      }
+    }
+
+    .landing-tour_stick {
+      display: flex;
+      justify-content: center;
+
+      @media (width >= 64rem) {
+        position: sticky;
+        top: 0;
+        align-items: flex-start;
+        height: 100vh;
+        padding-top: calc(1.75rem - 1rem * var(--p, 0));
+        overflow: hidden;
+      }
+    }
+
+    .landing-tour_box {
+      position: relative;
+      isolation: isolate;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-5);
+      width: calc(100% - 2rem);
+      padding: var(--space-4) var(--space-2);
+      overflow: hidden;
+      border-radius: var(--radius-xlarge);
+      background: var(--gradient-brand-glow);
+
+      @media (width >= 64rem) {
+        gap: 3.5rem;
+        width: calc(
+          min(70rem, 100% - 2rem) + (100% - 1.5rem - min(70rem, 100% - 2rem)) * var(--p, 0)
+        );
+        height: calc(min(80vh, 46.25rem) + (100vh - 1.5rem - min(80vh, 46.25rem)) * var(--p, 0));
+        padding: 0;
+        border-radius: calc(2.75rem - 0.75rem * var(--p, 0));
+      }
+    }
+
+    .landing-tour_layer {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      opacity: 0;
+      --reveal: -45%;
+      pointer-events: none;
+      mask-image: linear-gradient(to left, #000 var(--reveal), transparent calc(var(--reveal) + 45%));
+      transition:
+        --reveal 1.5s cubic-bezier(0.45, 0, 0.2, 1),
+        opacity 1.2s ease;
+
+      &[data-on] {
+        --reveal: 110%;
+        opacity: 1;
+      }
+    }
+
+    .landing-tour_tabs,
+    .landing-tour_card {
+      position: relative;
+      z-index: 10;
+    }
+
+    .landing-tour_tabs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: center;
+      gap: var(--space-2);
+      padding-inline: var(--space-2);
+    }
+
+    .landing-tour_tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-1);
+      min-width: 4rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .landing-tour_bubble {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-large);
+      height: var(--avatar-large);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: color-mix(in srgb, var(--background-3) 50%, transparent);
+      transition:
+        background-color var(--move-duration) var(--ease-out),
+        border-color var(--move-duration) var(--ease-out),
+        scale var(--move-duration) var(--ease-out);
+
+      @media (width < 64rem) {
+        width: var(--avatar-main);
+        height: var(--avatar-main);
+      }
+    }
+
+    .landing-tour_tab[aria-pressed="true"] .landing-tour_bubble {
+      border: var(--border-width-thick) solid var(--border-strong);
+      background-color: var(--background-3);
+      scale: 1.08;
+    }
+
+    .landing-tour_tab_label {
+      display: none;
+      padding: var(--space-0) var(--space-2);
+      border-radius: var(--radius-round);
+      background-color: color-mix(in srgb, var(--background-3) 55%, transparent);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+      white-space: nowrap;
+
+      @media (width >= 64rem) and (height >= 48.75rem) {
+        display: block;
+      }
+    }
+
+    .landing-tour_tab[aria-pressed="true"] .landing-tour_tab_label {
+      background-color: var(--background-3);
+    }
+
+    .landing-tour_card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-4);
+      width: 100%;
+      padding: var(--space-3);
+      border-radius: var(--radius-large);
+      background-color: var(--light-400);
+
+      @media (width >= 64rem) {
+        grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+        align-items: center;
+        gap: 2rem;
+        width: min(61.25rem, 100% - 4rem);
+        height: min(33rem, calc(min(80vh, 46.25rem) - 12rem));
+        padding: var(--space-5);
+        border-radius: var(--radius-xlarge);
+        scale: calc(1 + 0.1 * var(--p, 0));
+      }
+      @media (width >= 69rem) {
+        gap: 3.25rem;
+        padding: 2.5rem 2.75rem;
+      }
+    }
+
+    .landing-tour_copy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      animation: landing-tour-fade 0.8s ease backwards;
+
+      & > * {
+        animation: landing-tour-rise 0.55s var(--ease-out) backwards;
+      }
+      & > :nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      & > :nth-child(3) {
+        animation-delay: 0.2s;
+      }
+      & > :nth-child(4) {
+        animation-delay: 0.3s;
+      }
+    }
+
+    .landing-tour_copy_title {
+      margin-block: var(--space-3) var(--space-4);
+      font-weight: var(--secondary-bold);
+      line-height: var(--line-height-medium);
+      text-wrap: balance;
+    }
+
+    .landing-tour_copy_text {
+      max-width: 21.25rem;
+      color: var(--text-2);
+      line-height: var(--line-height-huge);
+    }
+
+    .landing-tour_dots {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      margin-block-start: var(--space-4);
+    }
+
+    .landing-tour_dot {
+      width: 0.75rem;
+      height: 0.375rem;
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--space-0);
+      background-color: var(--background-3);
+
+      &.current {
+        width: 1.75rem;
+        background-color: var(--border-strong);
+      }
+    }
+
+    .landing-tour_count {
+      margin-inline-start: var(--space-2);
+      color: var(--text-2);
+      font-weight: var(--primary-bold);
+    }
+
+    .landing-tour_screen {
+      min-width: 0;
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background);
+
+      @media (width >= 64rem) {
+        height: 100%;
+        overflow: hidden;
+      }
+    }
+
+    .landing-tour_pane {
+      animation: landing-tour-fade 0.5s ease backwards;
+
+      & > * > * {
+        animation: landing-tour-rise 0.55s var(--ease-out) backwards;
+      }
+      & > * > :nth-child(2) {
+        animation-delay: 0.08s;
+      }
+      & > * > :nth-child(3) {
+        animation-delay: 0.16s;
+      }
+    }
+
+    @keyframes landing-tour-fade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes landing-tour-pop {
+      from {
+        opacity: 0;
+        scale: 0.85;
+        translate: 0 0.75rem;
+      }
+      to {
+        opacity: 1;
+        scale: 1;
+        translate: 0 0;
+      }
+    }
+
+    @keyframes landing-tour-rise {
+      from {
+        opacity: 0;
+        translate: 0 0.75rem;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+
+    /* Shared screen parts */
+    .landing-tour_label {
+      color: var(--text-2);
+    }
+
+    .landing-tour_chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .landing-tour_chip {
+      --_on: var(--colors-vivid-yellow);
+      display: inline-flex;
+      align-items: center;
+      min-height: 2rem;
+      padding-inline: 0.5rem;
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      color: var(--text);
+      font-size: 0.75rem;
+      font-weight: var(--primary-bold);
+      white-space: nowrap;
+      cursor: pointer;
+      transition:
+        background-color var(--move-duration) var(--ease-out),
+        border-color var(--move-duration) var(--ease-out),
+        scale var(--move-duration) var(--ease-out);
+
+      &[data-color="red"] {
+        --_on: var(--colors-vivid-red);
+      }
+      &[data-color="blue"] {
+        --_on: var(--colors-vivid-blue);
+      }
+      &[data-color="green"] {
+        --_on: var(--colors-vivid-green);
+      }
+      &[data-color="pink"] {
+        --_on: var(--colors-vivid-pink);
+      }
+      &[aria-pressed="true"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--_on);
+        scale: 1.05;
+      }
+    }
+
+    .landing-tour_plan_title,
+    .landing-tour_invite_title,
+    .landing-tour_best_when,
+    .landing-tour_dcard_title {
+      font-family: var(--secondary-family);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-small);
+    }
+
+    .landing-tour_facts {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+
+      & dt {
+        color: var(--text-2);
+      }
+      & dd {
+        min-width: 0;
+        font-weight: var(--primary-medium);
+        overflow-wrap: anywhere;
+      }
+    }
+
+    .landing-tour_two {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.125rem), 1fr));
+      align-items: stretch;
+      gap: var(--space-3);
+
+      @media (width >= 64rem) {
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+
+        &.group {
+          grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+        }
+      }
+    }
+
+    /* 1. Builder */
+    .landing-tour_builder {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.125rem), 1fr));
+      align-items: start;
+      gap: var(--space-3);
+      padding: var(--space-2);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--colors-secondary-yellow);
+
+      @media (width >= 64rem) {
+        grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+      }
+    }
+
+    .landing-tour_steps {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-2);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .landing-tour_step {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+    }
+
+    .landing-tour_num {
+      display: flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 1.375rem;
+      height: 1.375rem;
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--colors-vivid-yellow);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+    }
+
+    .landing-tour_step_body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .landing-tour_label + .landing-tour_chips {
+      margin-block-start: var(--space-1);
+    }
+
+    .landing-tour_preview {
+      --_surface: var(--background-3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border);
+      border-radius: var(--radius-large);
+      background-color: var(--_surface);
+      transition: background-color var(--move-duration) var(--ease-out);
+
+      &[data-type="0"] {
+        --_surface: var(--colors-secondary-yellow);
+      }
+      &[data-type="1"] {
+        --_surface: var(--colors-secondary-blue);
+      }
+      &[data-type="2"] {
+        --_surface: var(--colors-secondary-purple);
+      }
+    }
+
+    .landing-tour_preview_top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+
+      & [data-off] {
+        opacity: 0.3;
+      }
+    }
+
+    .landing-tour_plan_title {
+      font-size: var(--h4);
+    }
+
+    /* 2. Find the time */
+    .landing-tour_compare {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .landing-tour_compare_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-1);
+
+      & > .landing-tour_label {
+        margin-inline-end: var(--space-1);
+      }
+    }
+
+    .landing-tour_heat {
+      display: grid;
+      grid-template-columns: 3.875rem repeat(7, minmax(0, 1fr));
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-2);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .landing-tour_heat_day {
+      color: var(--text-2);
+      font-size: var(--text-tiny);
+      font-weight: var(--primary-bold);
+      text-align: center;
+    }
+
+    .landing-tour_cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+      height: 2rem;
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: var(--radius-small);
+      background-color: var(--background);
+      color: var(--text);
+      font-weight: var(--primary-bold);
+      cursor: pointer;
+      transition: background-color var(--move-duration) var(--ease-out);
+
+      &[data-level="1"] {
+        background-color: color-mix(in srgb, var(--status-free-background) 50%, var(--background-3));
+      }
+      &[data-level="2"] {
+        background-color: var(--status-free-background);
+      }
+      &[data-level="3"] {
+        background-color: var(--status-free);
+      }
+      &[aria-pressed="true"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+      }
+    }
+
+    .landing-tour_best {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      transition: background-color var(--move-duration) var(--ease-out);
+
+      &[data-all="true"] {
+        background-color: var(--status-free-background);
+      }
+    }
+
+    .landing-tour_best_when {
+      font-size: var(--h5);
+    }
+
+    .landing-tour_best_text {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .landing-tour_best .action-button_wrap {
+      flex: none;
+    }
+
+    /* 3. Link and replies */
+    .landing-tour_invite {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--colors-secondary-blue);
+    }
+
+    .landing-tour_invite_title {
+      font-size: var(--h4);
+    }
+
+    .landing-tour_url {
+      align-self: stretch;
+      padding: var(--space-2) var(--space-3);
+      overflow: hidden;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-size: 0.75rem;
+      font-weight: var(--primary-bold);
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .landing-tour_hint {
+      font-size: 0.6875rem;
+      font-weight: var(--primary-bold);
+    }
+
+    .landing-tour_replies {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .landing-tour_replies_head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      align-self: stretch;
+      gap: var(--space-2);
+    }
+
+    .landing-tour_summary {
+      font-size: 0.75rem;
+      font-weight: var(--primary-bold);
+      white-space: nowrap;
+    }
+
+    .landing-tour_segs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-self: stretch;
+      gap: var(--space-0);
+    }
+
+    .landing-tour_seg {
+      height: 0.5rem;
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--space-0);
+      background-color: var(--background-3);
+      transition: background-color var(--move-duration) var(--ease-out);
+
+      &[data-state="1"] {
+        background-color: var(--status-free);
+      }
+      &[data-state="2"] {
+        background-color: var(--colors-secondary-orange);
+      }
+    }
+
+    .landing-tour_reply_row {
+      display: flex;
+      align-items: center;
+      align-self: stretch;
+      gap: var(--space-2);
+    }
+
+    .landing-tour_reply_name {
+      flex: 1;
+      font-weight: var(--primary-bold);
+    }
+
+    .landing-tour_reply {
+      min-height: 2.125rem;
+      padding-inline: var(--space-2);
+      border: var(--border-width-medium) dashed var(--border);
+      font-size: 0.75rem;
+      white-space: nowrap;
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      color: var(--text);
+      font-weight: var(--primary-bold);
+      cursor: pointer;
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      &[data-state="1"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--status-free-background);
+      }
+      &[data-state="2"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--colors-secondary-orange);
+      }
+    }
+
+    /* 4. Discover */
+    .landing-tour_discover {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .landing-tour_dcard {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+
+      &.big {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--colors-secondary-purple);
+      }
+    }
+
+    .landing-tour_art {
+      flex: none;
+      align-self: stretch;
+      width: clamp(5.25rem, 28%, 7.75rem);
+      min-height: 4.75rem;
+      height: auto;
+      overflow: hidden;
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-main);
+      background-color: var(--colors-secondary-orange);
+    }
+
+    .landing-tour_dcard_main {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .landing-tour_dcard_top,
+    .landing-tour_dcard_foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .landing-tour_dcard_title {
+      font-size: var(--h6);
+    }
+
+    .landing-tour_dcard.big .landing-tour_dcard_title {
+      font-size: var(--h5);
+    }
+
+    .landing-tour_going {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-weight: var(--primary-bold);
+    }
+
+    /* 5. Group */
+    .landing-tour_group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .landing-tour_chat {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .landing-tour_messages {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .landing-tour_msg {
+      max-width: 85%;
+      animation: landing-tour-pop 0.5s var(--ease-spring-soft) backwards;
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-medium) solid var(--border-strong);
+      font-weight: var(--primary-medium);
+
+      &[data-from="you"] {
+        align-self: flex-end;
+        border-radius: var(--radius-main) var(--radius-main) 0.25rem var(--radius-main);
+        background-color: var(--colors-vivid-yellow);
+      }
+      &[data-from="them"] {
+        align-self: flex-start;
+        border-radius: var(--radius-main) var(--radius-main) var(--radius-main) 0.25rem;
+        background-color: var(--colors-secondary-purple);
+      }
+    }
+
+    .landing-tour_quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .landing-tour_copy,
+      .landing-tour_copy > *,
+      .landing-tour_pane,
+      .landing-tour_pane > * > * {
+        animation: none;
+      }
+      .landing-tour_layer {
+        transition: none;
+      }
+    }
+  }
+</style>

@@ -1,0 +1,291 @@
+---
+import ActionButton from "@/components/item/ActionButton.astro";
+import Avatar from "@/components/item/Avatar.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
+import Pill from "@/components/item/Pill.astro";
+import type { AccentColor } from "@/types.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const colorOf: Record<string, AccentColor> = {
+  M: "red",
+  D: "blue",
+  S: "green",
+  P: "pink",
+  L: "purple",
+};
+
+/* People forming a hangout in the margins, one line at a time. `at` is the beat it appears on. */
+const items = [
+  { side: "left", top: 1.5, at: 1, kind: "in", who: "M", text: "anyone down for topgolf?" },
+  { side: "right", top: 3.375, at: 2, kind: "in", who: "D", text: "movie night this weekend?" },
+  { side: "left", top: 6.25, at: 3, kind: "in", who: "D", text: "yes!!", indent: 2.25 },
+  { side: "right", top: 8.125, at: 4, kind: "mint", who: "S", text: "I’m in", indent: 1.875 },
+  { side: "left", top: 10, at: 5, kind: "in", who: "S", text: "what time?" },
+  { side: "right", top: 11.875, at: 6, kind: "me", who: "P", text: "saturday 8?" },
+  { side: "left", top: 13.75, at: 7, kind: "me", who: "M", text: "friday 5?", indent: 1.25 },
+  { side: "right", top: 15.625, at: 8, kind: "mint", who: "L", text: "I’m in too" },
+  { side: "left", top: 17.8125, at: 9, kind: "plan", text: "Topgolf", sub: "Fri · 5:00 pm · 3 in", crew: "MDS" },
+  { side: "right", top: 19.6875, at: 10, kind: "plan", text: "Movie night", sub: "Sat · 8:00 pm · 5 in", crew: "SPLD" },
+] as const;
+---
+
+{
+  render && (
+    <section class="landing-hero_wrap" id="top" aria-labelledby="landing-hero-title">
+      <div class="landing-hero_scene" aria-hidden="true" data-scene>
+        {items.map((item) => (
+          <div
+            class:list={["landing-hero_item", item.side]}
+            data-at={item.at}
+            style={`--_top: ${item.top}rem; --_indent: ${"indent" in item ? item.indent : 0}rem;`}
+          >
+            {item.kind === "plan" ? (
+              <div class="landing-hero_plan">
+                <div class="landing-hero_plan_top">
+                  <Pill size="tiny" variant="filled" color="green">
+                    Locked in
+                  </Pill>
+                  <AvatarStack
+                    size="small"
+                    people={item.crew.split("").map((c) => ({ initial: c, color: colorOf[c] ?? "yellow" }))}
+                  />
+                </div>
+                <p class="landing-hero_plan_title text-style-h5">{item.text}</p>
+                <p class="landing-hero_plan_sub text-style-small">{item.sub}</p>
+              </div>
+            ) : (
+              <div class:list={["landing-hero_message", item.kind]}>
+                <Avatar initial={item.who} color={colorOf[item.who]} size="small" />
+                <p class="landing-hero_bubble text-style-main">{item.text}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <h1 id="landing-hero-title" class="landing-hero_title text-style-h1">
+        Making plans should be <span class="landing-hero_mark">the easy part.</span>
+      </h1>
+      <p class="landing-hero_text text-style-large">
+        Connect with friends, form groups, and see who’s in. Less “we should hang out,” more “see you there.”
+      </p>
+      <div class="landing-hero_buttons">
+        <ActionButton element="link" href="/signup" size="large" raised>
+          Make your first plan
+        </ActionButton>
+        <ActionButton element="link" href="#demo" size="large" color="white" raised>
+          See how it works
+        </ActionButton>
+      </div>
+    </section>
+  )
+}
+
+<script>
+  const scene = document.querySelector<HTMLElement>("[data-scene]");
+
+  if (scene) {
+    const items = [...scene.querySelectorAll<HTMLElement>("[data-at]")];
+    const beats = 14;
+    /* Everything is gone by the last beat, so the loop restarts from an empty scene. */
+    const show = (beat: number) =>
+      items.forEach((item) =>
+        item.toggleAttribute("data-on", beat >= Number(item.dataset.at) && beat < beats - 1),
+      );
+
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) show(11);
+    else {
+      let beat = 0;
+      show(beat);
+      setInterval(() => show((beat = (beat + 1) % beats)), 1500);
+    }
+  }
+</script>
+
+<style is:global>
+  @layer components {
+    .landing-hero_wrap {
+      position: relative;
+      width: var(--site-width);
+      max-width: 72.5rem;
+      margin-inline: auto;
+      padding-block: var(--space-7) var(--space-7);
+      text-align: center;
+
+      @media (width >= 85rem) {
+        padding-block: var(--space-8) var(--space-7);
+      }
+    }
+
+    .landing-hero_scene {
+      display: none;
+      position: absolute;
+      inset-block: 0;
+      left: 50%;
+      width: 100vw;
+      translate: -50% 0;
+      overflow: hidden;
+      pointer-events: none;
+
+      @media (width >= 85rem) {
+        display: block;
+      }
+    }
+
+    .landing-hero_item {
+      position: absolute;
+      top: var(--_top);
+      opacity: 0;
+      scale: 0.8;
+      translate: 0 0.875rem;
+      transition:
+        opacity 0.5s ease,
+        scale 0.6s var(--ease-spring-soft),
+        translate 0.6s var(--ease-spring-soft);
+
+      &.left {
+        left: 2%;
+        margin-inline-start: var(--_indent);
+        transform-origin: left center;
+      }
+      &.right {
+        right: 2%;
+        margin-inline-end: var(--_indent);
+        transform-origin: right center;
+      }
+      &[data-on] {
+        opacity: 1;
+        scale: 1;
+        translate: 0 0;
+      }
+    }
+
+    .landing-hero_message {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-2);
+
+      &.me,
+      &.mint {
+        flex-direction: row-reverse;
+      }
+      &.in {
+        --_bubble: var(--colors-secondary-purple);
+        --_corner: var(--radius-large) var(--radius-large) var(--radius-large) 0.375rem;
+      }
+      &.me {
+        --_bubble: var(--colors-vivid-yellow);
+        --_corner: var(--radius-large) var(--radius-large) 0.375rem var(--radius-large);
+      }
+      &.mint {
+        --_bubble: var(--colors-secondary-green);
+        --_corner: var(--radius-large) var(--radius-large) 0.375rem var(--radius-large);
+      }
+    }
+
+    .landing-hero_bubble {
+      max-width: 13rem;
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--_corner);
+      background-color: var(--_bubble);
+      font-weight: var(--primary-medium);
+      line-height: var(--line-height-large);
+      text-align: left;
+    }
+
+    .landing-hero_plan {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      width: 15rem;
+      padding: var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+      text-align: left;
+    }
+
+    .landing-hero_plan_top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .landing-hero_plan_title {
+      font-family: var(--secondary-family);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+
+    .landing-hero_plan_sub {
+      color: var(--text-2);
+      font-weight: var(--primary-medium);
+    }
+
+    .landing-hero_title {
+      position: relative;
+      max-width: 50rem;
+      margin-inline: auto;
+      font-size: clamp(2.5rem, 6.2vw, 5rem);
+      font-weight: var(--secondary-bold);
+      line-height: var(--line-height-small);
+      animation: landing-hero-rise 0.8s var(--ease-out) 0.05s backwards;
+    }
+
+    .landing-hero_mark {
+      padding-inline: 0.06em;
+      background-image: linear-gradient(
+        transparent 62%,
+        var(--colors-vivid-yellow) 62%
+      );
+    }
+
+    .landing-hero_text {
+      position: relative;
+      max-width: 35rem;
+      margin: var(--space-5) auto 0;
+      line-height: var(--line-height-huge);
+      text-wrap: balance;
+      animation: landing-hero-rise 0.8s var(--ease-out) 0.15s backwards;
+    }
+
+    .landing-hero_buttons {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space-3);
+      margin-block-start: var(--space-6);
+      animation: landing-hero-rise 0.8s var(--ease-out) 0.25s backwards;
+    }
+
+    @keyframes landing-hero-rise {
+      from {
+        opacity: 0;
+        translate: 0 0.75rem;
+      }
+      to {
+        opacity: 1;
+        translate: 0 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .landing-hero_title,
+      .landing-hero_text,
+      .landing-hero_buttons {
+        animation: none;
+      }
+      .landing-hero_item {
+        transition: none;
+      }
+    }
+  }
+</style>

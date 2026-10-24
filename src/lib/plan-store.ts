@@ -11,8 +11,6 @@ export interface PlanViewState {
   replies: Record<string, Reply>;
   votes: Record<string, string[]>;
   feed: FeedItem[];
-  nudged: boolean;
-  auto: boolean;
   locked: string | null;
   copied: boolean;
   description: string;
@@ -36,8 +34,6 @@ export const getPlan = (): PlanDetail => {
       replies: Object.fromEntries(plan.friends.map((f) => [f.id, f.reply])),
       votes: Object.fromEntries(plan.friends.map((f) => [f.id, f.votes])),
       feed: plan.feed,
-      nudged: false,
-      auto: plan.autoNudge,
       locked: plan.lockedSlot,
       copied: false,
       description: plan.description,
@@ -94,25 +90,6 @@ export const waitingFriends = () =>
 
 export const tally = (slotId: string) =>
   getPlan().friends.filter((friend) => get().votes[friend.id]?.includes(slotId));
-
-export const nudgeWaiting = () => {
-  const names = waitingFriends();
-  if (names.length === 0 || get().nudged) return;
-  update({
-    nudged: true,
-    feed: addFeed(
-      `nudged ${names.map((f) => f.name).join(" and ")}`,
-      "Text reminders are not switched on yet",
-    ),
-    tick: get().tick + 1,
-  });
-  void repo.nudge(getPlan().id, names.map((f) => f.id));
-};
-
-export const toggleAuto = () => {
-  update({ auto: !get().auto });
-  void repo.setAutoNudge(getPlan().id, get().auto);
-};
 
 export const toggleLock = (slotId: string) => {
   const unlock = get().locked === slotId;

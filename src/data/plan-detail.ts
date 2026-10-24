@@ -47,7 +47,6 @@ export interface PlanDetail {
   slots: PlanSlot[];
   /** Locked time slot id, or null. */
   lockedSlot: string | null;
-  autoNudge: boolean;
   feed: FeedItem[];
   swaps: { label: string; cost: string }[];
 }
@@ -97,7 +96,6 @@ const beachDay = (): PlanDetail => ({
   ],
   slots,
   lockedSlot: null,
-  autoNudge: true,
   feed: [
     { who: "Priya", color: "pink", text: "is in", detail: "Picked Sat 11 AM and Sat 3 PM", time: "12 min ago" },
     { who: "Dev", color: "blue", text: "is a maybe", detail: "Picked Sun 11 AM", time: "1 h ago" },
@@ -131,8 +129,7 @@ export const sampleDetail = (id: string): PlanDetail | null => {
     friends,
     slots,
     lockedSlot: card.stage === 2 ? "sat11" : null,
-    autoNudge: true,
-    feed: [
+      feed: [
       { who: "You", color: "orange", text: `made the plan and sent the link to ${friends.length} friends`, detail: "Friends reply without an account", time: "Yesterday" },
     ],
     swaps,

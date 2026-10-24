@@ -88,10 +88,10 @@ const { render = true } = Astro.props;
       if (id && get().joined[id] && !target.closest("a, button")) location.href = `/app/groups/${id}`;
     });
 
-    const tagsFor = (group: OpenGroup) => [
-      group.capacity <= 4 ? "Cozy group" : group.capacity <= 6 ? "Small group" : "Bigger group",
-      group.newcomerFriendly ? "Newcomer friendly" : "Regulars welcome",
-      "Public place",
+    /* Only what helps a choice: how well it fits, and whether newcomers are welcome. */
+    const tagsFor = (group: OpenGroup, you: number) => [
+      `${you}% match`,
+      ...(group.newcomerFriendly ? ["Newcomer friendly"] : []),
     ];
 
     const fill = (card: HTMLElement, group: OpenGroup, isSoon: boolean) => {
@@ -125,10 +125,8 @@ const { render = true } = Astro.props;
       setText(
         card,
         "[data-going]",
-        `${going} going · ${spots > 0 ? `${spots} spot${spots === 1 ? "" : "s"} open` : "Full"}`,
+        `${going} going · ${spots > 0 ? `${spots} open` : "Full"}`,
       );
-      setText(card, "[data-you]", `Fits you ${fit.you}%`);
-      setText(card, "[data-them]", `You fit them ${fit.them}%`);
 
       const stack = card.querySelector<HTMLElement>("[data-stack]")!;
       const people = [
@@ -140,21 +138,21 @@ const { render = true } = Astro.props;
       );
 
       const tags = card.querySelector<HTMLElement>("[data-tags]")!;
-      if (!tags.childElementCount) {
-        tags.replaceChildren(
-          ...tagsFor(group).map((tag) => {
-            const pill = cloneFirst(tagTemplate);
-            setText(pill, ".pill_text", tag);
-            return pill;
-          }),
-        );
-      }
+      tags.title = `You fit them ${fit.them}%`;
+      tags.replaceChildren(
+        ...tagsFor(group, fit.you).map((tag, index) => {
+          const pill = cloneFirst(tagTemplate);
+          if (index === 0) pill.classList.add("filled");
+          setText(pill, ".pill_text", tag);
+          return pill;
+        }),
+      );
 
       const join = card.querySelector<HTMLElement>("[data-join]")!;
       join.classList.toggle("ink", !joined);
       join.classList.toggle("white", joined);
       join.setAttribute("aria-pressed", String(joined));
-      setText(join, ".action-button_text", joined ? "Leave group" : "Join");
+      setText(join, ".action-button_text", joined ? "Leave" : "Join");
     };
 
     /** Keeps one card per group, in order, without redrawing cards that stay. */

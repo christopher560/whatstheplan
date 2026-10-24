@@ -1,0 +1,189 @@
+---
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const questions = [
+  { q: "Do my friends need an account?", a: "No. They open your link, reply in one tap, and see the plan." },
+  { q: "Can I plan more than hangouts?", a: "Yes. Pick hangout, school or formal and the invite adapts." },
+  { q: "How does Discover work?", a: "Pick your days and interests. We match you into a group near you." },
+  { q: "Can I leave a group?", a: "Anytime. You can also block or report people." },
+];
+---
+
+{
+  render && (
+    <section class="landing-faq_wrap" id="faq" aria-labelledby="landing-faq-title" data-faq>
+      <h2 id="landing-faq-title" class="landing-faq_title scroll-reveal">Questions</h2>
+      <div class="landing-faq_list">
+        {questions.map((item, i) => (
+          <div class="landing-faq_item">
+            <button
+              class="landing-faq_button"
+              type="button"
+              id={`landing-faq-button-${i}`}
+              aria-expanded={i === 0}
+              aria-controls={`landing-faq-panel-${i}`}
+            >
+              <span class="landing-faq_question">{item.q}</span>
+              <span class="landing-faq_plus" aria-hidden="true" />
+            </button>
+            <div
+              class="landing-faq_panel"
+              id={`landing-faq-panel-${i}`}
+              role="region"
+              aria-labelledby={`landing-faq-button-${i}`}
+            >
+              <div class="landing-faq_clip">
+                <p class="landing-faq_answer text-style-main">{item.a}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-faq]").forEach((root) => {
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>(".landing-faq_button")];
+
+    /* One answer open at a time; pressing the open one closes it. */
+    buttons.forEach((button) =>
+      button.addEventListener("click", () => {
+        const open = button.getAttribute("aria-expanded") === "true";
+        buttons.forEach((other) => other.setAttribute("aria-expanded", "false"));
+        button.setAttribute("aria-expanded", String(!open));
+      }),
+    );
+  });
+</script>
+
+<style is:global>
+  @layer components {
+    .landing-faq_wrap {
+      width: var(--site-width);
+      max-width: 53.75rem;
+      margin-inline: auto;
+      padding-block-end: var(--space-8);
+    }
+
+    .landing-faq_title {
+      margin-block-end: var(--space-3);
+      font-family: var(--secondary-family);
+      font-size: clamp(2.125rem, 5vw, 3.5rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-small);
+      text-align: center;
+    }
+
+    .landing-faq_list {
+      border-top: var(--border-width) solid var(--border);
+    }
+
+    .landing-faq_item {
+      border-bottom: var(--border-width) solid var(--border);
+    }
+
+    .landing-faq_button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      width: 100%;
+      min-height: 4.25rem;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+
+      @media (hover: hover) {
+        &:hover .landing-faq_question {
+          text-decoration: underline;
+          text-underline-offset: 0.2em;
+        }
+      }
+    }
+
+    .landing-faq_question {
+      font-family: var(--secondary-family);
+      font-size: clamp(1.1875rem, 2.4vw, 1.5rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+
+    .landing-faq_plus {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 2.125rem;
+      height: 2.125rem;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      position: relative;
+      transition:
+        rotate var(--move-duration) var(--ease-out),
+        background-color var(--move-duration) var(--ease-out);
+    }
+
+    .landing-faq_plus::before,
+    .landing-faq_plus::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      translate: -50% -50%;
+      border-radius: var(--radius-round);
+      background-color: currentColor;
+    }
+
+    .landing-faq_plus::before {
+      width: 0.875rem;
+      height: 0.125rem;
+    }
+
+    .landing-faq_plus::after {
+      width: 0.125rem;
+      height: 0.875rem;
+    }
+
+    .landing-faq_button[aria-expanded="true"] .landing-faq_plus {
+      background-color: var(--colors-vivid-yellow);
+      rotate: 45deg;
+    }
+
+    .landing-faq_panel {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.35s var(--ease-out);
+    }
+
+    .landing-faq_button[aria-expanded="true"] + .landing-faq_panel {
+      grid-template-rows: 1fr;
+    }
+
+    .landing-faq_clip {
+      overflow: hidden;
+    }
+
+    .landing-faq_answer {
+      max-width: 38.75rem;
+      padding-block-end: var(--space-4);
+      color: var(--text-2);
+      line-height: var(--line-height-huge);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .landing-faq_panel,
+      .landing-faq_plus {
+        transition: none;
+      }
+    }
+  }
+</style>

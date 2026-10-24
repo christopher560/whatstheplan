@@ -24,7 +24,7 @@ named in the "built" sections.
 | Discover, round 4: the real group page (members, plan, poll; chat comes next) | built |
 | Group chat (text only, refreshes every few seconds) | built |
 | Live updates (frequent checks) on plan page, group page, Discover, Plans page, badges | built |
-| Email nudges, reminders and "locked in" emails | after group chat |
+| Email nudges, reminders and "locked in" emails | decided against (no email sending); the Nudge button and auto-nudge switch were removed |
 | Teen Discover with an age check | later, needs a decision on verification and legal review |
 
 Order was set by the owner: Discover and group chat come before nudges and live updates.
@@ -791,3 +791,19 @@ Database only: nothing on the Discover page uses it until round 3.
 - **Sidebar and tab bar badges:** the numbers for Plans and Friends stay current on every page.
 - **Not live:** the invite pages for guests (`/p`, `/r`), the calendar and the Friends page. They still update on reload.
 - **Cost to know:** a check with nothing new is a very small request and answer (a few hundred bytes of data plus normal headers) and one cheap database query, roughly 6 an open-tab minute at the fastest rate and about 2 once quiet. If usage grows, raise the base interval in the `poll` calls.
+
+## Nudges removed
+
+- Decision: no email sending for now. The Nudge button and the auto-nudge switch on the host's plan page are gone (they saved nothing), along with `nudge` and `setAutoNudge` in the browser and server code and the `set_plan_auto_nudge` database function. In their place the replies panel says who is still out ("Still waiting on Jo and Sam.", or "Everyone has replied.").
+- The `plans.auto_nudge` column is left in the table, unused, so nothing else had to change. Drop it in a later cleanup if you like.
+- If email comes back later, the pieces needed are: a Resend sending key in the server environment, a place for guests to leave an email (they only give a name today), an opt-out, and a scheduler for reminders.
+
+## Launch checks - done
+
+- **Database audit:** every table has row level security; writes go through functions with a fixed `search_path`; advisors show no security errors. Migration `launch_fk_indexes` added indexes on 12 foreign keys (speed only).
+- **App audit:** every action validates input with zod, checks the signed-in person, and rate-limits the public ones (`hit_rate_limit`). Cross-origin posts are refused; bad input returns 400.
+- **Dependencies:** `npm audit fix` applied and `package.json` pins `zod` with an `overrides` entry (`^4.6.6`) so the actions and Astro share one copy. The only remaining audit notice is `path-to-regexp` (build-time, through `@astrojs/vercel`; the only fix is a breaking downgrade), accepted.
+- **Secrets:** nothing secret in the repo. Vercel holds only the public Supabase URL and publishable key (all environments) and the hCaptcha site key (production only). The hCaptcha secret and the Resend key live in Supabase.
+- **Vercel:** domains `whatstheplan.social` (redirects to `www`), `www.whatstheplan.social`, and the `.vercel.app` alias, all verified. Latest production deploy is ready. `vercel.json` sets CSP, HSTS, frame denial, nosniff, referrer and permissions headers. One Firewall rule: guest replies (`/_actions/invite.reply`) are limited to 20 per minute per IP.
+- **Accepted risks:** age is self-reported and the `age_group` column can be edited by its owner (lock edits once Discover opens to teens); leaked-password protection needs Supabase Pro; guests' invite pages, Friends and Calendar are not live-updated.
+- **Supabase dashboard checklist (manual):** minimum password length 8 or more; CAPTCHA on for sign-up, sign-in and reset; Site URL `https://whatstheplan.social`; redirect allow-list limited to `https://whatstheplan.social/**` and `https://www.whatstheplan.social/**` (remove localhost and wildcard previews); custom SMTP through Resend with the templates set; email confirmation on.

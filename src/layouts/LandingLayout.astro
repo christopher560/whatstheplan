@@ -1,0 +1,50 @@
+---
+import "@/styles/global.css";
+import "../styles/dashboard-base.css";
+import BaseHead from "@/components/utility/BaseHead.astro";
+import SkipLink from "@/components/global/SkipLink.astro";
+import type { SeoProps } from "@/types.ts";
+
+type Props = SeoProps;
+
+const seo = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead {...seo} />
+  </head>
+
+  <body>
+    <SkipLink />
+    <div class="landing-layout_wrap">
+      <slot name="nav" />
+      <main class="landing-layout_main" id="main">
+        <slot />
+      </main>
+      <slot name="footer" />
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  @layer components {
+    .landing-layout_wrap {
+      overflow-x: clip;
+      background-color: var(--background);
+      background-image: radial-gradient(
+        56rem 26rem at 85% -4%,
+        color-mix(in srgb, var(--colors-vivid-yellow) 16%, transparent),
+        transparent 70%
+      );
+      background-repeat: no-repeat;
+      color: var(--text);
+      font-family: var(--primary-family);
+    }
+
+    .landing-layout_main {
+      display: block;
+    }
+  }
+</style>

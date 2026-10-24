@@ -1,0 +1,392 @@
+---
+import Avatar from "@/components/item/Avatar.astro";
+import Pill from "@/components/item/Pill.astro";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+/* How busy each day is in the little calendar, from empty (0) to everyone free (4). */
+const levels = [0, 1, 2, 1, 2, 1, 3, 1, 0, 1, 2, 1, 2, 2, 2, 1, 2, 1, 3, 3, 1, 1, 2, 0, 1, 2, 4, 2];
+---
+
+{
+  render && (
+    <section class="landing-features_wrap" id="features" aria-labelledby="landing-features-title">
+      <div class="landing-features_head">
+        <span class="landing-features_tag text-style-tiny">Features</span>
+        <h2 id="landing-features-title" class="landing-features_title scroll-reveal">
+          Everything a plan needs
+        </h2>
+      </div>
+
+      <div class="landing-features_layout">
+        <article class="landing-features_card wide scroll-reveal">
+          <div class="landing-features_copy">
+            <p class="landing-features_kicker text-style-tiny">Calendar</p>
+            <h3 class="landing-features_card_title">See when everyone is free</h3>
+            <p class="landing-features_card_text text-style-main">Paint your week once. Overlaps light up.</p>
+          </div>
+          <div class="landing-features_calendar" aria-hidden="true">
+            {levels.map((level) => (
+              <span class="landing-features_day" data-level={level} />
+            ))}
+          </div>
+        </article>
+
+        <article class="landing-features_card narrow blue scroll-reveal">
+          <p class="landing-features_kicker ink text-style-tiny">Invite</p>
+          <h3 class="landing-features_card_title">One link. No app needed.</h3>
+          <p class="landing-features_url text-style-small">whatstheplan.social/p/tacos</p>
+        </article>
+
+        <article class="landing-features_card narrow orange scroll-reveal">
+          <p class="landing-features_kicker ink text-style-tiny">Budget</p>
+          <h3 class="landing-features_card_title">Costs up front</h3>
+          <p class="landing-features_price">
+            $15<span class="landing-features_each text-style-small"> each</span>
+          </p>
+          <div class="landing-features_bars" aria-hidden="true">
+            <span /><span /><span /><span />
+          </div>
+        </article>
+
+        <article class="landing-features_card wide purple scroll-reveal">
+          <div class="landing-features_copy">
+            <p class="landing-features_kicker ink text-style-tiny">Discover</p>
+            <h3 class="landing-features_card_title">Meet people who like what you like</h3>
+            <p class="landing-features_card_text text-style-main">Pick your days. We match you into a group.</p>
+          </div>
+          <div class="landing-features_sample">
+            <div class="landing-features_sample_top">
+              <p class="landing-features_sample_title">Sunset hike</p>
+              <Pill size="tiny" variant="filled" color="pink">
+                92% fit
+              </Pill>
+            </div>
+            <div class="landing-features_sample_foot">
+              <span class="avatar-stack_wrap">
+                <Avatar initial="A" color="yellow" size="small" />
+                <Avatar initial="K" color="blue" size="small" />
+                <Avatar initial="R" color="pink" size="small" />
+                <Avatar initial="T" color="green" size="small" />
+              </span>
+              <span class="text-style-small landing-features_going">5 of 6 going</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="landing-features_card half scroll-reveal">
+          <p class="landing-features_kicker text-style-tiny">Groups</p>
+          <h3 class="landing-features_card_title">A chat for every plan</h3>
+          <div class="landing-features_chat">
+            <p class="landing-features_msg them text-style-small">who is driving?</p>
+            <p class="landing-features_msg you text-style-small">me, 3 seats</p>
+          </div>
+        </article>
+
+        <article class="landing-features_card half green scroll-reveal">
+          <p class="landing-features_kicker ink text-style-tiny">Updates</p>
+          <h3 class="landing-features_card_title">Everyone stays in the loop</h3>
+          <div class="landing-features_update">
+            <p class="landing-features_update_title">Update from Maya</p>
+            <p class="landing-features_update_text">Moved to Lupe's, 7:30 pm</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .landing-features_wrap {
+      width: var(--site-width);
+      max-width: 72.5rem;
+      margin-inline: auto;
+      padding-block: var(--space-7) var(--space-8);
+    }
+
+    .landing-features_head {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      margin-block-end: var(--space-5);
+      text-align: center;
+    }
+
+    .landing-features_tag {
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+    }
+
+    .landing-features_title {
+      font-family: var(--secondary-family);
+      font-size: clamp(2.125rem, 5vw, 3.5rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-small);
+      text-wrap: balance;
+    }
+
+    .landing-features_layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3);
+
+      @media (width >= 64rem) {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: var(--space-3);
+      }
+    }
+
+    .landing-features_card {
+      --_surface: var(--background-3);
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-5) var(--space-4);
+      border: var(--border-width) solid var(--border-subtle);
+      border-radius: var(--radius-xlarge);
+      background-color: var(--_surface);
+      transition: translate var(--move-duration) var(--ease-out);
+
+      @media (hover: hover) {
+        &:hover {
+          translate: 0 var(--card-lift);
+        }
+      }
+      &.blue,
+      &.orange,
+      &.purple,
+      &.green {
+        border: var(--border-width-thick) solid var(--border-strong);
+      }
+      &.blue {
+        --_surface: var(--colors-secondary-blue);
+      }
+      &.orange {
+        --_surface: var(--colors-secondary-orange);
+      }
+      &.purple {
+        --_surface: var(--colors-secondary-purple);
+      }
+      &.green {
+        --_surface: var(--colors-secondary-green);
+      }
+      &.wide {
+        flex-flow: row wrap;
+        align-items: center;
+        gap: var(--space-4);
+
+        @media (width >= 64rem) {
+          grid-column: span 4;
+        }
+      }
+      &.narrow {
+        @media (width >= 64rem) {
+          grid-column: span 2;
+        }
+      }
+      &.half {
+        @media (width >= 64rem) {
+          grid-column: span 3;
+        }
+      }
+    }
+
+    .landing-features_copy {
+      display: flex;
+      flex: 1 1 13.75rem;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .landing-features_kicker {
+      color: var(--text-2);
+
+      &.ink {
+        color: var(--text);
+      }
+    }
+
+    .landing-features_card_title {
+      margin-block: var(--space-1) var(--space-3);
+      font-family: var(--secondary-family);
+      font-size: var(--h5);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-medium);
+    }
+
+    .landing-features_copy .landing-features_card_title {
+      margin-block: 0;
+      font-size: var(--h4);
+    }
+
+    .landing-features_card_text {
+      color: var(--text-2);
+      line-height: var(--line-height-large);
+    }
+
+    .landing-features_card.purple .landing-features_card_text {
+      color: var(--text);
+    }
+
+    .landing-features_calendar {
+      display: grid;
+      flex: 1 1 14.375rem;
+      grid-template-columns: repeat(7, 1fr);
+      gap: var(--space-0);
+    }
+
+    .landing-features_day {
+      height: 1.5rem;
+      border: var(--border-width-medium) solid var(--border-subtle);
+      border-radius: 0.4375rem;
+      background-color: var(--background);
+
+      &[data-level="1"] {
+        background-color: color-mix(in srgb, var(--status-free-background) 50%, var(--background-3));
+      }
+      &[data-level="2"] {
+        background-color: var(--status-free-background);
+      }
+      &[data-level="3"] {
+        background-color: color-mix(in srgb, var(--status-free) 60%, var(--status-free-background));
+      }
+      &[data-level="4"] {
+        border: var(--border-width-thick) solid var(--border-strong);
+        background-color: var(--status-free);
+      }
+    }
+
+    .landing-features_url {
+      padding: var(--space-2) var(--space-3);
+      overflow: hidden;
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-weight: var(--primary-bold);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .landing-features_price {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-1);
+      font-family: var(--secondary-family);
+      font-size: var(--h2);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-small);
+    }
+
+    .landing-features_each {
+      font-family: var(--primary-family);
+      letter-spacing: normal;
+    }
+
+    .landing-features_bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-0);
+      margin-block-start: var(--space-3);
+
+      & span {
+        height: 0.625rem;
+        border: var(--border-width-medium) solid var(--border-strong);
+        border-radius: 0.3125rem;
+        background-color: var(--background-3);
+      }
+    }
+
+    .landing-features_sample {
+      display: flex;
+      flex: 1 1 14.375rem;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: var(--border-width-thick) solid var(--border-strong);
+      border-radius: var(--radius-large);
+      background-color: var(--background-3);
+    }
+
+    .landing-features_sample_top,
+    .landing-features_sample_foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .landing-features_sample_foot {
+      justify-content: flex-start;
+    }
+
+    .landing-features_sample_title {
+      font-family: var(--secondary-family);
+      font-size: var(--h6);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+
+    .landing-features_going {
+      font-weight: var(--primary-bold);
+    }
+
+    .landing-features_chat {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .landing-features_msg {
+      padding: var(--space-1) var(--space-3);
+      border: var(--border-width-medium) solid var(--border-strong);
+      font-weight: var(--primary-medium);
+
+      &.them {
+        align-self: flex-start;
+        border-radius: var(--radius-main) var(--radius-main) var(--radius-main) 0.25rem;
+        background-color: var(--colors-secondary-purple);
+      }
+      &.you {
+        align-self: flex-end;
+        border-radius: var(--radius-main) var(--radius-main) 0.25rem var(--radius-main);
+        background-color: var(--colors-vivid-yellow);
+      }
+    }
+
+    .landing-features_update {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      font-size: var(--text-small);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-medium) solid var(--border-strong);
+      border-radius: var(--radius-main);
+      background-color: var(--background-3);
+    }
+
+    .landing-features_update_title,
+    .landing-features_update_text {
+      line-height: var(--line-height-large);
+    }
+
+    .landing-features_update_title {
+      font-weight: var(--primary-bold);
+    }
+
+    .landing-features_update_text {
+      color: var(--text-2);
+      font-weight: var(--primary-medium);
+    }
+  }
+</style>

@@ -468,16 +468,6 @@ export const server = {
       },
     }),
 
-    setAutoNudge: defineAction({
-      accept: "json",
-      input: z.object({ planId: z.uuid(), on: z.boolean() }),
-      handler: async (input, context): Promise<{ ok: true } | { ok: false; error: string }> => {
-        const { user, supabase } = context.locals;
-        if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
-        const { error } = await supabase.rpc("set_plan_auto_nudge", { p_plan: input.planId, p_on: input.on });
-        return error ? { ok: false, error: generic } : { ok: true };
-      },
-    }),
   },
 
   invite: {

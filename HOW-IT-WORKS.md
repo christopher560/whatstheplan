@@ -526,7 +526,7 @@ These protections are shared by every feature above.
 
 | Not built | What it will do |
 | --- | --- |
-| Email nudges and reminders | The Nudge and auto-nudge buttons do nothing yet. Emails would go through Resend; texts need a paid text-message service. |
+| Email or text messages | Decided against for now. The plan page just says who has not replied yet. |
 | Teen Discover | 13 to 15 and 16 to 17 meeting only their own band. Waits for an age check (school email or parent consent) and a legal review. |
 | Groups the app forms | The app grouping people from a waitlist who share interests and free hours. |
 
@@ -556,3 +556,7 @@ These protections are shared by every feature above.
   Add `"16-17"` or `"13-15"` only after you have decided on an age check and checked
   the legal side.
 - **Add places and starter groups:** fill in `supabase/seed-groups.sql` and run it.
+
+## Launch checks
+
+Before launch the database, the app code, the secrets and the dependencies were all checked. Everything private stays behind the sign-in and the database rules; the browser only ever holds a public key. Known and accepted for now: ages are self-reported (so teens are not yet allowed into Discover), and a few older warnings in a build-time tool that cannot be fixed without breaking the build. The full list and the Supabase dashboard checklist are at the end of SUPABASE.md.

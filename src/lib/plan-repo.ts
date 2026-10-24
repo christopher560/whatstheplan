@@ -10,9 +10,8 @@ const unwrap = <T>({ data, error }: { data?: T; error?: unknown }): T | typeof f
 /**
  * What the host's plan page writes. The page reads the plan on the server with
  * `readPlan` (src/lib/plans-db.ts). Only the host can change a plan; the database
- * functions check that. Nudging needs reminders to send, which come later, so it saves nothing yet.
+ * functions check that.
  */
-export const nudge = async (_planId: string, _friendIds: string[]) => {};
 export const lockTime = async (planId: string, slotId: string | null) =>
   unwrap(await actions.plans.lockSlot({ planId, slotId })) as Simple;
 
@@ -20,8 +19,6 @@ export const lockTime = async (planId: string, slotId: string | null) =>
 export const addMemberFriend = async (memberId: string) =>
   unwrap(await actions.plans.addMemberFriend({ memberId })) as { ok: true; status: string } | { ok: false; error: string };
 
-export const setAutoNudge = async (planId: string, on: boolean) =>
-  unwrap(await actions.plans.setAutoNudge({ planId, on })) as Simple;
 export const saveDescription = async (planId: string, text: string) =>
   unwrap(await actions.plans.setDescription({ planId, text })) as Simple;
 export const sendUpdate = async (planId: string, message: string) =>

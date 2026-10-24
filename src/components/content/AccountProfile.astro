@@ -8,7 +8,6 @@ import ColorPicker from "@/components/form/ColorPicker.astro";
 import ScaleQuestion from "@/components/form/ScaleQuestion.astro";
 import OptionGroup from "@/components/form/OptionGroup.astro";
 import type { Profile } from "@/lib/onboarding-repo.ts";
-import type { Area } from "@/data/onboarding.ts";
 import {
   ageGroups,
   interests,
@@ -18,7 +17,6 @@ import {
   groupSizes,
   findOptions,
   contactOptions,
-  otherArea,
 } from "@/data/onboarding.ts";
 
 interface Props {
@@ -26,14 +24,11 @@ interface Props {
   render?: boolean;
   /** The signed-in person's profile. */
   profile?: Profile;
-  /** Nearby places to choose from, nearest first. */
-  areas?: Area[];
 }
 
-const { render = true, profile, areas = [] } = Astro.props;
+const { render = true, profile } = Astro.props;
 
 const adultAges = ageGroups.filter((age) => age.id !== "u13");
-const allAreas = [...areas, otherArea];
 ---
 
 {
@@ -45,10 +40,6 @@ const allAreas = [...areas, otherArea];
     >
       <header class="account-profile_header">
         <h1 class="account-profile_title text-style-title">Your profile</h1>
-        <p class="account-profile_lead text-style-large">
-          Change anything you set up when you joined. Friends only ever see your
-          first name and color.
-        </p>
       </header>
 
       <Panel
@@ -113,26 +104,8 @@ const allAreas = [...areas, otherArea];
               ))}
             </div>
             <p class="account-profile_hint text-style-small">
-              Used to match you with people your age. It stays private.
+              Discover is for adults for now. This stays private.
             </p>
-          </div>
-          <div class="account-profile_group" role="group" aria-labelledby="account-area">
-            <p id="account-area" class="account-profile_label text-style-main">
-              Your area
-            </p>
-            <div class="account-profile_row">
-              {allAreas.map((area) => (
-                <Pill
-                  element="button"
-                  size="main"
-                  pressed={area.id === profile.area_id}
-                  data-area={area.id}
-                  data-area-name={area.name}
-                >
-                  {area.name}
-                </Pill>
-              ))}
-            </div>
           </div>
         </div>
       </Panel>
@@ -271,16 +244,6 @@ const allAreas = [...areas, otherArea];
             options={contactOptions}
             value={profile.contactable_by}
           />
-          <div class="account-profile_setting">
-            <Choice
-              variant="toggle"
-              label="Show my general area"
-              name="show_area"
-              role="switch"
-              checked={profile.show_area}
-            />
-            <p class="account-profile_hint text-style-small">Never an exact spot.</p>
-          </div>
         </div>
       </Panel>
 
@@ -360,7 +323,6 @@ const allAreas = [...areas, otherArea];
         colorInput.value = state.avatar_color.toLowerCase();
 
       press("[data-age]", (el) => el.dataset.age === state.age_group);
-      press("[data-area]", (el) => el.dataset.area === state.area_id);
       press("[data-interest]", (el) => state.interests.includes(el.dataset.interest!));
       press("[data-activity]", (el) => state.activity_types.includes(el.dataset.activity!));
       press("[data-availability]", (el) => state.availability.includes(el.dataset.availability!));
@@ -378,19 +340,13 @@ const allAreas = [...areas, otherArea];
       checkRadios("discoverable_by", state.discoverable_by);
       checkRadios("contactable_by", state.contactable_by);
       ($(`input[name="group_first"]`) as HTMLInputElement).checked = state.group_first;
-      ($(`input[name="show_area"]`) as HTMLInputElement).checked = state.show_area;
 
       const avatar = $("[data-live-avatar]");
       avatar.style.setProperty("--_color", state.avatar_color);
       avatar.style.setProperty("--_on", onColor);
       $("[data-live-initial]").textContent = first ? first[0].toUpperCase() : "?";
       $("[data-live-name]").textContent = first || "Your first name";
-      const areaName = $<HTMLElement>(`[data-area="${state.area_id}"]`)?.dataset.areaName;
-      $("[data-live-line]").textContent =
-        (result?.name ?? "") +
-        (state.show_area && areaName && state.area_id !== "other"
-          ? ` · ${areaName} area`
-          : "");
+      $("[data-live-line]").textContent = result?.name ?? "";
       const shown = state.interests.slice(0, 4);
       $$("[data-live-tag]").forEach((tag) => {
         const index = shown.indexOf(tag.dataset.liveTag!);
@@ -421,7 +377,7 @@ const allAreas = [...areas, otherArea];
 
     root.addEventListener("click", (event) => {
       const target = (event.target as HTMLElement).closest<HTMLElement>(
-        "[data-swatch], [data-age], [data-area], [data-interest], [data-activity], [data-availability], [data-discard], [data-save]",
+        "[data-swatch], [data-age], [data-interest], [data-activity], [data-availability], [data-discard], [data-save]",
       );
       if (!target) return;
       const data = target.dataset;
@@ -462,7 +418,6 @@ const allAreas = [...areas, otherArea];
       change(() => {
         if (target.matches("[data-swatch]")) state.avatar_color = swatchColor(target);
         else if (data.age) state.age_group = data.age;
-        else if (data.area) state.area_id = data.area;
         else if (data.interest) state.interests = toggle(state.interests, data.interest);
         else if (data.activity) state.activity_types = toggle(state.activity_types, data.activity);
         else if (data.availability)
@@ -488,7 +443,6 @@ const allAreas = [...areas, otherArea];
       else if (target.name === "contactable_by")
         change(() => (state.contactable_by = target.value));
       else if (target.name === "group_first") change(() => (state.group_first = target.checked));
-      else if (target.name === "show_area") change(() => (state.show_area = target.checked));
     });
 
     render();
@@ -510,7 +464,6 @@ const allAreas = [...areas, otherArea];
       gap: var(--space-4);
     }
 
-    .account-profile_lead,
     .account-profile_hint {
       color: var(--text-2);
     }
