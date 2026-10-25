@@ -1,7 +1,8 @@
 ---
 import ActionButton from "@/components/item/ActionButton.astro";
+import AvatarStack from "@/components/item/AvatarStack.astro";
 import Icon from "@/components/media/Icon.astro";
-import brand_full_logo_cropped from "@/assets/logo/brand-full-logo-cropped.svg";
+import brand_wordmark from "@/assets/logo/brand-wordmark.svg";
 import { SITE_NAME } from "@/consts.ts";
 
 interface Props {
@@ -13,7 +14,10 @@ const { render = true } = Astro.props;
 
 const links = [
   { label: "How it works", href: "#demo" },
+  { label: "Discover", href: "#pillars" },
   { label: "Features", href: "#features" },
+  { label: "My Story", href: "/story" },
+  { label: "GitHub", href: "https://github.com/christopher560/whatstheplan", external: true },
   { label: "Log in", href: "/login" },
 ];
 ---
@@ -21,29 +25,51 @@ const links = [
 {
   render && (
     <>
-      <div class="landing-closing_scallop" aria-hidden="true" />
       <section class="landing-closing_wrap" aria-labelledby="landing-closing-title">
+        <span class="landing-closing_chip one" aria-hidden="true">who’s in? 🙋</span>
+        <span class="landing-closing_chip two" aria-hidden="true">Sat · 7:00 pm</span>
+        <span class="landing-closing_chip three" aria-hidden="true">
+          <AvatarStack
+            size="small"
+            people={[
+              { initial: "M", color: "yellow" },
+              { initial: "D", color: "blue" },
+              { initial: "S", color: "pink" },
+            ]}
+          />
+          3 going
+        </span>
+        <span class="landing-closing_chip four" aria-hidden="true">see you there</span>
+        <div class="landing-closing_inner">
         <h2 id="landing-closing-title" class="landing-closing_title scroll-reveal">
           Your next plan is one link away.
         </h2>
         <ActionButton element="link" href="/signup" size="large" raised>
           Start planning, it's free
         </ActionButton>
+        </div>
       </section>
       <footer class="landing-closing_footer">
+        <div class="landing-closing_row">
+          <nav class="landing-closing_links" aria-label="Footer">
+            {links.map((link) => (
+              <a
+                class="landing-closing_link text-style-small"
+                href={link.href}
+                target={link.external ? "_blank" : undefined}
+                rel={link.external ? "noopener" : undefined}
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+          <p class="landing-closing_copyright text-style-small">
+            &copy; {new Date().getFullYear()} {SITE_NAME}
+          </p>
+        </div>
         <a class="landing-closing_logo" href="#top" aria-label={SITE_NAME}>
-          <Icon src={brand_full_logo_cropped} variant="full-width" />
+          <Icon src={brand_wordmark} variant="full-width" />
         </a>
-        <nav class="landing-closing_links" aria-label="Footer">
-          {links.map((link) => (
-            <a class="landing-closing_link text-style-small" href={link.href}>
-              {link.label}
-            </a>
-          ))}
-        </nav>
-        <p class="landing-closing_copyright text-style-small">
-          &copy; {new Date().getFullYear()} {SITE_NAME}
-        </p>
       </footer>
     </>
   )
@@ -51,66 +77,107 @@ const links = [
 
 <style is:global>
   @layer components {
-    .landing-closing_scallop {
-      height: 1.375rem;
-      margin-block-end: -0.0625rem;
-      background:
-        radial-gradient(
-            circle at 1.375rem 1.375rem,
-            var(--colors-secondary-yellow) 1.3125rem,
-            transparent 1.375rem
-          )
-          repeat-x;
-      background-size: 2.75rem 1.375rem;
+    .landing-closing_wrap {
+      position: relative;
+      padding-block: clamp(3.5rem, 8vw, 7rem) clamp(2.5rem, 5vw, 4rem);
+      overflow: hidden;
+      border-radius: clamp(1.75rem, 4vw, 3rem) clamp(1.75rem, 4vw, 3rem) 0 0;
+      background-color: color-mix(in srgb, var(--colors-vivid-orange) 38%, var(--background-3));
+      text-align: center;
     }
 
-    .landing-closing_wrap {
+    .landing-closing_inner {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: var(--space-5);
-      padding: clamp(2.5rem, 7vw, 5.5rem) var(--space-3);
-      background-color: var(--colors-secondary-yellow);
-      text-align: center;
-    }
-
-    .landing-closing_title {
-      max-width: 45rem;
-      font-family: var(--secondary-family);
-      font-size: clamp(2.25rem, 6vw, 4.5rem);
-      font-weight: var(--secondary-bold);
-      letter-spacing: var(--letter-spacing-tight);
-      line-height: var(--line-height-small);
-      text-wrap: balance;
-    }
-
-    .landing-closing_footer {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--space-3);
       width: var(--site-width);
       max-width: 72.5rem;
       margin-inline: auto;
-      padding-block: var(--space-4) var(--space-6);
-      color: var(--text-2);
+    }
 
-      @media (width >= 64rem) {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
+    .landing-closing_title {
+      position: relative;
+      max-width: 51.25rem;
+      font-family: var(--secondary-family);
+      font-size: clamp(2.5rem, 7vw, 5.5rem);
+      font-weight: var(--secondary-bold);
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: 0.98;
+      text-wrap: balance;
+    }
+
+    .landing-closing_wrap .action-button_wrap {
+      position: relative;
+    }
+
+    .landing-closing_chip {
+      position: absolute;
+      display: none;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: var(--border-width-medium) solid var(--border);
+      border-radius: var(--radius-round);
+      background-color: var(--background-3);
+      font-size: var(--text-small);
+      font-weight: var(--primary-bold);
+      white-space: nowrap;
+
+      @media (width >= 72rem) {
+        display: inline-flex;
+      }
+      &.one {
+        left: 7%;
+        top: 24%;
+        rotate: -6deg;
+      }
+      &.two {
+        right: 8%;
+        top: 20%;
+        rotate: 5deg;
+        background-color: var(--colors-secondary-green);
+      }
+      &.three {
+        left: 12%;
+        bottom: 24%;
+        rotate: 4deg;
+      }
+      &.four {
+        right: 11%;
+        bottom: 22%;
+        rotate: -5deg;
+        background-color: var(--colors-secondary-purple);
       }
     }
 
+    .landing-closing_footer {
+      padding: var(--space-1) 0 0;
+      overflow: hidden;
+      background-color: color-mix(in srgb, var(--colors-vivid-orange) 38%, var(--background-3));
+    }
+
+    .landing-closing_row,
     .landing-closing_logo {
-      display: block;
-      width: 7.5rem;
+      width: var(--site-width);
+      max-width: 72.5rem;
+      margin-inline: auto;
+    }
+
+    .landing-closing_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding-block-end: var(--space-4);
     }
 
     .landing-closing_links {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-1);
+      gap: var(--space-0) var(--space-1);
     }
 
     .landing-closing_link {
@@ -118,15 +185,28 @@ const links = [
       align-items: center;
       min-height: var(--control-height-small);
       padding-inline: var(--space-3);
-      color: var(--text-2);
+      border-radius: 0.75rem;
+      color: var(--text);
       font-weight: var(--primary-bold);
       text-decoration: none;
+      transition: background-color var(--hover-duration) var(--hover-ease);
 
       @media (hover: hover) {
         &:hover {
-          color: var(--text);
+          background-color: color-mix(in srgb, var(--text) 10%, transparent);
         }
       }
+    }
+
+    .landing-closing_copyright {
+      color: color-mix(in srgb, var(--text) 70%, transparent);
+      font-weight: var(--primary-medium);
+    }
+
+    .landing-closing_logo {
+      display: block;
+      color: var(--text);
+      opacity: 0.3;
     }
   }
 </style>
