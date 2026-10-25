@@ -1,0 +1,120 @@
+---
+import Icon from "@/components/media/Icon.astro";
+import brand_wordmark from "@/assets/logo/brand-wordmark.svg";
+import { SITE_NAME } from "@/consts.ts";
+
+interface Props {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+}
+
+const { render = true } = Astro.props;
+
+const links = [
+  { label: "How it works", href: "/#demo" },
+  { label: "Discover", href: "/#pillars" },
+  { label: "Features", href: "/#features" },
+  { label: "My Story", href: "/story", hidden: true },
+  { label: "GitHub", href: "https://github.com/christopher560/whatstheplan", external: true },
+  { label: "Log in", href: "/login" },
+];
+---
+
+{
+  render && (
+    <footer class="landing-footer_wrap">
+        <div class="landing-footer_row">
+          <nav class="landing-footer_links" aria-label="Footer">
+            {links.map((link) => (
+              <a
+                class="landing-footer_link text-style-small"
+                href={link.href}
+                hidden={link.hidden}
+                target={link.external ? "_blank" : undefined}
+                rel={link.external ? "noopener" : undefined}
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+          <p class="landing-footer_copyright text-style-small">
+            &copy; {new Date().getFullYear()} {SITE_NAME}
+          </p>
+        </div>
+        <a class="landing-footer_logo" href="/" aria-label={SITE_NAME}>
+          <Icon src={brand_wordmark} variant="full-width" />
+        </a>
+      </footer>
+  )
+}
+
+<style is:global>
+  @layer components {
+    .landing-footer_wrap {
+      padding: var(--space-6) 0 0;
+      border-radius: clamp(1.75rem, 4vw, 3rem) clamp(1.75rem, 4vw, 3rem) 0 0;
+      overflow: hidden;
+      background-color: color-mix(in srgb, var(--colors-vivid-orange) 38%, var(--background-3));
+    }
+
+    .landing-closing_wrap + .landing-footer_wrap {
+      padding-block-start: var(--space-1);
+      border-radius: 0;
+    }
+
+    .landing-footer_row,
+    .landing-footer_logo {
+      width: var(--site-width);
+      max-width: 72.5rem;
+      margin-inline: auto;
+    }
+
+    .landing-footer_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding-block-end: var(--space-4);
+    }
+
+    .landing-footer_links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-0) var(--space-1);
+    }
+
+    .landing-footer_link {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--control-height-small);
+      padding-inline: var(--space-3);
+      border-radius: 0.75rem;
+      color: var(--text);
+      font-weight: var(--primary-bold);
+      text-decoration: none;
+      transition: background-color var(--hover-duration) var(--hover-ease);
+
+      @media (hover: hover) {
+        &:hover {
+          background-color: color-mix(in srgb, var(--text) 10%, transparent);
+        }
+      }
+    }
+
+    .landing-footer_link[hidden] {
+      display: none;
+    }
+
+    .landing-footer_copyright {
+      color: color-mix(in srgb, var(--text) 70%, transparent);
+      font-weight: var(--primary-medium);
+    }
+
+    .landing-footer_logo {
+      display: block;
+      color: var(--text);
+      opacity: 0.3;
+    }
+  }
+</style>

@@ -1,6 +1,5 @@
 ---
 import LandingLayout from "@/layouts/LandingLayout.astro";
-import LandingNav from "@/components/content/LandingNav.astro";
 import LandingHero from "@/components/content/LandingHero.astro";
 import LandingTour from "@/components/section/LandingTour.astro";
 import LandingPillars from "@/components/content/LandingPillars.astro";
@@ -8,10 +7,10 @@ import LandingFeatures from "@/components/content/LandingFeatures.astro";
 import LandingOccasions from "@/components/content/LandingOccasions.astro";
 import LandingFaq from "@/components/content/LandingFaq.astro";
 import LandingClosing from "@/components/content/LandingClosing.astro";
+import LandingFooter from "@/components/content/LandingFooter.astro";
 ---
 
-<LandingLayout>
-  <LandingNav slot="nav" />
+<LandingLayout footer={false}>
   <!-- Hero -->
   <LandingHero />
   <!-- How it works -->
@@ -26,4 +25,5 @@ import LandingClosing from "@/components/content/LandingClosing.astro";
   <LandingFaq />
   <!-- Closing call to action and footer -->
   <LandingClosing />
+  <LandingFooter />
 </LandingLayout>

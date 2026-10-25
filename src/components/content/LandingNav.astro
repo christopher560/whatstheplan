@@ -12,9 +12,9 @@ interface Props {
 const { render = true } = Astro.props;
 
 const tabs = [
-  { label: "How it works", href: "#demo" },
-  { label: "Discover", href: "#pillars" },
-  { label: "Features", href: "#features" },
+  { label: "How it works", href: "/#demo" },
+  { label: "Discover", href: "/#pillars" },
+  { label: "Features", href: "/#features" },
 ];
 ---
 
@@ -22,7 +22,7 @@ const tabs = [
   render && (
     <div class="landing-nav_wrap">
       <header class="landing-nav_bar">
-        <a class="landing-nav_logo" href="#top" aria-label={SITE_NAME}>
+        <a class="landing-nav_logo" href="/" aria-label={SITE_NAME}>
           <Icon src={brand_full_logo_cropped} variant="full-width" />
         </a>
         <nav class="landing-nav_tabs" aria-label="Sections" data-tabs>
@@ -32,7 +32,7 @@ const tabs = [
             </a>
           ))}
         </nav>
-        <a class="landing-nav_link landing-nav_story text-style-small" href="/story">
+        <a class="landing-nav_link landing-nav_story text-style-small" href="/story" hidden>
           My Story
         </a>
         <a
@@ -66,7 +66,7 @@ const tabs = [
   const tabs = document.querySelector<HTMLElement>("[data-tabs]");
   const links = tabs ? [...tabs.querySelectorAll<HTMLAnchorElement>("a")] : [];
   const sections = links.map((link) =>
-    document.querySelector<HTMLElement>(link.getAttribute("href")!),
+    document.getElementById(link.hash.slice(1)),
   );
 
   /* The tab for the last section whose top has passed about a third of the way down the screen. */
@@ -198,6 +198,10 @@ const tabs = [
       @media (width >= 64rem) {
         display: inline-flex;
       }
+    }
+
+    .landing-nav_story[hidden] {
+      display: none;
     }
 
     .landing-nav_github_text {

@@ -1,13 +1,20 @@
 ---
 import "@/styles/global.css";
 import "../styles/dashboard-base.css";
+import LandingNav from "@/components/content/LandingNav.astro";
+import LandingFooter from "@/components/content/LandingFooter.astro";
 import BaseHead from "@/components/utility/BaseHead.astro";
 import SkipLink from "@/components/global/SkipLink.astro";
 import type { SeoProps } from "@/types.ts";
 
-type Props = SeoProps;
+type Props = SeoProps & {
+  /** Show the shared nav bar. */
+  nav?: boolean;
+  /** Show the shared footer. Turn off to place it yourself, right after a closing section. */
+  footer?: boolean;
+};
 
-const seo = Astro.props;
+const { nav = true, footer = true, ...seo } = Astro.props;
 ---
 
 <!doctype html>
@@ -19,11 +26,11 @@ const seo = Astro.props;
   <body>
     <SkipLink />
     <div class="landing-layout_wrap">
-      <slot name="nav" />
+      <LandingNav render={nav} />
       <main class="landing-layout_main" id="main">
         <slot />
       </main>
-      <slot name="footer" />
+      <LandingFooter render={footer} />
     </div>
   </body>
 </html>
